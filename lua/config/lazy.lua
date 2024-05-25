@@ -10,9 +10,13 @@ vim.opt.rtp:prepend(vim.env.LAZY or lazypath)
 require("lazy").setup({
   spec = {
     -- add LazyVim and import its plugins
-    { "LazyVim/LazyVim", import = "lazyvim.plugins", opts = {
-      colorscheme = "catppuccin",
-    } },
+    {
+      "LazyVim/LazyVim",
+      import = "lazyvim.plugins",
+      opts = {
+        colorscheme = "catppuccin",
+      },
+    },
     -- import any extras modules here
     { import = "lazyvim.plugins.extras.linting.eslint" },
     { import = "lazyvim.plugins.extras.formatting.prettier" },
@@ -30,6 +34,7 @@ require("lazy").setup({
       tag = "0.1.6",
       dependencies = { "nvim-lua/plenary.nvim" },
     },
+    { "xiyaowong/transparent.nvim" },
     {
       "catppuccin/nvim",
       name = "catppuccin",
@@ -37,7 +42,7 @@ require("lazy").setup({
       config = function()
         -- Catppuccin configuration
         require("catppuccin").setup({
-          flavour = "macchiato", -- latte, frappe, macchiato, mocha
+          flavour = "mocha", -- latte, frappe, macchiato, mocha
           term_colors = true,
           integrations = {
             treesitter = true,
@@ -105,7 +110,7 @@ require("lazy").setup({
         -- "matchit",
         -- "matchparen",
         -- "netrwPlugin",
-        "tarPlugin" ,
+        "tarPlugin",
         "tohtml",
         "tutor",
         "zipPlugin",
