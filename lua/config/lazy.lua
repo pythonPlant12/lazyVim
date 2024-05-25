@@ -34,7 +34,11 @@ require("lazy").setup({
       tag = "0.1.6",
       dependencies = { "nvim-lua/plenary.nvim" },
     },
+
+    -- Transparent Background on NVIM
     { "xiyaowong/transparent.nvim" },
+
+    -- Catpuccin Theme
     {
       "catppuccin/nvim",
       name = "catppuccin",
