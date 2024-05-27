@@ -29,10 +29,34 @@ require("lazy").setup({
     -- { import = "lazyvim.plugins.extras.lang.python" },
     -- import/override with your plugins
     { import = "plugins" },
+
+    -- Configure telescope.nvim
     {
       "nvim-telescope/telescope.nvim",
       tag = "0.1.6",
       dependencies = { "nvim-lua/plenary.nvim" },
+      config = function()
+        require('telescope').setup{
+          defaults = {
+            file_ignore_patterns = {".git/"},
+            vimgrep_arguments = {
+              'rg',
+              '--color=never',
+              '--no-heading',
+              '--with-filename',
+              '--line-number',
+              '--column',
+              '--smart-case'
+            },
+          },
+        }
+
+        -- Bind <space><space> to Telescope find_files
+        vim.api.nvim_set_keymap('n', '<space><space>', ':Telescope find_files<CR>', { noremap = true, silent = true })
+
+        -- Optional: Load project extension if using project.nvim
+        -- require('telescope').load_extension('projects')
+      end
     },
 
     -- Transparent Background on NVIM
@@ -73,6 +97,8 @@ require("lazy").setup({
         vim.cmd("colorscheme catppuccin")
       end,
     },
+
+    -- venv-selector plugin
     {
       "linux-cultist/venv-selector.nvim",
       dependencies = { "neovim/nvim-lspconfig", "nvim-telescope/telescope.nvim", "mfussenegger/nvim-dap-python" },
@@ -125,3 +151,6 @@ require("lazy").setup({
 
 -- vim.opt.number = true -- Enable line numbers
 -- vim.opt.relativenumber = false -- Disable relative line numbers
+
+-- Add LazyGit configuration
+vim.api.nvim_set_keymap('n', '<leader>gg', ':lua require("lazyvim.util.terminal").lazygit()<CR>', { noremap = true, silent = true })
