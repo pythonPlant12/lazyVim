@@ -13,6 +13,7 @@ return {
         "pyright",
         "angular-language-server",
         "css-lsp",
+        "css-variables-language-server"
       })
     end,
   },
