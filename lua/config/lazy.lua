@@ -58,7 +58,6 @@ require("lazy").setup({
         -- require('telescope').load_extension('projects')
       end
     },
-
     -- Transparent Background on NVIM
     { "xiyaowong/transparent.nvim" },
 
@@ -151,6 +150,3 @@ require("lazy").setup({
 
 -- vim.opt.number = true -- Enable line numbers
 -- vim.opt.relativenumber = false -- Disable relative line numbers
-
--- Add LazyGit configuration
-vim.api.nvim_set_keymap('n', '<leader>gg', ':lua require("lazyvim.util.terminal").lazygit()<CR>', { noremap = true, silent = true })
