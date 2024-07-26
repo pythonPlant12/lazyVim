@@ -54,3 +54,9 @@ keymaps.set("o", "d", '"_d')
 keymaps.set("o", "dd", '"_dd')
 keymaps.set("o", "dw", '"_dw')
 keymaps.set("o", "db", '"_db')
+
+-- Moving throught window with arrow keys
+vim.api.nvim_set_keymap('n', '<C-w><Left>', '<C-w>h', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<C-w><Down>', '<C-w>j', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<C-w><Up>', '<C-w>k', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<C-w><Right>', '<C-w>l', { noremap = true, silent = true })

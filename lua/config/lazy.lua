@@ -30,37 +30,51 @@ require("lazy").setup({
     -- import/override with your plugins
     { import = "plugins" },
 
+    -- Plugin and configuration for neo-tree
+    {
+      "nvim-neo-tree/neo-tree.nvim",
+      opts = {
+        filesystem = {
+          filtered_items = {
+            visible = true,
+            show_hidden_count = true,
+            hide_dotfiles = false,
+            hide_gitignored = false,
+          },
+        },
+      },
+    },
     -- Configure telescope.nvim
     {
       "nvim-telescope/telescope.nvim",
       tag = "0.1.6",
       dependencies = { "nvim-lua/plenary.nvim" },
       config = function()
-        require('telescope').setup{
+        require("telescope").setup({
           defaults = {
-            file_ignore_patterns = {".git/"},
+            file_ignore_patterns = { ".git/" },
             vimgrep_arguments = {
-              'rg',
-              '--color=never',
-              '--no-heading',
-              '--with-filename',
-              '--line-number',
-              '--column',
-              '--smart-case'
+              "rg",
+              "--color=never",
+              "--no-heading",
+              "--with-filename",
+              "--line-number",
+              "--column",
+              "--smart-case",
             },
           },
-        }
+        })
 
         -- Bind <space><space> to Telescope find_files
-        vim.api.nvim_set_keymap('n', '<space><space>', ':Telescope find_files<CR>', { noremap = true, silent = true })
+        vim.api.nvim_set_keymap("n", "<space><space>", ":Telescope find_files<CR>", { noremap = true, silent = true })
 
         -- Optional: Load project extension if using project.nvim
         -- require('telescope').load_extension('projects')
-      end
+      end,
     },
 
     -- Transparent Background on NVIM
-    { "xiyaowong/transparent.nvim" },
+    -- { "xiyaowong/transparent.nvim" },
 
     -- Catpuccin Theme
     {
@@ -97,11 +111,11 @@ require("lazy").setup({
         vim.cmd("colorscheme catppuccin")
       end,
     },
-
     -- venv-selector plugin
+    -- "mfussenegger/nvim-dap-python"
     {
       "linux-cultist/venv-selector.nvim",
-      dependencies = { "neovim/nvim-lspconfig", "nvim-telescope/telescope.nvim", "mfussenegger/nvim-dap-python" },
+      dependencies = { "neovim/nvim-lspconfig", "nvim-telescope/telescope.nvim" },
       config = function()
         require("venv-selector").setup({
           name = {
@@ -153,4 +167,9 @@ require("lazy").setup({
 -- vim.opt.relativenumber = false -- Disable relative line numbers
 
 -- Add LazyGit configuration
-vim.api.nvim_set_keymap('n', '<leader>gg', ':lua require("lazyvim.util.terminal").lazygit()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap(
+  "n",
+  "<leader>gg",
+  ':lua require("lazyvim.util.terminal").lazygit()<CR>',
+  { noremap = true, silent = true }
+)

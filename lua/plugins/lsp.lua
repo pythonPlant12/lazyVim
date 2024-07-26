@@ -17,4 +17,27 @@ return {
       })
     end,
   },
+  -- LSP configuration
+  {
+    "neovim/nvim-lspconfig",
+    config = function()
+      local lspconfig = require("lspconfig")
+
+      lspconfig.pyright.setup({
+        settings = {
+          python = {
+            analysis = {
+              autoSearchPaths = true,
+              diagnosticMode = "openFilesOnly",
+              useLibraryCodeForTypes = true,
+              typeCheckingMode = "off",
+              executionEnvironments = {
+                { root = "src" },
+              },
+            },
+          },
+        },
+      })
+    end,
+  },
 }
