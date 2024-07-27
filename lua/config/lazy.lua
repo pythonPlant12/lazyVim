@@ -29,7 +29,10 @@ require("lazy").setup({
     -- { import = "lazyvim.plugins.extras.lang.python" },
     -- import/override with your plugins
     { import = "plugins" },
-
+    -- Plugin for multiple cursors
+    {
+      "terryma/vim-multiple-cursors",
+    },
     -- Plugin and configuration for neo-tree
     {
       "nvim-neo-tree/neo-tree.nvim",

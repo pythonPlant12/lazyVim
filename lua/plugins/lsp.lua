@@ -30,7 +30,7 @@ return {
               autoSearchPaths = true,
               diagnosticMode = "openFilesOnly",
               useLibraryCodeForTypes = true,
-              typeCheckingMode = "off",
+              typeCheckingMode = "on",
               executionEnvironments = {
                 { root = "src" },
               },
