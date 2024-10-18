@@ -13,4 +13,5 @@ return {
       root_dir = "./",
     },
   },
+  lazy = false;
 }
