@@ -26,7 +26,7 @@ require("lazy").setup({
     { import = "lazyvim.plugins.extras.lang.json" },
     { import = "lazyvim.plugins.extras.lang.rust" },
     { import = "lazyvim.plugins.extras.lang.tailwind" },
-    -- { import = "lazyvim.plugins.extras.lang.python" },
+    { import = "lazyvim.plugins.extras.lang.python" },
     -- import/override with your plugins
     { import = "plugins" },
     -- Plugin for multiple cursors
@@ -114,8 +114,12 @@ require("lazy").setup({
         vim.cmd("colorscheme catppuccin")
       end,
     },
+    {
+    "mfussenegger/nvim-dap",
+      config = function() end,
+    },
     -- venv-selector plugin
-    -- "mfussenegger/nvim-dap-python"
+    "mfussenegger/nvim-dap-python",
     {
       "linux-cultist/venv-selector.nvim",
       dependencies = { "neovim/nvim-lspconfig", "nvim-telescope/telescope.nvim" },
@@ -127,7 +131,7 @@ require("lazy").setup({
             "env",
             ".env",
           },
-          dap_enabled = true,
+          dap_enabled = false,
         })
       end,
       event = "VeryLazy", -- Optional: needed only if you want to type `:VenvSelect` without a keymapping

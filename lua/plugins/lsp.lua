@@ -33,7 +33,7 @@ return {
               typeCheckingMode = "on",
               executionEnvironments = {
                 { root = "src" },
-              },
+               },
             },
           },
         },
