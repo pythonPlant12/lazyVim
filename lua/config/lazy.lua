@@ -81,41 +81,53 @@ require("lazy").setup({
 
     -- Catpuccin Theme
     {
-      "catppuccin/nvim",
-      name = "catppuccin",
-      priority = 1000,
+      "xiantang/darcula-dark.nvim",
+      name = "darcula-dark",
+      priority = 1000, -- High priority to load before other plugins
+      dependencies = {
+        "nvim-treesitter/nvim-treesitter",
+      },
       config = function()
-        -- Catppuccin configuration
-        require("catppuccin").setup({
-          flavour = "mocha", -- latte, frappe, macchiato, mocha
-          term_colors = true,
-          integrations = {
-            treesitter = true,
-            native_lsp = {
-              enabled = true,
-              virtual_text = {
-                errors = { "italic" },
-                hints = { "italic" },
-                warnings = { "italic" },
-                information = { "italic" },
-              },
-              underlines = {
-                errors = { "underline" },
-                hints = { "underline" },
-                warnings = { "underline" },
-                information = { "underline" },
-              },
-            },
-            -- other integrations you want to enable
-          },
-        })
-
         -- Apply the theme
-        vim.cmd("colorscheme catppuccin")
+        vim.cmd("colorscheme darcula-dark")
       end,
     },
+    -- {
+    --   "catppuccin/nvim",
+    --   name = "catppuccin",
+    --   priority = 1000,
+    --   config = function()
+    --     -- Catppuccin configuration
+    --     require("catppuccin").setup({
+    --       flavour = "mocha", -- latte, frappe, macchiato, mocha
+    --       term_colors = true,
+    --       integrations = {
+    --         treesitter = true,
+    --         native_lsp = {
+    --           enabled = true,
+    --           virtual_text = {
+    --             errors = { "italic" },
+    --             hints = { "italic" },
+    --             warnings = { "italic" },
+    --             information = { "italic" },
+    --           },
+    --           underlines = {
+    --             errors = { "underline" },
+    --             hints = { "underline" },
+    --             warnings = { "underline" },
+    --             information = { "underline" },
+    --           },
+    --         },
+    --         -- other integrations you want to enable
+    --       },
+    --     })
+    --
+    --     -- Apply the theme
+    --     vim.cmd("colorscheme catppuccin")
+    --   end,
+    -- },
     {
-    "mfussenegger/nvim-dap",
+      "mfussenegger/nvim-dap",
       config = function() end,
     },
     -- venv-selector plugin
