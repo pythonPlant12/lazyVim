@@ -23,6 +23,18 @@ return {
   },
   {
     "neovim/nvim-lspconfig",
+    config = function()
+      -- Automatically refresh grep results after changes
+      local function refresh_grep()
+        vim.cmd("cclose")
+        vim.cmd("copen")
+        vim.cmd("cclose")
+      end
+
+      vim.api.nvim_create_autocmd({ "BufWritePost", "QuickFixCmdPost" }, {
+        callback = refresh_grep,
+      })
+    end,
     opts = {
       diagnostics = {
         underline = true,
@@ -30,7 +42,6 @@ return {
         virtual_text = {
           spacing = 4,
           source = "if_many",
-          prefix = "●",
         },
         severity_sort = true,
       },

@@ -29,6 +29,24 @@ require("lazy").setup({
     { import = "lazyvim.plugins.extras.lang.python" },
     -- import/override with your plugins
     { import = "plugins" },
+    {
+      "nvim-treesitter/nvim-treesitter",
+      build = ":TSUpdate",
+      event = "BufReadPost",
+      dependencies = {
+        "nvim-treesitter/nvim-treesitter-textobjects",
+      },
+      opts = {
+        highlight = {
+          -- Your existing highlight configuration
+        },
+        rainbow = {
+          enable = true,
+          extended_mode = true,
+          max_file_lines = nil,
+        },
+      },
+    },
     -- Plugin for multiple cursors
     {
       "terryma/vim-multiple-cursors",
@@ -100,6 +118,19 @@ require("lazy").setup({
         vim.cmd("colorscheme darcula-dark")
       end,
     },
+    -- Underline same word
+    {
+      "RRethy/vim-illuminate",
+      config = function()
+        require("illuminate").configure({
+          -- Configuration options for the vim-illuminate plugin
+          -- You can customize the behavior as needed
+          delay = 100,
+          increment_at_cursor = true,
+        })
+      end,
+    },
+    -- Nvim DAP for python debugging
     {
       "mfussenegger/nvim-dap",
       config = function() end,
