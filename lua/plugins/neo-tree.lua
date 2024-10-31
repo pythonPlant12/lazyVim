@@ -12,6 +12,22 @@ return {
       -- Change the path here
       root_dir = "./",
     },
+    default_component_configs = {
+      git_status = {
+        symbols = {
+          added = "",
+          deleted = "󰧧",
+          modified = "",
+          renamed = "",
+          -- Status type
+          untracked = "",
+          ignored = "",
+          unstaged = "",
+          staged = "",
+          conflict = "",
+        },
+      },
+    },
   },
-  lazy = false;
+  lazy = false,
 }

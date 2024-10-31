@@ -60,3 +60,63 @@ vim.api.nvim_set_keymap('n', '<C-w><Left>', '<C-w>h', { noremap = true, silent =
 vim.api.nvim_set_keymap('n', '<C-w><Down>', '<C-w>j', { noremap = true, silent = true })
 vim.api.nvim_set_keymap('n', '<C-w><Up>', '<C-w>k', { noremap = true, silent = true })
 vim.api.nvim_set_keymap('n', '<C-w><Right>', '<C-w>l', { noremap = true, silent = true })
+
+
+
+-- These might be in your LSP config
+vim.keymap.set('n', 'gD', vim.lsp.buf.declaration)
+vim.keymap.set('n', 'gd', vim.lsp.buf.definition)
+vim.keymap.set('n', 'K', vim.lsp.buf.hover)
+vim.keymap.set('n', 'gi', vim.lsp.buf.implementation)
+vim.keymap.set('n', 'gr', vim.lsp.buf.references)
+
+
+-- In your keymaps.lua or init.lua
+vim.keymap.set('n', '<C-w>z', function()
+    if vim.fn.exists('g:zoom_restored') == 0 or vim.g.zoom_restored == 0 then
+        -- Save current window state
+        vim.g.zoom_winrestcmd = vim.fn.winrestcmd()
+        -- Zoom in
+        vim.cmd('resize | vertical resize')
+        vim.g.zoom_restored = 1
+    else
+        -- Restore window state
+        vim.cmd(vim.g.zoom_winrestcmd)
+        vim.g.zoom_restored = 0
+    end
+end, { noremap = true, silent = true, desc = 'Toggle window zoom' })
+
+vim.api.nvim_create_autocmd('FileType', {
+    pattern = 'qf',
+    callback = function()
+        vim.keymap.set('n', '<CR>', function()
+            -- Get current quickfix item
+            local item = vim.fn.getqflist()[vim.fn.line('.')]
+            if not item or not item.bufnr then return end
+
+            -- Get full file path from buffer number
+            local filename = vim.api.nvim_buf_get_name(item.bufnr)
+            if filename == '' then return end
+
+            local lnum = item.lnum
+            local col = math.max(0, (item.col or 1) - 1)
+
+            -- Close quickfix
+            vim.cmd('cclose')
+
+            -- Open in new buffer (removed enew command)
+            vim.cmd('edit ' .. vim.fn.fnameescape(filename))
+
+            -- Set cursor position safely
+            vim.schedule(function()
+                local bufnr = vim.api.nvim_get_current_buf()
+                local line_count = vim.api.nvim_buf_line_count(bufnr)
+                local line = math.min(lnum, line_count)
+                local line_length = #vim.api.nvim_buf_get_lines(bufnr, line - 1, line, true)[1]
+                local column = math.min(col, line_length)
+                
+                vim.api.nvim_win_set_cursor(0, {line, column})
+            end)
+        end, { buffer = true, noremap = true })
+    end,
+})

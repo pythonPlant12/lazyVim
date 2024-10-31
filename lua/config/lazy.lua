@@ -58,12 +58,20 @@ require("lazy").setup({
             file_ignore_patterns = { ".git/" },
             vimgrep_arguments = {
               "rg",
-              "--color=never",
               "--no-heading",
               "--with-filename",
               "--line-number",
               "--column",
               "--smart-case",
+            },
+          },
+          extensions = {
+            media_files = {
+              -- filetypes whitelist
+              -- defaults to {"png", "jpg", "mp4", "webm", "pdf"}
+              filetypes = { "png", "webp", "jpg", "jpeg" },
+              -- find command (defaults to `fd`)
+              find_cmd = "rg",
             },
           },
         })
@@ -79,7 +87,7 @@ require("lazy").setup({
     -- Transparent Background on NVIM
     -- { "xiyaowong/transparent.nvim" },
 
-    -- Catpuccin Theme
+    -- Theme
     {
       "xiantang/darcula-dark.nvim",
       name = "darcula-dark",
@@ -92,40 +100,6 @@ require("lazy").setup({
         vim.cmd("colorscheme darcula-dark")
       end,
     },
-    -- {
-    --   "catppuccin/nvim",
-    --   name = "catppuccin",
-    --   priority = 1000,
-    --   config = function()
-    --     -- Catppuccin configuration
-    --     require("catppuccin").setup({
-    --       flavour = "mocha", -- latte, frappe, macchiato, mocha
-    --       term_colors = true,
-    --       integrations = {
-    --         treesitter = true,
-    --         native_lsp = {
-    --           enabled = true,
-    --           virtual_text = {
-    --             errors = { "italic" },
-    --             hints = { "italic" },
-    --             warnings = { "italic" },
-    --             information = { "italic" },
-    --           },
-    --           underlines = {
-    --             errors = { "underline" },
-    --             hints = { "underline" },
-    --             warnings = { "underline" },
-    --             information = { "underline" },
-    --           },
-    --         },
-    --         -- other integrations you want to enable
-    --       },
-    --     })
-    --
-    --     -- Apply the theme
-    --     vim.cmd("colorscheme catppuccin")
-    --   end,
-    -- },
     {
       "mfussenegger/nvim-dap",
       config = function() end,
