@@ -70,6 +70,11 @@ vim.keymap.set('n', 'K', vim.lsp.buf.hover)
 vim.keymap.set('n', 'gi', vim.lsp.buf.implementation)
 vim.keymap.set('n', 'gr', vim.lsp.buf.references)
 
+-- Swap Shift + 4 and Shift + 6
+vim.keymap.set('n', '$', '^', { noremap = true })
+vim.keymap.set('n', '^', '$', { noremap = true })
+vim.keymap.set('v', '$', '^', { noremap = true })
+vim.keymap.set('v', '^', '$', { noremap = true })
 
 -- In your keymaps.lua or init.lua
 vim.keymap.set('n', '<C-w>z', function()
