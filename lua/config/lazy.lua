@@ -107,15 +107,15 @@ require("lazy").setup({
 
     -- Theme
     {
-      "rmehri01/onenord.nvim",
-      name = "onenord",
+      "xiantang/darcula-dark.nvim",
+      name = "darcula-dark",
       priority = 1000, -- High priority to load before other plugins
       dependencies = {
         "nvim-treesitter/nvim-treesitter",
       },
       config = function()
         -- Apply the theme
-        vim.cmd("colorscheme onenord")
+        vim.cmd("colorscheme darcula-dark")
       end,
     },
     -- Underline same word
