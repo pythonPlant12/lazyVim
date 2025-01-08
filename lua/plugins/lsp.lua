@@ -2,8 +2,7 @@
   "neovim/nvim-lspconfig",
   event = "LazyFile",
   dependencies = {
-    "mason.nvim",
-    { "williamboman/mason-lspconfig.nvim", config = function() end },
+    "williamboman/mason.nvim",
   },
   opts = function()
     ---@class PluginLspOpts

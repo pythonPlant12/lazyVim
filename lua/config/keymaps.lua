@@ -62,6 +62,10 @@ vim.api.nvim_set_keymap('n', '<C-w><Up>', '<C-w>k', { noremap = true, silent = t
 vim.api.nvim_set_keymap('n', '<C-w><Right>', '<C-w>l', { noremap = true, silent = true })
 
 
+-- Open termianl in new tab
+vim.keymap.set('n', '<leader>t', ':tabnew | term<CR>', { noremap = true })
+-- Easy escape from terminal mode
+vim.keymap.set('t', '<Esc>', '<C-\\><C-n>', { noremap = true })
 
 -- These might be in your LSP config
 vim.keymap.set('n', 'gD', vim.lsp.buf.declaration)
@@ -70,11 +74,13 @@ vim.keymap.set('n', 'K', vim.lsp.buf.hover)
 vim.keymap.set('n', 'gi', vim.lsp.buf.implementation)
 vim.keymap.set('n', 'gr', vim.lsp.buf.references)
 
--- Swap Shift + 4 and Shift + 6
-vim.keymap.set('n', '$', '^', { noremap = true })
-vim.keymap.set('n', '^', '$', { noremap = true })
-vim.keymap.set('v', '$', '^', { noremap = true })
-vim.keymap.set('v', '^', '$', { noremap = true })
+-- Map Shift+B to go to end of line
+vim.keymap.set('n', 'B', '^', { noremap = true })
+vim.keymap.set('v', 'B', '^', { noremap = true })
+
+-- Map Shift+A to go to beginning of line
+vim.keymap.set('n', 'W', '$', { noremap = true })
+vim.keymap.set('v', 'W', '$', { noremap = true })
 
 -- In your keymaps.lua or init.lua
 vim.keymap.set('n', '<C-w>z', function()
