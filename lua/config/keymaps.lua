@@ -14,6 +14,13 @@ keymaps.set("n", "<C-a>", "gg<S-v>G")
 -- Jumplist
 keymaps.set("n", "<C-m>", "<C-i>", opts)
 
+-- Switch C-i and C-o
+keymaps.set('n', '<C-i>', '<C-o>', opts)
+keymaps.set('n', '<C-o>', '<C-i>', opts)
+
+keymaps.set('v', '<C-i>', '<C-o>', opts)
+keymaps.set('v', '<C-o>', '<C-i>', opts)
+
 -- New tab
 keymaps.set("n", "te", "tabedit")
 vim.api.nvim_set_keymap("n", "te", ":tabedit<CR>", opts)
