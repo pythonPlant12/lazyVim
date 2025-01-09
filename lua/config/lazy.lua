@@ -10,13 +10,10 @@ vim.opt.rtp:prepend(vim.env.LAZY or lazypath)
 require("lazy").setup({
   spec = {
     -- add LazyVim and import its plugins
-    {
-      "LazyVim/LazyVim",
-      import = "lazyvim.plugins",
-      opts = {
-        colorscheme = "catppuccin",
-      },
-    },
+     {
+       "LazyVim/LazyVim",
+       import = "lazyvim.plugins",
+     },
     -- import any extras modules here
     { import = "lazyvim.plugins.extras.linting.eslint" },
     { import = "lazyvim.plugins.extras.formatting.prettier" },
@@ -106,18 +103,18 @@ require("lazy").setup({
     -- { "xiyaowong/transparent.nvim" },
 
     -- Theme
-    {
-      "xiantang/darcula-dark.nvim",
-      name = "darcula-dark",
-      priority = 1000, -- High priority to load before other plugins
-      dependencies = {
-        "nvim-treesitter/nvim-treesitter",
-      },
-      config = function()
-        -- Apply the theme
-        vim.cmd("colorscheme darcula-dark")
-      end,
-    },
+    -- {
+    --   "xiantang/darcula-dark.nvim",
+    --   name = "darcula-dark",
+    --   priority = 1000, -- High priority to load before other plugins
+    --   dependencies = {
+    --     "nvim-treesitter/nvim-treesitter",
+    --   },
+    --   config = function()
+    --     -- Apply the theme
+    --     vim.cmd("colorscheme darcula-dark")
+    --   end,
+    -- },
     -- Underline same word
     {
       "RRethy/vim-illuminate",
