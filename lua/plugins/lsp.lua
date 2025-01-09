@@ -125,8 +125,6 @@ return {
     LazyVim.lsp.setup()
     LazyVim.lsp.on_dynamic_capability(require("lazyvim.plugins.lsp.keymaps").on_attach)
 
-    LazyVim.lsp.words.setup(opts.document_highlight)
-
     -- diagnostics signs
     if vim.fn.has("nvim-0.10.0") == 0 then
       if type(opts.diagnostics.signs) ~= "boolean" then
@@ -145,7 +143,8 @@ return {
           if
             vim.api.nvim_buf_is_valid(buffer)
             and vim.bo[buffer].buftype == ""
-            and not vim.tbl_contains(opts.inlay_hints.exclude, vim.bo[buffer].filetype)
+            and opts.inlay_hints.exclude -- check if exclude exists
+            and not vim.tbl_contains(opts.inlay_hints.exclude or {}, vim.bo[buffer].filetype)
           then
             vim.lsp.inlay_hint.enable(true, { bufnr = buffer })
           end
