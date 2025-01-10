@@ -10,10 +10,10 @@ vim.opt.rtp:prepend(vim.env.LAZY or lazypath)
 require("lazy").setup({
   spec = {
     -- add LazyVim and import its plugins
-     {
-       "LazyVim/LazyVim",
-       import = "lazyvim.plugins",
-     },
+    {
+      "LazyVim/LazyVim",
+      import = "lazyvim.plugins",
+    },
     -- import any extras modules here
     { import = "lazyvim.plugins.extras.linting.eslint" },
     { import = "lazyvim.plugins.extras.formatting.prettier" },
@@ -35,7 +35,27 @@ require("lazy").setup({
       },
       opts = {
         highlight = {
-          -- Your existing highlight configuration
+          enable = true,
+          additional_vim_regex_highlighting = false,
+        },
+        indent = { enable = true },
+        ensure_installed = {
+          "bash",
+          "c",
+          "html",
+          "javascript",
+          "json",
+          "lua",
+          "luadoc",
+          "luap",
+          "python",
+          "query",
+          "regex",
+          "tsx",
+          "typescript",
+          "vim",
+          "vimdoc",
+          "yaml",
         },
         rainbow = {
           enable = true,

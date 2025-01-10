@@ -18,8 +18,8 @@ keymaps.set("n", "<C-m>", "<C-i>", opts)
 keymaps.set('n', '<C-i>', '<C-o>', opts)
 keymaps.set('n', '<C-o>', '<C-i>', opts)
 
-keymaps.set('v', '<C-i>', '<C-o>', opts)
-keymaps.set('v', '<C-o>', '<C-i>', opts)
+vim.keymap.set('n', '<C-o>', '<C-o>', { desc = 'Jump backwards' })
+vim.keymap.set('n', '<C-p>', '<C-i>', { desc = 'Jump forward' })
 
 -- New tab
 keymaps.set("n", "te", "tabedit")
