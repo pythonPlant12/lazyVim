@@ -14,12 +14,16 @@ keymaps.set("n", "<C-a>", "gg<S-v>G")
 -- Jumplist
 keymaps.set("n", "<C-m>", "<C-i>", opts)
 
--- Switch C-i and C-o
-keymaps.set('n', '<C-i>', '<C-o>', opts)
-keymaps.set('n', '<C-o>', '<C-i>', opts)
+-- Add new line below without entering insert mode and move cursor there
+vim.keymap.set('n', '<CR>', 'o<Esc>')
 
-vim.keymap.set('n', '<C-o>', '<C-o>', { desc = 'Jump backwards' })
-vim.keymap.set('n', '<C-p>', '<C-i>', { desc = 'Jump forward' })
+-- Add new line and move text from cursor to new line
+vim.keymap.set('n', '<S-CR>', 'i<CR><Esc>')
+
+-- When you press Ctrl-i -> jump backwards (older position)
+-- When you press Ctrl-o -> jump forwards (newer position)
+vim.keymap.set('n', '<C-i>', '<C-o>', { noremap = true, desc = "Jump backward (older position)" })
+vim.keymap.set('n', '<C-o>', '<C-i>', { noremap = true, desc = "Jump forward (newer position)" })
 
 -- New tab
 keymaps.set("n", "te", "tabedit")
@@ -43,6 +47,11 @@ keymaps.set("n", "<C-j>", function()
   vim.diagnostic.goto_next()
 end, opts)
 
+-- Delete everything before cursor but preserve indentation
+vim.keymap.set('n', 'dB', 'ma^y0`ad^', { noremap = true })
+
+-- Delete everything after cursor
+vim.keymap.set('n', 'dW', 'D', { noremap = true })
 
 -- Override "d" and its combinations to delete without yanking in normal mode
 keymaps.set("n", "d", '"_d')
@@ -132,7 +141,6 @@ vim.api.nvim_create_autocmd('FileType', {
                 local line = math.min(lnum, line_count)
                 local line_length = #vim.api.nvim_buf_get_lines(bufnr, line - 1, line, true)[1]
                 local column = math.min(col, line_length)
-                
                 vim.api.nvim_win_set_cursor(0, {line, column})
             end)
         end, { buffer = true, noremap = true })
