@@ -59,6 +59,9 @@ keymaps.set("n", "dd", '"_dd')
 keymaps.set("n", "dw", '"_dw')
 keymaps.set("n", "db", '"_db')
 
+keymaps.set("n", "j", "k")
+keymaps.set("n", "k", "j")
+
 -- Override "d" and its combinations to delete without yanking in visual mode
 keymaps.set("x", "d", '"_d')
 keymaps.set("x", "dd", '"_dd')
