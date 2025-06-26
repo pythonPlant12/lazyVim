@@ -101,6 +101,17 @@ vim.keymap.set('v', 'B', '^', { noremap = true })
 vim.keymap.set('n', 'W', '$', { noremap = true })
 vim.keymap.set('v', 'W', '$', { noremap = true })
 
+-- Swap j and k for up and down 
+vim.keymap.set('n', 'j', 'k', { noremap = true })
+vim.keymap.set('v', 'j', 'k', { noremap = true })
+
+vim.keymap.set('n', 'k', 'j', { noremap = true })
+vim.keymap.set('v', 'k', 'j', { noremap = true })
+
+-- Swap j and k for up and down switching for window
+vim.keymap.set('n', '<C-w>j', '<C-w>k', { noremap = true })
+vim.keymap.set('n', '<C-w>k', '<C-w>j', { noremap = true })
+
 -- In your keymaps.lua or init.lua
 vim.keymap.set('n', '<C-w>z', function()
     if vim.fn.exists('g:zoom_restored') == 0 or vim.g.zoom_restored == 0 then
