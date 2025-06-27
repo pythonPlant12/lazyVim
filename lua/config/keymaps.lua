@@ -83,8 +83,8 @@ vim.api.nvim_set_keymap('n', '<C-w><Right>', '<C-w>l', { noremap = true, silent 
 
 -- Open termianl in new tab
 vim.keymap.set('n', '<leader>t', ':tabnew | term<CR>', { noremap = true })
--- Easy escape from terminal mode
-vim.keymap.set('t', '<Esc>', '<C-\\><C-n>', { noremap = true })
+-- -- Easy escape from terminal mode
+-- vim.keymap.set('t', '<Esc>', '<C-\\><C-n>', { noremap = true })
 
 -- These might be in your LSP config
 vim.keymap.set('n', 'gD', vim.lsp.buf.declaration)
@@ -111,6 +111,9 @@ vim.keymap.set('v', 'k', 'j', { noremap = true })
 -- Swap j and k for up and down switching for window
 vim.keymap.set('n', '<C-w>j', '<C-w>k', { noremap = true })
 vim.keymap.set('n', '<C-w>k', '<C-w>j', { noremap = true })
+
+-- Shortcut for expanding the error lens 
+vim.keymap.set('n', 'E', vim.diagnostic.open_float, { noremap = true, silent = true, desc = "Show line diagnostics" })
 
 -- In your keymaps.lua or init.lua
 vim.keymap.set('n', '<C-w>z', function()
