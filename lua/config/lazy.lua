@@ -159,17 +159,17 @@ require("lazy").setup({
     --   end,
     -- },
     -- Underline same word
-    {
-      "RRethy/vim-illuminate",
-      config = function()
-        require("illuminate").configure({
-          -- Configuration options for the vim-illuminate plugin
-          -- You can customize the behavior as needed
-          delay = 100,
-          increment_at_cursor = true,
-        })
-      end,
-    },
+    -- {
+    --   "RRethy/vim-illuminate",
+    --   config = function()
+    --     require("illuminate").configure({
+    --       -- Configuration options for the vim-illuminate plugin
+    --       -- You can customize the behavior as needed
+    --       delay = 100,
+    --       increment_at_cursor = true,
+    --     })
+    --   end,
+    -- },
     -- Nvim DAP for python debugging
     {
       "mfussenegger/nvim-dap",
