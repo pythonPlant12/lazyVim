@@ -116,6 +116,9 @@ vim.keymap.set('n', '<C-w>k', '<C-w>j', { noremap = true })
 vim.keymap.set('n', 'E', vim.diagnostic.open_float, { noremap = true, silent = true, desc = "Show line diagnostics" })
 
 -- In your keymaps.lua or init.lua
+-- Rename the variable from lsp
+vim.keymap.set('n', "<leader>r", vim.lsp.buf.rename, { desc = "Rename the variable" })
+
 vim.keymap.set('n', '<C-w>z', function()
     if vim.fn.exists('g:zoom_restored') == 0 or vim.g.zoom_restored == 0 then
         -- Save current window state
