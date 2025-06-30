@@ -14,6 +14,25 @@ require("lazy").setup({
       "LazyVim/LazyVim",
       import = "lazyvim.plugins",
     },
+    {
+      "tpope/vim-surround",
+      event = "VeryLazy",
+    },
+
+    -- Text objects
+    {
+      "kana/vim-textobj-user", -- Required for other textobj plugins
+      event = "VeryLazy",
+    },
+    {
+      "kana/vim-textobj-entire", -- ae/ie for entire buffer
+      dependencies = "kana/vim-textobj-user",
+      event = "VeryLazy",
+    },
+    {
+      "vim-scripts/argtextobj.vim", -- aa/ia for function arguments
+      event = "VeryLazy",
+    },
     -- import any extras modules here
     { import = "lazyvim.plugins.extras.linting.eslint" },
     { import = "lazyvim.plugins.extras.formatting.prettier" },
@@ -32,6 +51,10 @@ require("lazy").setup({
       event = "BufReadPost",
       dependencies = {
         "nvim-treesitter/nvim-treesitter-textobjects",
+      },
+      ensure_installed = {
+        "rust",
+        "ron"
       },
       opts = {
         highlight = {
@@ -174,6 +197,24 @@ require("lazy").setup({
         { "<leader>vs", "<cmd>VenvSelect<cr>" },
         -- Keymap to retrieve the venv from a cache (the one previously used for the same project directory).
         { "<leader>vc", "<cmd>VenvSelectCached<cr>" },
+      },
+    },
+    -- Rust packages
+    {
+      "Saecki/crates.nvim",
+      event = { "BufRead Cargo.toml" },
+      opts = {
+        completion = {
+          crates = {
+            enabled = true,
+          },
+        },
+        lsp = {
+          enabled = true,
+          actions = true,
+          completion = true,
+          hover = true,
+        },
       },
     },
   },
