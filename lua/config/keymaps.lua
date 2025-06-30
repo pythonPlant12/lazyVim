@@ -119,6 +119,13 @@ vim.keymap.set('n', 'E', vim.diagnostic.open_float, { noremap = true, silent = t
 -- Rename the variable from lsp
 vim.keymap.set('n', "<leader>r", vim.lsp.buf.rename, { desc = "Rename the variable" })
 
+-- Toggle line comment with Ctrl+/ (using alternative mapping that works in terminals)
+vim.keymap.set('n', '<C-_>', function() require('Comment.api').toggle.linewise.current() end, { noremap = true, silent = true, desc = "Toggle line comment" })
+vim.keymap.set('v', '<C-_>', "<ESC><cmd>lua require('Comment.api').toggle.linewise(vim.fn.visualmode())<CR>", { noremap = true, silent = true, desc = "Toggle selection comment" })
+
+-- Go to line with gl + line number (e.g., gl42 goes to line 42)
+vim.keymap.set('n', 'gl', ':', { noremap = true, desc = "Go to line number" })
+
 vim.keymap.set('n', '<C-w>z', function()
     if vim.fn.exists('g:zoom_restored') == 0 or vim.g.zoom_restored == 0 then
         -- Save current window state
