@@ -126,6 +126,15 @@ vim.keymap.set('v', '<C-_>', "<ESC><cmd>lua require('Comment.api').toggle.linewi
 -- Go to line with gl + line number (e.g., gl42 goes to line 42)
 vim.keymap.set('n', 'gl', ':', { noremap = true, desc = "Go to line number" })
 
+-- Toggle code folding (fold/unfold current section)
+vim.keymap.set('n', '<leader>T', 'za', { noremap = true, silent = true, desc = "Toggle code folding" })
+
+-- Git diff and blame keymaps (using gitsigns)
+vim.keymap.set('n', '<leader>gp', ':Gitsigns preview_hunk<CR>', { noremap = true, silent = true, desc = "Preview git hunk diff" })
+vim.keymap.set('n', '<leader>gb', ':Gitsigns toggle_current_line_blame<CR>', { noremap = true, silent = true, desc = "Toggle git blame for current line" })
+vim.keymap.set('n', '<leader>gn', ':Gitsigns next_hunk<CR>', { noremap = true, silent = true, desc = "Next git hunk" })
+vim.keymap.set('n', '<leader>gP', ':Gitsigns prev_hunk<CR>', { noremap = true, silent = true, desc = "Previous git hunk" })
+
 vim.keymap.set('n', '<C-w>z', function()
     if vim.fn.exists('g:zoom_restored') == 0 or vim.g.zoom_restored == 0 then
         -- Save current window state
