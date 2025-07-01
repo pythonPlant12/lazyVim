@@ -11,19 +11,16 @@ keymaps.set("n", "-", "C-x")
 -- Select all
 keymaps.set("n", "<C-a>", "gg<S-v>G")
 
--- Jumplist
-keymaps.set("n", "<C-m>", "<C-i>", opts)
-
 -- Add new line below without entering insert mode and move cursor there
 vim.keymap.set('n', '<CR>', 'o<Esc>')
 
 -- Add new line and move text from cursor to new line
 vim.keymap.set('n', '<S-CR>', 'i<CR><Esc>')
 
--- When you press Ctrl-i -> jump backwards (older position)
--- When you press Ctrl-o -> jump forwards (newer position)
-vim.keymap.set('n', '<C-i>', '<C-o>', { noremap = true, desc = "Jump backward (older position)" })
-vim.keymap.set('n', '<C-o>', '<C-i>', { noremap = true, desc = "Jump forward (newer position)" })
+-- When you press <leader>-i -> jump backwards (older position)
+-- When you press <leader>-o -> jump forwards (newer position)
+vim.keymap.set('n', '<leader>i', '<C-o>', { noremap = true, desc = "Jump backward" })
+vim.keymap.set('n', '<leader>o', '<C-i>', { noremap = true, desc = "Jump forward" })
 
 -- New tab
 keymaps.set("n", "te", "tabedit")
