@@ -128,6 +128,7 @@ vim.keymap.set('n', '<leader>T', 'za', { noremap = true, silent = true, desc = "
 
 -- Git diff and blame keymaps (using gitsigns)
 vim.keymap.set('n', '<leader>gp', ':Gitsigns preview_hunk<CR>', { noremap = true, silent = true, desc = "Preview git hunk diff" })
+vim.keymap.set('n', '<leader>gr', ':Gitsigns reset_hunk<CR>', { noremap = true, silent = true, desc = "Reset git hunk (undo changes)" })
 vim.keymap.set('n', '<leader>gb', ':Gitsigns toggle_current_line_blame<CR>', { noremap = true, silent = true, desc = "Toggle git blame for current line" })
 vim.keymap.set('n', '<leader>gn', ':Gitsigns next_hunk<CR>', { noremap = true, silent = true, desc = "Next git hunk" })
 vim.keymap.set('n', '<leader>gP', ':Gitsigns prev_hunk<CR>', { noremap = true, silent = true, desc = "Previous git hunk" })

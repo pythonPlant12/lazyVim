@@ -87,9 +87,30 @@ require("lazy").setup({
         },
       },
     },
-    -- Plugin for multiple cursors
+    -- Multiple cursors with simple, working configuration
     {
-      "terryma/vim-multiple-cursors",
+      "mg979/vim-visual-multi",
+      lazy = false,  -- Load immediately to avoid timing issues
+      init = function()
+        -- Configure BEFORE plugin loads
+        vim.g.VM_default_mappings = 0  -- Disable all default mappings
+        vim.g.VM_maps = {
+          -- Exit multiple cursor mode
+          ["Exit"] = "<Esc>",
+        }
+        vim.g.VM_set_statusline = 0
+        vim.g.VM_silent_exit = 1
+      end,
+      config = function()
+        -- Additional keymaps using Neovim's keymap function for reliability
+        vim.keymap.set({'n', 'v'}, '<leader>mw', '<Plug>(VM-Find-Under)', { desc = "Select word under cursor" })
+        vim.keymap.set({'n', 'v'}, '<leader>mk', '<Plug>(VM-Add-Cursor-Down)', { desc = "Add cursor below" })
+        vim.keymap.set({'n', 'v'}, '<leader>mj', '<Plug>(VM-Add-Cursor-Up)', { desc = "Add cursor above" })
+        vim.keymap.set({'n', 'v'}, '<leader>mc', '<Plug>(VM-Add-Cursor-At-Pos)', { desc = "Add cursor at current position" })
+        vim.keymap.set({'n', 'v'}, '<leader>ma', '<Plug>(VM-Select-All)', { desc = "Select all occurrences" })
+        vim.keymap.set({'n', 'v'}, '<leader>mx', '<Plug>(VM-Skip-Region)', { desc = "Skip current selection" })
+        vim.keymap.set({'n', 'v'}, '<leader>mq', '<Plug>(VM-Remove-Region)', { desc = "Remove current cursor" })
+      end,
     },
     -- Plugin and configuration for neo-tree
     {
