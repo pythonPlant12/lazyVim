@@ -14,6 +14,41 @@ return {
       },
     },
   },
+  -- lualine with custom mode colors
+  {
+    "nvim-lualine/lualine.nvim",
+    opts = {
+      options = {
+        theme = {
+          normal = {
+            a = { fg = "#ffffff", bg = "#56a8f5", gui = "bold" }, -- blue for normal mode
+            b = { fg = "#bcbec4", bg = "#2b2d30" },
+            c = { fg = "#bcbec4", bg = "#1e1f22" },
+          },
+          insert = {
+            a = { fg = "#ffffff", bg = "#c77dbb", gui = "bold" }, -- purple for insert mode
+            b = { fg = "#bcbec4", bg = "#2b2d30" },
+            c = { fg = "#bcbec4", bg = "#1e1f22" },
+          },
+          visual = {
+            a = { fg = "#ffffff", bg = "#cf8e6d", gui = "bold" }, -- orange for visual/select mode
+            b = { fg = "#bcbec4", bg = "#2b2d30" },
+            c = { fg = "#bcbec4", bg = "#1e1f22" },
+          },
+          replace = {
+            a = { fg = "#ffffff", bg = "#f75464", gui = "bold" }, -- red for replace mode
+            b = { fg = "#bcbec4", bg = "#2b2d30" },
+            c = { fg = "#bcbec4", bg = "#1e1f22" },
+          },
+          command = {
+            a = { fg = "#ffffff", bg = "#6aab73", gui = "bold" }, -- green for command mode
+            b = { fg = "#bcbec4", bg = "#2b2d30" },
+            c = { fg = "#bcbec4", bg = "#1e1f22" },
+          },
+        },
+      },
+    },
+  },
   -- Preview markdown live in web browser
   {
     "iamcco/markdown-preview.nvim",
