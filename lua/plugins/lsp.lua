@@ -21,6 +21,10 @@ return {
           -- prefix = "icons",
         },
         severity_sort = true,
+        -- Deduplicate diagnostics from multiple sources
+        float = {
+          source = "if_many",
+        },
         signs = {
           text = {
             [vim.diagnostic.severity.ERROR] = LazyVim.config.icons.diagnostics.Error,
@@ -125,6 +129,38 @@ return {
         angularls = {
           filetypes = { "typescript", "html", "typescriptreact", "typescript.tsx" },
         },
+        -- Disable rust_analyzer since we use rustaceanvim
+        rust_analyzer = {
+          enabled = false,
+        },
+        -- YAML Language Server with custom configuration
+        yamlls = {
+          settings = {
+            yaml = {
+              gui = {
+                expandFocusedSidePanel = true,
+                nerdFontsVersion = "3",
+                border = "rounded",
+                theme = {
+                  selectedLineBgColor = {
+                    "black",
+                    "bold"
+                  },
+                  selectedRangeBgColor = {
+                    "green", 
+                    "bold"
+                  }
+                }
+              },
+              git = {
+                paging = {
+                  colorArg = "always",
+                  pager = "delta --dark --paging=never"
+                }
+              }
+            }
+          }
+        },
       },
       -- you can do any additional lsp server setup here
       -- return true if you don't want this server to be setup with lspconfig
@@ -205,6 +241,12 @@ return {
     end
 
     vim.diagnostic.config(vim.deepcopy(opts.diagnostics))
+    
+    -- Setup custom diagnostic deduplication for Rust
+    local ok, rust_diagnostics = pcall(require, "config.diagnostics")
+    if ok then
+      rust_diagnostics.setup()
+    end
 
     local servers = opts.servers
     local has_cmp, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")

@@ -26,8 +26,18 @@ vim.keymap.set('n', '<leader>o', '<C-i>', { noremap = true, desc = "Jump forward
 keymaps.set("n", "te", "tabedit")
 vim.api.nvim_set_keymap("n", "te", ":tabedit<CR>", opts)
 vim.api.nvim_set_keymap("n", "tq", ":tabclose<CR>", opts)
-keymaps.set("n", "<Tab>", ":tabnext<CR>", opts)
-keymaps.set("n", "<s-Tab>", ":tabprev<CR>", opts)
+-- Tab indentation keymaps for all modes
+-- Normal mode: Tab to indent, Shift+Tab to unindent
+keymaps.set("n", "<Tab>", ">>", opts)
+keymaps.set("n", "<S-Tab>", "<<", opts)
+
+-- Insert mode: Tab to indent, Shift+Tab to unindent
+keymaps.set("i", "<Tab>", "<C-t>", opts)
+keymaps.set("i", "<S-Tab>", "<C-d>", opts)
+
+-- Visual mode: Tab to indent selection, Shift+Tab to unindent selection
+keymaps.set("v", "<Tab>", ">gv", opts)
+keymaps.set("v", "<S-Tab>", "<gv", opts)
 
 -- Split window
 keymaps.set("n", "ss", ":split<Return>", opts)

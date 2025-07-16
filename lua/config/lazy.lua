@@ -231,10 +231,10 @@ require("lazy").setup({
           },
         },
         lsp = {
-          enabled = true,
-          actions = true,
-          completion = true,
-          hover = true,
+          enabled = false,  -- Disable to prevent duplicate rust-analyzer
+          actions = false,
+          completion = false,
+          hover = false,
         },
       },
     },
