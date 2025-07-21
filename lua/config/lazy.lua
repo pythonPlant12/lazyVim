@@ -238,6 +238,19 @@ require("lazy").setup({
         },
       },
     },
+    -- Vim bookmarks
+    {
+      "MattesGroeger/vim-bookmarks",
+      config = function()
+        vim.g.bookmark_sign = '⚑'
+        vim.g.bookmark_annotation_sign = '☰'
+        vim.g.bookmark_auto_save = 1
+        vim.g.bookmark_auto_close = 1
+        vim.g.bookmark_highlight_lines = 1
+        vim.g.bookmark_show_warning = 0
+        vim.g.bookmark_center = 1
+      end,
+    },
   },
   defaults = {
     -- By default, only LazyVim plugins will be lazy-loaded. Your custom plugins will load during startup.
