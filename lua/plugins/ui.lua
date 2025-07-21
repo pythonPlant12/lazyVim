@@ -76,4 +76,9 @@ return {
       },
     },
   },
+  -- Disable neoscroll plugin if it exists
+  {
+    "karb94/neoscroll.nvim",
+    enabled = false,
+  },
 }

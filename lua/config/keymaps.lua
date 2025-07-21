@@ -31,13 +31,52 @@ vim.api.nvim_set_keymap("n", "tq", ":tabclose<CR>", opts)
 keymaps.set("n", "<Tab>", ">>", opts)
 keymaps.set("n", "<S-Tab>", "<<", opts)
 
--- Insert mode: Tab to indent, Shift+Tab to unindent
-keymaps.set("i", "<Tab>", "<C-t>", opts)
-keymaps.set("i", "<S-Tab>", "<C-d>", opts)
+-- Insert mode: Force Shift+Tab to unindent (override completion plugin)
+keymaps.set("i", "<S-Tab>", "<C-d>", { noremap = true, silent = true })
 
 -- Visual mode: Tab to indent selection, Shift+Tab to unindent selection
 keymaps.set("v", "<Tab>", ">gv", opts)
 keymaps.set("v", "<S-Tab>", "<gv", opts)
+
+-- Fix delete key behavior in insert mode (works on both Linux and macOS)
+-- Map Delete key to delete character to the right of cursor
+
+-- Function to delete character to the right
+local function delete_char_right()
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local line = vim.api.nvim_get_current_line()
+  
+  if col < #line then
+    vim.api.nvim_buf_set_text(0, row - 1, col, row - 1, col + 1, {})
+  end
+end
+
+-- Comprehensive Delete key mapping for macOS and Linux
+-- Map all possible key codes that could be the "Delete" key
+
+-- Standard delete key codes
+keymaps.set("i", "<Del>", delete_char_right, { noremap = true, silent = true })
+keymaps.set("i", "<kDel>", delete_char_right, { noremap = true, silent = true })
+
+-- macOS specific combinations
+keymaps.set("i", "<D-BS>", delete_char_right, { noremap = true, silent = true })  -- Cmd + Backspace
+keymaps.set("i", "<M-BS>", delete_char_right, { noremap = true, silent = true })  -- Alt + Backspace
+keymaps.set("i", "<C-BS>", delete_char_right, { noremap = true, silent = true })  -- Ctrl + Backspace
+
+-- Terminal escape sequences
+keymaps.set("i", "<Esc>[3~", delete_char_right, { noremap = true, silent = true })
+keymaps.set("i", "<Esc>[P", delete_char_right, { noremap = true, silent = true })
+
+-- Alternative approach: use Ctrl+D as forward delete (common vim convention)
+keymaps.set("i", "<C-d>", delete_char_right, { noremap = true, silent = true })
+
+-- Test key to verify the function works
+keymaps.set("i", "<F9>", delete_char_right, { noremap = true, silent = true })  -- Test with F9
+
+-- LSP suggestion keymaps
+-- Shift+Leader to show LSP suggestions
+keymaps.set("n", "<S-Leader>", vim.lsp.buf.completion, { noremap = true, silent = true, desc = "Show LSP suggestions" })
+keymaps.set("i", "<S-Leader>", vim.lsp.buf.completion, { noremap = true, silent = true, desc = "Show LSP suggestions" })
 
 -- Split window
 keymaps.set("n", "ss", ":split<Return>", opts)
@@ -66,8 +105,6 @@ keymaps.set("n", "dd", '"_dd')
 keymaps.set("n", "dw", '"_dw')
 keymaps.set("n", "db", '"_db')
 
-keymaps.set("n", "j", "k")
-keymaps.set("n", "k", "j")
 
 -- Override "d" and its combinations to delete without yanking in visual mode
 keymaps.set("x", "d", '"_d')
@@ -108,12 +145,88 @@ vim.keymap.set('v', 'B', '^', { noremap = true })
 vim.keymap.set('n', 'W', '$', { noremap = true })
 vim.keymap.set('v', 'W', '$', { noremap = true })
 
--- Swap j and k for up and down 
-vim.keymap.set('n', 'j', 'k', { noremap = true })
-vim.keymap.set('v', 'j', 'k', { noremap = true })
+-- Swap j and k for up and down movement with end of line positioning
+-- But exclude special buffers like NeoTree, quickfix, etc.
+local function setup_navigation_keys()
+  -- Check if current buffer should use normal navigation
+  local function should_use_normal_nav()
+    local filetype = vim.bo.filetype
+    local buftype = vim.bo.buftype
+    
+    -- Exclude these filetypes from end-of-line navigation
+    local excluded_filetypes = {
+      'neo-tree',
+      'NvimTree',
+      'qf',
+      'quickfix',
+      'help',
+      'man',
+      'lspinfo',
+      'telescope',
+      'toggleterm',
+      'terminal',
+      'oil',
+      'alpha',
+      'dashboard',
+      'startify',
+      'fugitive',
+      'git',
+      'DiffviewFiles',
+      'DiffviewFileHistory',
+    }
+    
+    -- Exclude these buffer types
+    local excluded_buftypes = {
+      'quickfix',
+      'help',
+      'nofile',
+      'terminal',
+    }
+    
+    for _, ft in ipairs(excluded_filetypes) do
+      if filetype == ft then
+        return true
+      end
+    end
+    
+    for _, bt in ipairs(excluded_buftypes) do
+      if buftype == bt then
+        return true
+      end
+    end
+    
+    return false
+  end
+  
+  -- Set up the keymaps
+  if should_use_normal_nav() then
+    -- Use normal j/k navigation for special buffers
+    vim.keymap.set('n', 'j', 'k', { noremap = true, silent = true, buffer = true })
+    vim.keymap.set('v', 'j', 'k', { noremap = true, silent = true, buffer = true })
+    vim.keymap.set('n', 'k', 'j', { noremap = true, silent = true, buffer = true })
+    vim.keymap.set('v', 'k', 'j', { noremap = true, silent = true, buffer = true })
+    vim.keymap.set('n', '<Up>', 'k', { noremap = true, silent = true, buffer = true })
+    vim.keymap.set('v', '<Up>', 'k', { noremap = true, silent = true, buffer = true })
+    vim.keymap.set('n', '<Down>', 'j', { noremap = true, silent = true, buffer = true })
+    vim.keymap.set('v', '<Down>', 'j', { noremap = true, silent = true, buffer = true })
+  else
+    -- Use end-of-line navigation for regular text editing
+    vim.keymap.set('n', 'j', 'k$', { noremap = true, silent = true, buffer = true })
+    vim.keymap.set('v', 'j', 'k$', { noremap = true, silent = true, buffer = true })
+    vim.keymap.set('n', 'k', 'j$', { noremap = true, silent = true, buffer = true })
+    vim.keymap.set('v', 'k', 'j$', { noremap = true, silent = true, buffer = true })
+    vim.keymap.set('n', '<Up>', 'k$', { noremap = true, silent = true, buffer = true })
+    vim.keymap.set('v', '<Up>', 'k$', { noremap = true, silent = true, buffer = true })
+    vim.keymap.set('n', '<Down>', 'j$', { noremap = true, silent = true, buffer = true })
+    vim.keymap.set('v', '<Down>', 'j$', { noremap = true, silent = true, buffer = true })
+  end
+end
 
-vim.keymap.set('n', 'k', 'j', { noremap = true })
-vim.keymap.set('v', 'k', 'j', { noremap = true })
+-- Set up navigation keys when entering buffers
+vim.api.nvim_create_autocmd({ 'BufEnter', 'FileType' }, {
+  callback = setup_navigation_keys,
+})
+
 
 -- Swap j and k for up and down switching for window
 vim.keymap.set('n', '<C-w>j', '<C-w>k', { noremap = true })

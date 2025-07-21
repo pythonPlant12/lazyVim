@@ -31,19 +31,22 @@ return {
 
       opts.sources = cmp.config.sources(vim.list_extend(opts.sources, { { name = "emoji" } }))
       opts.mapping = vim.tbl_extend("force", opts.mapping, {
-        -- only accept the suggestion if it has been explicitly selected
-        ["<CR>"] = cmp.mapping.confirm({ select = false }),
+        -- Enter creates new line, Shift+Enter accepts suggestion
+        ["<CR>"] = cmp.mapping(function(fallback)
+          if cmp.visible() then
+            cmp.abort()
+          end
+          fallback()
+        end, { "i", "s" }),
+        ["<S-CR>"] = cmp.mapping.confirm({ select = true }),
         ["<Tab>"] = cmp.mapping(function(fallback)
           if cmp.visible() then
             cmp.select_next_item()
-            -- You could replace the expand_or_jumpable() calls with expand_or_locally_jumpable()
-            -- that way you will only jump inside the snippet region
           elseif luasnip.expand_or_jumpable() then
             luasnip.expand_or_jump()
-          elseif has_words_before() then
-            cmp.complete()
           else
-            fallback()
+            -- Default tab behavior for indentation
+            vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-t>", true, false, true), "n", false)
           end
         end, { "i", "s" }),
         ["<S-Tab>"] = cmp.mapping(function(fallback)
@@ -52,7 +55,9 @@ return {
           elseif luasnip.jumpable(-1) then
             luasnip.jump(-1)
           else
-            fallback()
+            -- Force unindentation behavior
+            local keys = vim.api.nvim_replace_termcodes("<C-d>", true, false, true)
+            vim.api.nvim_feedkeys(keys, "n", false)
           end
         end, { "i", "s" }),
       })
