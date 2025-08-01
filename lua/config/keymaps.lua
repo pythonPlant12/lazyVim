@@ -270,10 +270,15 @@ vim.keymap.set('n', '<C-w>z', function()
     end
 end, { noremap = true, silent = true, desc = 'Toggle window zoom' })
 
--- Format code with Prettier
+-- Format code with appropriate formatter
 vim.keymap.set('n', '<leader>fp', function()
-  vim.lsp.buf.format({ name = 'prettier' })
-end, { noremap = true, silent = true, desc = "Format with Prettier" })
+  local filetype = vim.bo.filetype
+  if filetype == 'python' then
+    vim.lsp.buf.format({ name = 'ruff' })
+  else
+    vim.lsp.buf.format({ name = 'prettier' })
+  end
+end, { noremap = true, silent = true, desc = "Format code" })
 
 -- Fix ESLint issues
 vim.keymap.set('n', '<leader>fe', function()
