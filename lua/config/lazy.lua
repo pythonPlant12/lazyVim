@@ -158,12 +158,18 @@ require("lazy").setup({
         -- Store the initial startup directory
         local startup_cwd = vim.fn.getcwd()
         
-        -- Bind <space><space> and <leader><leader> to Telescope find_files from startup directory
+        -- Bind <space><space> to Telescope find_files from startup directory
         vim.keymap.set("n", "<space><space>", function()
           require("telescope.builtin").find_files({ cwd = startup_cwd })
         end, { noremap = true, silent = true })
         
+        -- Bind <leader><leader> to Telescope find_files from startup directory
         vim.keymap.set("n", "<leader><leader>", function()
+          require("telescope.builtin").find_files({ cwd = startup_cwd })
+        end, { noremap = true, silent = true })
+        
+        -- Bind <leader>ff to Telescope find_files from startup directory
+        vim.keymap.set("n", "<leader>ff", function()
           require("telescope.builtin").find_files({ cwd = startup_cwd })
         end, { noremap = true, silent = true })
 
