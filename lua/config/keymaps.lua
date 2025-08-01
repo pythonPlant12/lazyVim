@@ -270,6 +270,24 @@ vim.keymap.set('n', '<C-w>z', function()
     end
 end, { noremap = true, silent = true, desc = 'Toggle window zoom' })
 
+-- Format code with Prettier
+vim.keymap.set('n', '<leader>fp', function()
+  vim.lsp.buf.format({ name = 'prettier' })
+end, { noremap = true, silent = true, desc = "Format with Prettier" })
+
+-- Fix ESLint issues
+vim.keymap.set('n', '<leader>fe', function()
+  vim.lsp.buf.code_action({
+    filter = function(action)
+      return action.kind and string.match(action.kind, "source.fixAll.eslint")
+    end,
+    apply = true
+  })
+end, { noremap = true, silent = true, desc = "Fix ESLint issues" })
+
+-- Ensure neo-tree toggle keymap (in case LazyVim default isn't working)
+vim.keymap.set('n', '<leader>e', '<cmd>Neotree toggle<cr>', { noremap = true, silent = true, desc = "Toggle Neo-tree" })
+
 vim.api.nvim_create_autocmd('FileType', {
     pattern = 'qf',
     callback = function()
