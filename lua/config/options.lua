@@ -9,6 +9,9 @@ vim.g.autoformat = false
 vim.g.lazyvim_python_lsp = "pyright"
 -- vim.g.lazyvim_python_ruff = "ruff_lsp"
 
+-- Disable all UI animations
+vim.g.snacks_animate = false
+
 -- Cursor configuration with colors
 vim.opt.guicursor = "n-v-c-sm:block-Cursor/lCursor,i-ci-ve:block-iCursor/lCursor,r-cr-o:block-rCursor/lCursor"
 
