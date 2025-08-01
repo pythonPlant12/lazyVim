@@ -255,6 +255,7 @@ vim.keymap.set('n', '<leader>gr', ':Gitsigns reset_hunk<CR>', { noremap = true, 
 vim.keymap.set('n', '<leader>gb', ':Gitsigns toggle_current_line_blame<CR>', { noremap = true, silent = true, desc = "Toggle git blame for current line" })
 vim.keymap.set('n', '<leader>gn', ':Gitsigns next_hunk<CR>', { noremap = true, silent = true, desc = "Next git hunk" })
 vim.keymap.set('n', '<leader>gP', ':Gitsigns prev_hunk<CR>', { noremap = true, silent = true, desc = "Previous git hunk" })
+vim.keymap.set('n', '<leader>gz', ':Gitsigns reset_hunk<CR>', { noremap = true, silent = true, desc = "Revert current git hunk" })
 
 vim.keymap.set('n', '<C-w>z', function()
     if vim.fn.exists('g:zoom_restored') == 0 or vim.g.zoom_restored == 0 then

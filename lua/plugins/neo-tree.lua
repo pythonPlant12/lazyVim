@@ -9,8 +9,6 @@ return {
       },
       follow_current_file = true,
       use_libuv_file_watcher = true,
-      -- Change the path here
-      root_dir = "./",
     },
     default_component_configs = {
       git_status = {
