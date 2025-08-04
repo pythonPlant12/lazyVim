@@ -306,24 +306,25 @@ vim.keymap.set('n', '<C-w>z', function()
     end
 end, { noremap = true, silent = true, desc = 'Toggle window zoom' })
 
--- Format code with appropriate formatter
-vim.keymap.set('n', '<leader>fp', function()
-  local filetype = vim.bo.filetype
-  if filetype == 'python' then
-    vim.lsp.buf.format({ name = 'ruff' })
-  else
-    vim.lsp.buf.format({ name = 'prettier' })
-  end
-end, { noremap = true, silent = true, desc = "Format code" })
-
--- Fix ESLint issues
+-- Fix ESLint issues with eslint_d
 vim.keymap.set('n', '<leader>fe', function()
-  vim.lsp.buf.code_action({
-    filter = function(action)
-      return action.kind and string.match(action.kind, "source.fixAll.eslint")
-    end,
-    apply = true
-  })
+  local filetype = vim.bo.filetype
+  local js_filetypes = { "javascript", "typescript", "javascriptreact", "typescriptreact" }
+  
+  if vim.tbl_contains(js_filetypes, filetype) then
+    -- Run eslint_d with --fix flag using full path
+    local filename = vim.fn.expand('%:p')
+    if filename and filename ~= '' then
+      local eslint_cmd = '/Users/nikitalutsai/.nvm/versions/node/v20.18.0/bin/eslint_d --fix ' .. vim.fn.shellescape(filename)
+      vim.fn.system(eslint_cmd)
+      vim.cmd('edit!') -- Reload the file to show changes
+      print("ESLint fixes applied")
+    else
+      print("No file to fix")
+    end
+  else
+    print("ESLint not available for this file type")
+  end
 end, { noremap = true, silent = true, desc = "Fix ESLint issues" })
 
 -- Ensure neo-tree toggle keymap (in case LazyVim default isn't working)
