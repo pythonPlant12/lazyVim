@@ -266,6 +266,11 @@ require("lazy").setup({
         vim.g.bookmark_center = 1
       end,
     },
+    -- Better quickfix window
+    {
+      "kevinhwang91/nvim-bqf",
+      ft = "qf",
+    },
   },
   defaults = {
     -- By default, only LazyVim plugins will be lazy-loaded. Your custom plugins will load during startup.

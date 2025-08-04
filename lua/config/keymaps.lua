@@ -74,9 +74,44 @@ keymaps.set("i", "<C-d>", delete_char_right, { noremap = true, silent = true })
 keymaps.set("i", "<F9>", delete_char_right, { noremap = true, silent = true })  -- Test with F9
 
 -- LSP suggestion keymaps
--- Shift+Leader to show LSP suggestions
-keymaps.set("n", "<S-Leader>", vim.lsp.buf.completion, { noremap = true, silent = true, desc = "Show LSP suggestions" })
-keymaps.set("i", "<S-Leader>", vim.lsp.buf.completion, { noremap = true, silent = true, desc = "Show LSP suggestions" })
+-- Trigger completion manually (works with blink.cmp)
+keymaps.set("i", "<C-n>", function()
+  -- Try blink.cmp first (LazyVim's default)
+  local ok, blink = pcall(require, 'blink.cmp')
+  if ok and blink then
+    if blink.is_visible() then
+      blink.select_next()
+    else
+      blink.show()
+    end
+  else
+    -- Try nvim-cmp as fallback
+    local ok2, cmp = pcall(require, 'cmp')
+    if ok2 and cmp then
+      if cmp.visible() then
+        cmp.select_next_item()
+      else
+        cmp.complete()
+      end
+    else
+      -- Final fallback to built-in completion
+      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-x><C-o>", true, false, true), "n", false)
+    end
+  end
+end, { noremap = true, silent = true, desc = "Show/navigate LSP suggestions" })
+
+-- Move lines up/down with Ctrl+Shift+Arrow keys
+-- Normal mode: move current line
+keymaps.set("n", "<C-S-Up>", ":m .-2<CR>==", { noremap = true, silent = true, desc = "Move line up" })
+keymaps.set("n", "<C-S-Down>", ":m .+1<CR>==", { noremap = true, silent = true, desc = "Move line down" })
+
+-- Visual mode: move selected lines
+keymaps.set("v", "<C-S-Up>", ":m '<-2<CR>gv=gv", { noremap = true, silent = true, desc = "Move selection up" })
+keymaps.set("v", "<C-S-Down>", ":m '>+1<CR>gv=gv", { noremap = true, silent = true, desc = "Move selection down" })
+
+-- Insert mode: move current line and stay in insert mode
+keymaps.set("i", "<C-S-Up>", "<Esc>:m .-2<CR>==gi", { noremap = true, silent = true, desc = "Move line up" })
+keymaps.set("i", "<C-S-Down>", "<Esc>:m .+1<CR>==gi", { noremap = true, silent = true, desc = "Move line down" })
 
 -- Split window
 keymaps.set("n", "ss", ":split<Return>", opts)
@@ -293,6 +328,9 @@ end, { noremap = true, silent = true, desc = "Fix ESLint issues" })
 
 -- Ensure neo-tree toggle keymap (in case LazyVim default isn't working)
 vim.keymap.set('n', '<leader>e', '<cmd>Neotree toggle<cr>', { noremap = true, silent = true, desc = "Toggle Neo-tree" })
+
+-- Open quickfix window
+vim.keymap.set('n', '<leader>qf', '<cmd>copen<cr>', { noremap = true, silent = true, desc = "Open quickfix window" })
 
 vim.api.nvim_create_autocmd('FileType', {
     pattern = 'qf',
