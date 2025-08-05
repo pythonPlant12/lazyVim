@@ -21,12 +21,77 @@ return {
         end,
         desc = "Toggle format on save globally",
       },
+      {
+        "<leader>fap",
+        function()
+          vim.g.prettier_on_save_enabled = not vim.g.prettier_on_save_enabled
+          local status = vim.g.prettier_on_save_enabled and "✅ ENABLED" or "❌ DISABLED"
+          local icon = vim.g.prettier_on_save_enabled and "🎨" or "🚫"
+          
+          -- Use custom notification if available, otherwise print
+          if _G.format_notify then
+            _G.format_notify(icon .. " Prettier on save " .. status .. " globally", "info")
+          else
+            print("🎨 Prettier on save " .. status .. " globally")
+          end
+          
+          -- Update statusline to show change
+          vim.cmd('redrawstatus')
+        end,
+        desc = "Toggle prettier format on save globally",
+      },
+      {
+        "<leader>far",
+        function()
+          vim.g.ruff_format_on_save_enabled = not vim.g.ruff_format_on_save_enabled
+          local status = vim.g.ruff_format_on_save_enabled and "✅ ENABLED" or "❌ DISABLED"
+          local icon = vim.g.ruff_format_on_save_enabled and "🐍" or "🚫"
+          
+          -- Use custom notification if available, otherwise print
+          if _G.format_notify then
+            _G.format_notify(icon .. " Ruff format on save " .. status .. " globally", "info")
+          else
+            print("🐍 Ruff format on save " .. status .. " globally")
+          end
+          
+          -- Update statusline to show change
+          vim.cmd('redrawstatus')
+        end,
+        desc = "Toggle ruff format on save globally",
+      },
+      {
+        "<leader>fa",
+        function()
+          local prettier_status = vim.g.prettier_on_save_enabled and "🎨 ✅" or "🎨 ❌"
+          local eslint_status = vim.g.eslint_fix_on_save_enabled and "🔧 ✅" or "🔧 ❌"
+          local ruff_status = vim.g.ruff_format_on_save_enabled and "🐍 ✅" or "🐍 ❌"
+          local format_status = vim.g.format_on_save_enabled and "📝 ✅" or "📝 ❌"
+          local lint_status = vim.g.lint_on_save_enabled and "🔍 ✅" or "🔍 ❌"
+          
+          local auto_save_ok, auto_save_config = pcall(require, "auto-save.config")
+          local autosave_status = (auto_save_ok and auto_save_config.opts.enabled) and "💾 ✅" or "💾 ❌"
+          
+          print("═══════════════════════════════════")
+          print("    🚀 AUTO FORMAT STATUS 🚀")
+          print("═══════════════════════════════════")
+          print("  " .. prettier_status .. "  <leader>fap - Prettier on save")
+          print("  " .. eslint_status .. "  <leader>fae - ESLint fix on save")
+          print("  " .. ruff_status .. "  <leader>far - Ruff format on save")
+          print("  " .. format_status .. "  <leader>fs  - Format on save (general)")
+          print("  " .. lint_status .. "  <leader>ls  - Lint on save")
+          print("  " .. autosave_status .. "  <leader>as  - Auto-save")
+          print("═══════════════════════════════════")
+        end,
+        desc = "Show auto format status and commands",
+      },
     },
     config = function()
       local conform = require("conform")
       
       -- Disable format on save by default
       vim.g.format_on_save_enabled = false
+      vim.g.prettier_on_save_enabled = false
+      vim.g.ruff_format_on_save_enabled = false
       
       conform.setup({
         formatters_by_ft = {
@@ -69,8 +134,18 @@ return {
           },
         },
         format_on_save = function(bufnr)
-          -- Check if format on save is globally enabled
-          if not vim.g.format_on_save_enabled then
+          local filetype = vim.bo[bufnr].filetype
+          
+          -- Check specific formatters first
+          if filetype == "python" and vim.g.ruff_format_on_save_enabled then
+            return {
+              timeout_ms = 500,
+              lsp_fallback = true,
+            }
+          end
+          
+          -- Check if format on save is globally enabled OR prettier is specifically enabled
+          if not vim.g.format_on_save_enabled and not vim.g.prettier_on_save_enabled then
             return
           end
           return {
@@ -94,12 +169,32 @@ return {
         end,
         desc = "Toggle lint on save globally",
       },
+      {
+        "<leader>fae",
+        function()
+          vim.g.eslint_fix_on_save_enabled = not vim.g.eslint_fix_on_save_enabled
+          local status = vim.g.eslint_fix_on_save_enabled and "✅ ENABLED" or "❌ DISABLED"
+          local icon = vim.g.eslint_fix_on_save_enabled and "🔧" or "🚫"
+          
+          -- Use custom notification if available, otherwise print
+          if _G.format_notify then
+            _G.format_notify(icon .. " ESLint fix on save " .. status .. " globally", "info")
+          else
+            print("🔧 ESLint fix on save " .. status .. " globally")
+          end
+          
+          -- Update statusline to show change
+          vim.cmd('redrawstatus')
+        end,
+        desc = "Toggle eslint fix on save globally",
+      },
     },
     config = function()
       local lint = require("lint")
       
       -- Disable lint on save by default
       vim.g.lint_on_save_enabled = false
+      vim.g.eslint_fix_on_save_enabled = false
       
       lint.linters_by_ft = {
         javascript = { "eslint_d" },
@@ -179,6 +274,23 @@ return {
       vim.api.nvim_create_autocmd({ "BufWritePost" }, {
         group = lint_augroup,
         callback = function()
+          local bufnr = vim.api.nvim_get_current_buf()
+          
+          -- Check if ESLint fix on save is enabled globally
+          if vim.g.eslint_fix_on_save_enabled then
+            local filetype = vim.bo[bufnr].filetype
+            local js_filetypes = { "javascript", "typescript", "javascriptreact", "typescriptreact" }
+            
+            if vim.tbl_contains(js_filetypes, filetype) then
+              local filename = vim.api.nvim_buf_get_name(bufnr)
+              if filename and filename ~= '' then
+                local eslint_cmd = '/Users/nikitalutsai/.nvm/versions/node/v20.18.0/bin/eslint_d --fix ' .. vim.fn.shellescape(filename)
+                vim.fn.system(eslint_cmd)
+                vim.cmd('edit!') -- Reload the file to show changes
+              end
+            end
+          end
+          
           -- Only lint if globally enabled
           if vim.g.lint_on_save_enabled then
             lint.try_lint()
