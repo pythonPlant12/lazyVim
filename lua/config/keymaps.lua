@@ -330,8 +330,17 @@ end, { noremap = true, silent = true, desc = "Fix ESLint issues" })
 -- Ensure neo-tree toggle keymap (in case LazyVim default isn't working)
 vim.keymap.set('n', '<leader>e', '<cmd>Neotree toggle<cr>', { noremap = true, silent = true, desc = "Toggle Neo-tree" })
 
--- Open quickfix window
-vim.keymap.set('n', '<leader>qf', '<cmd>copen<cr>', { noremap = true, silent = true, desc = "Open quickfix window" })
+-- Populate quickfix with all workspace diagnostics
+vim.keymap.set('n', '<leader>qfa', function()
+  vim.diagnostic.setqflist()
+  vim.cmd('copen')
+end, { noremap = true, silent = true, desc = "Open quickfix with all diagnostics" })
+
+-- Populate quickfix with current file diagnostics
+vim.keymap.set('n', '<leader>qff', function()
+  vim.diagnostic.setloclist()
+  vim.cmd('lopen')
+end, { noremap = true, silent = true, desc = "Open location list with file diagnostics" })
 
 vim.api.nvim_create_autocmd('FileType', {
     pattern = 'qf',
