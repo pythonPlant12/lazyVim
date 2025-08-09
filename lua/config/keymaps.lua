@@ -17,6 +17,13 @@ vim.keymap.set('n', '<CR>', 'o<Esc>')
 -- Add new line and move text from cursor to new line
 vim.keymap.set('n', '<S-CR>', 'i<CR><Esc>')
 
+-- Multiple reliable options for new line without accepting completions
+vim.keymap.set('i', '<M-CR>', '<CR>', { noremap = true, silent = true, desc = "Alt+Enter: New line" })
+vim.keymap.set('i', '<C-o>', '<C-e><CR>', { noremap = true, silent = true, desc = "Ctrl+O: Dismiss completion and new line" })
+vim.keymap.set('i', '<C-l>', '<C-e><CR>', { noremap = true, silent = true, desc = "Ctrl+L: Dismiss completion and new line" })
+
+
+
 -- When you press <leader>-i -> jump backwards (older position)
 -- When you press <leader>-o -> jump forwards (newer position)
 vim.keymap.set('n', '<leader>i', '<C-o>', { noremap = true, desc = "Jump backward" })

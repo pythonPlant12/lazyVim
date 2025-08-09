@@ -34,7 +34,7 @@ vim.cmd("highlight rCursor guifg=white guibg=#f75464")
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "rust",
   callback = function(ev)
-    -- Configure diagnostics specifically for Rust buffers
+    -- Configure diagnostics globally (not buffer-specific to avoid namespace issues)
     vim.diagnostic.config({
       virtual_text = {
         source = false, -- Don't show source name for cleaner display
@@ -53,6 +53,6 @@ vim.api.nvim_create_autocmd("FileType", {
       underline = true,
       update_in_insert = false,
       severity_sort = true,
-    }, ev.buf)
+    })
   end,
 })
