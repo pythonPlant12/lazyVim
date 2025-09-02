@@ -1,11 +1,20 @@
 return {
-    "nickkadutskyi/jb.nvim",
+    "rose-pine/neovim",
+    name = "rose-pine",
     lazy = false,
     priority = 1000,
-    opts = {},
     config = function()
-        -- require("jb").setup({transparent = true})
-        vim.cmd("colorscheme jb")
+        require("rose-pine").setup({
+            variant = "moon",
+            disable_background = false,
+            disable_float_background = false,
+            styles = {
+                bold = false,
+                italic = false,
+                transparency = false,
+            },
+        })
+        vim.cmd("colorscheme rose-pine-moon")
     end,
 }
 
