@@ -43,6 +43,7 @@ require("lazy").setup({
     { import = "lazyvim.plugins.extras.lang.rust" },
     { import = "lazyvim.plugins.extras.lang.tailwind" },
     { import = "lazyvim.plugins.extras.lang.python" },
+    { import = "lazyvim.plugins.extras.lang.vue" },
     -- import/override with your plugins
     { import = "plugins" },
     {
@@ -78,6 +79,7 @@ require("lazy").setup({
           "typescript",
           "vim",
           "vimdoc",
+          "vue",
           "yaml",
         },
         rainbow = {
@@ -270,6 +272,26 @@ require("lazy").setup({
     {
       "kevinhwang91/nvim-bqf",
       ft = "qf",
+    },
+    -- Grug-far configuration (disabled due to errors)
+    -- {
+    --   "MagicDuck/grug-far.nvim",
+    --   enabled = false,
+    -- },
+    -- Alternative: nvim-spectre for find and replace
+    {
+      "nvim-pack/nvim-spectre",
+      dependencies = {
+        "nvim-lua/plenary.nvim",
+      },
+      config = function()
+        require("spectre").setup()
+      end,
+      keys = {
+        { "<leader>S", '<cmd>lua require("spectre").toggle()<CR>', desc = "Toggle Spectre" },
+        { "<leader>sw", '<cmd>lua require("spectre").open_visual({select_word=true})<CR>', desc = "Search current word" },
+        { "<leader>sp", '<cmd>lua require("spectre").open_file_search({select_word=true})<CR>', desc = "Search on current file" },
+      },
     },
   },
   defaults = {
