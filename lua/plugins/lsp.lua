@@ -3,6 +3,7 @@ return {
   event = "LazyFile",
   dependencies = {
     "williamboman/mason.nvim",
+    "williamboman/mason-lspconfig.nvim",
   },
   opts = function()
     ---@class PluginLspOpts
@@ -133,33 +134,29 @@ return {
         rust_analyzer = {
           enabled = false,
         },
-        -- YAML Language Server with custom configuration
+        -- Disable vtsls since we use ts_ls for JS/TS files
+        vtsls = {
+          enabled = false,
+        },
+        -- YAML Language Server
         yamlls = {
           settings = {
             yaml = {
-              gui = {
-                expandFocusedSidePanel = true,
-                nerdFontsVersion = "3",
-                border = "rounded",
-                theme = {
-                  selectedLineBgColor = {
-                    "black",
-                    "bold"
-                  },
-                  selectedRangeBgColor = {
-                    "green", 
-                    "bold"
-                  }
-                }
+              schemaStore = {
+                -- Enable built-in schemaStore support
+                enable = true,
+                -- Avoid TypeError: Cannot read properties of undefined (reading 'length')
+                url = "",
               },
-              git = {
-                paging = {
-                  colorArg = "always",
-                  pager = "delta --dark --paging=never"
-                }
-              }
-            }
-          }
+              schemas = require('schemastore').yaml.schemas(),
+              validate = true,
+              format = {
+                enable = true,
+              },
+              hover = true,
+              completion = true,
+            },
+          },
         },
       },
       -- you can do any additional lsp server setup here

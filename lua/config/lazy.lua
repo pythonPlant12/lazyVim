@@ -331,3 +331,29 @@ vim.api.nvim_set_keymap(
   ':lua require("lazyvim.util.terminal").lazygit()<CR>',
   { noremap = true, silent = true }
 )
+
+-- Add serpl (search and replace) keybindings
+vim.keymap.set("n", "<leader>sr", function()
+  -- Search from the root where vim was opened
+  local startup_cwd = vim.fn.fnamemodify(vim.fn.argv()[1] or ".", ":p:h")
+  if vim.fn.isdirectory(startup_cwd) == 0 then
+    startup_cwd = vim.fn.getcwd()
+  end
+  LazyVim.terminal("serpl --project-root " .. vim.fn.shellescape(startup_cwd), { cwd = startup_cwd })
+end, { desc = "Search and Replace from root (serpl)" })
+
+vim.keymap.set("n", "<leader>sf", function()
+  -- Search only in current file, do nothing if no buffer is open
+  local current_file = vim.fn.expand("%:p")
+  if current_file == "" or vim.fn.filereadable(current_file) == 0 then
+    vim.notify("No file open in current buffer", vim.log.levels.WARN)
+    return
+  end
+  
+  -- Create a temporary directory with only the current file for serpl to search
+  local file_dir = vim.fn.fnamemodify(current_file, ":h")
+  local filename = vim.fn.fnamemodify(current_file, ":t")
+  
+  -- Use serpl with project root set to the file's directory
+  LazyVim.terminal("serpl --project-root " .. vim.fn.shellescape(file_dir), { cwd = file_dir })
+end, { desc = "Search in current file directory (serpl)" })

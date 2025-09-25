@@ -33,6 +33,16 @@ vim.g.lazyvim_scroll_animation = false
 vim.g.minianimate_scroll = false
 vim.g.snacks_scroll = false
 
+-- Terminal font configuration for GUI Neovim clients
+if vim.g.neovide then
+  vim.o.guifont = "JetBrainsMono NF Light:h15.5"
+  vim.g.neovide_font_size = 15.5
+  vim.g.neovide_letter_spacing = -0.7
+  vim.g.neovide_line_height = 1.0
+elseif vim.g.fvim_loaded then
+  vim.o.guifont = "JetBrainsMono NF Light:h15.5"
+end
+
 -- Force disable smooth scrolling in LazyVim
 vim.api.nvim_create_autocmd("VimEnter", {
   callback = function()
