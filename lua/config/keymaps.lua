@@ -25,6 +25,10 @@ vim.keymap.set(
   "<C-e><CR>",
   { noremap = true, silent = true, desc = "Ctrl+O: Dismiss completion and new line" }
 )
+
+-- Ctrl+O to create new line in normal and visual modes
+vim.keymap.set("n", "<C-o>", "o<Esc>", { noremap = true, silent = true, desc = "Ctrl+O: New line below" })
+vim.keymap.set("v", "<C-o>", "<Esc>o<Esc>", { noremap = true, silent = true, desc = "Ctrl+O: New line below" })
 vim.keymap.set(
   "i",
   "<C-l>",

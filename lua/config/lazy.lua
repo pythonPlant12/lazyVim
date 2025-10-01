@@ -160,19 +160,34 @@ require("lazy").setup({
         -- Store the initial startup directory
         local startup_cwd = vim.fn.getcwd()
         
-        -- Bind <space><space> to Telescope find_files from startup directory
+        -- Bind <space><space> to Telescope find_files from startup directory with hidden files
         vim.keymap.set("n", "<space><space>", function()
-          require("telescope.builtin").find_files({ cwd = startup_cwd })
+          require("telescope.builtin").find_files({ 
+            cwd = startup_cwd,
+            hidden = true,
+            no_ignore = false,
+            follow = true
+          })
         end, { noremap = true, silent = true })
         
-        -- Bind <leader><leader> to Telescope find_files from startup directory
+        -- Bind <leader><leader> to Telescope find_files from startup directory with hidden files
         vim.keymap.set("n", "<leader><leader>", function()
-          require("telescope.builtin").find_files({ cwd = startup_cwd })
+          require("telescope.builtin").find_files({ 
+            cwd = startup_cwd,
+            hidden = true,
+            no_ignore = false,
+            follow = true
+          })
         end, { noremap = true, silent = true })
         
-        -- Bind <leader>ff to Telescope find_files from startup directory
+        -- Bind <leader>ff to Telescope find_files from startup directory with hidden files
         vim.keymap.set("n", "<leader>ff", function()
-          require("telescope.builtin").find_files({ cwd = startup_cwd })
+          require("telescope.builtin").find_files({ 
+            cwd = startup_cwd,
+            hidden = true,
+            no_ignore = false,
+            follow = true
+          })
         end, { noremap = true, silent = true })
 
         -- Optional: Load project extension if using project.nvim
