@@ -143,12 +143,11 @@ return {
           settings = {
             yaml = {
               schemaStore = {
-                -- Enable built-in schemaStore support
-                enable = true,
-                -- Avoid TypeError: Cannot read properties of undefined (reading 'length')
+                -- Disable schemaStore to avoid network errors
+                enable = false,
                 url = "",
               },
-              schemas = require('schemastore').yaml.schemas(),
+              -- schemas = require('schemastore').yaml.schemas(), -- Disabled to avoid errors
               validate = true,
               format = {
                 enable = true,
