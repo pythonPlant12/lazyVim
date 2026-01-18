@@ -1,9 +1,10 @@
 {
   "extras": [
-
+    "lazyvim.plugins.extras.lang.typescript",
+    "lazyvim.plugins.extras.lang.vue"
   ],
   "news": {
-    "NEWS.md": "3314"
+    "NEWS.md": "11866"
   },
-  "version": 3
+  "version": 8
 }

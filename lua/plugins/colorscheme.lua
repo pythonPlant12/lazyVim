@@ -1,10 +1,22 @@
 return {
-  "craftzdog/solarized-osaka.nvim",
-  lazy = true,
-  priority = 1000,
-  opts = function()
-    return {
-      transparent = true,
-    }
-  end,
+  {
+    "rose-pine/neovim",
+    name = "rose-pine",
+    priority = 1000,
+    opts = {
+      variant = "auto",
+      dark_variant = "main",
+      styles = {
+        bold = false,
+        italic = false,
+        transparency = true,
+      },
+    },
+  },
+  {
+    "LazyVim/LazyVim",
+    opts = {
+      colorscheme = "rose-pine",
+    },
+  },
 }

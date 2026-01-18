@@ -35,3 +35,13 @@ keymaps.set("n", "<C-w><up>", "<C-w>-")
 keymaps.set("n", "<C-j>", function()
   vim.diagnostic.goto_next()
 end, opts)
+
+-- Hover (show definition/error)
+keymaps.set("n", "<leader>k", function()
+  vim.lsp.buf.hover()
+end, { desc = "Show hover information" })
+
+-- Show diagnostic error message
+keymaps.set("n", "<leader>K", function()
+  vim.diagnostic.open_float()
+end, { desc = "Show diagnostic message" })
