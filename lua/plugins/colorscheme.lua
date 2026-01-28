@@ -1,22 +1,19 @@
 return {
   {
-    "rose-pine/neovim",
-    name = "rose-pine",
-    priority = 1000,
+    "LazyVim/LazyVim",
     opts = {
-      variant = "auto",
-      dark_variant = "main",
-      styles = {
-        bold = false,
-        italic = false,
-        transparency = true,
-      },
+      colorscheme = "islands-dark",
     },
   },
   {
-    "LazyVim/LazyVim",
-    opts = {
-      colorscheme = "rose-pine",
-    },
+    "folke/snacks.nvim",
+    priority = 1000,
+    optional = true,
+    opts = function(_, opts)
+      opts = opts or {}
+      opts.styles = opts.styles or {}
+      opts.styles.transparency = false
+      return opts
+    end,
   },
 }
