@@ -54,6 +54,12 @@ keymaps.set("v", "D", '"_D', opts)
 keymaps.set("v", "x", '"_x', opts)
 keymaps.set("v", "s", '"_s', opts)
 
+-- Line navigation
+keymaps.set("n", "B", "^", { desc = "Go to beginning of line" })
+keymaps.set("n", "W", "$", { desc = "Go to end of line" })
+keymaps.set("v", "B", "^", { desc = "Go to beginning of line" })
+keymaps.set("v", "W", "$", { desc = "Go to end of line" })
+
 -- Hover (show definition/error)
 keymaps.set("n", "<leader>k", function()
   vim.lsp.buf.hover()
