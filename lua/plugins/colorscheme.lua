@@ -13,6 +13,8 @@ return {
       opts = opts or {}
       opts.styles = opts.styles or {}
       opts.styles.transparency = false
+      opts.scroll = opts.scroll or {}
+      opts.scroll.enabled = false
       return opts
     end,
   },
