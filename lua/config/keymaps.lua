@@ -13,6 +13,14 @@ keymaps.set("n", "<C-a>", "gg<S-v>G")
 
 -- Jumplist
 keymaps.set("n", "<C-m>", "<C-i>", opts)
+keymaps.set("n", "<C-i>", "<C-o>", opts)
+keymaps.set("n", "<C-o>", "<C-i>", opts)
+keymaps.set("n", "<D-i>", "<C-o>", opts)
+keymaps.set("n", "<D-o>", "<C-i>", opts)
+keymaps.set("n", "<leader>i", "<C-o>", opts)
+keymaps.set("n", "<leader>o", "<C-i>", opts)
+
+keymaps.set("n", "zc", "za", opts)
 
 -- New tab
 keymaps.set("n", "te", "tabedit")

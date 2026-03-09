@@ -9,12 +9,18 @@ return {
         "shellcheck",
         "shfmt",
         "tailwindcss-language-server",
-        "python-lsp-server",
       })
     end,
   },
   {
     "neovim/nvim-lspconfig",
+    opts = {
+      servers = {
+        pylsp = {
+          enabled = false,
+        },
+      },
+    },
     init = function()
       local max_width = math.floor(vim.o.columns * 0.5)
       local max_height = math.floor(vim.o.lines * 0.3)
