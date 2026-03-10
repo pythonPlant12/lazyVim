@@ -12,6 +12,26 @@ return {
       popup_border_style = "rounded",
       window = {
         position = "left",
+        mappings = {
+          ["<Left>"] = function(state)
+            local node = state.tree:get_node()
+            if node.type == "directory" and node:is_expanded() then
+              node:collapse()
+              require("neo-tree.ui.renderer").redraw(state)
+            else
+              local parent_id = node:get_parent_id()
+              if parent_id then
+                require("neo-tree.ui.renderer").focus_node(state, parent_id)
+              end
+            end
+          end,
+          ["<Right>"] = function(state)
+            local node = state.tree:get_node()
+            if node.type == "directory" and not node:is_expanded() then
+              require("neo-tree.sources.filesystem").toggle_directory(state, node)
+            end
+          end,
+        },
       },
       filesystem = {
         filtered_items = {
@@ -26,8 +46,6 @@ return {
   {
     "akinsho/bufferline.nvim",
     keys = {
-      { "<Tab>", "<Cmd>BuffeLineCycleNext<CR>", desc = "Next tab" },
-      { "<S-Tab>", "<Cmd>BuffeLineCyclePrev<CR>", desc = "Prev tab" },
     },
     opts = {
       options = {

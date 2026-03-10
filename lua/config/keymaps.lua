@@ -12,7 +12,6 @@ keymaps.set("n", "-", "C-x")
 keymaps.set("n", "<C-a>", "gg<S-v>G")
 
 -- Jumplist
-keymaps.set("n", "<C-m>", "<C-i>", opts)
 keymaps.set("n", "<C-i>", "<C-o>", opts)
 keymaps.set("n", "<C-o>", "<C-i>", opts)
 keymaps.set("n", "<D-i>", "<C-o>", opts)
@@ -26,8 +25,6 @@ keymaps.set("n", "zc", "za", opts)
 keymaps.set("n", "te", "tabedit")
 vim.api.nvim_set_keymap("n", "te", ":tabedit<CR>", opts)
 vim.api.nvim_set_keymap("n", "tq", ":tabclose<CR>", opts)
-keymaps.set("n", "<Tab>", ":tabnext<CR>", opts)
-keymaps.set("n", "<s-Tab>", ":tabprev<CR>", opts)
 
 -- Split window
 keymaps.set("n", "ss", ":split<Return>", opts)
@@ -40,9 +37,6 @@ keymaps.set("n", "<C-w><up>", "<C-w>+")
 keymaps.set("n", "<C-w><up>", "<C-w>-")
 
 -- Diagnostics
-keymaps.set("n", "<C-j>", function()
-  vim.diagnostic.goto_next()
-end, opts)
 
 -- Swap j/k (j=up, k=down)
 keymaps.set("n", "j", "k", opts)
@@ -110,5 +104,88 @@ keymaps.set("n", "<leader>fP", function()
   vim.notify("Copied: " .. abs, vim.log.levels.INFO, { title = "Path" })
 end, { desc = "Copy absolute path" })
 
-keymaps.set("n", "<C-k>", vim.lsp.buf.hover, { desc = "Show hover information" })
+keymaps.set("n", "<C-m>", vim.lsp.buf.hover, { desc = "Show hover information" })
 keymaps.set("i", "<C-n>", function() require("blink.cmp").show() end, { desc = "Show suggestions" })
+
+keymaps.set("n", "<leader>ce", function()
+  vim.lsp.buf.code_action({
+    apply = true,
+    context = { only = { "source.fixAll.eslint" }, diagnostics = {} },
+  })
+end, { desc = "ESLint fix file" })
+
+keymaps.set("n", "<C-j>", ":tabprev<CR>", { desc = "Previous tab" })
+keymaps.set("n", "<C-k>", ":tabnext<CR>", { desc = "Next tab" })
+
+local function move_buf_to_win(dir)
+  local buf = vim.api.nvim_get_current_buf()
+  local cur_win = vim.api.nvim_get_current_win()
+  vim.cmd("wincmd " .. dir)
+  local target_win = vim.api.nvim_get_current_win()
+  if target_win == cur_win then
+    vim.cmd(dir == "h" and "leftabove vsplit" or "rightbelow vsplit")
+    vim.cmd("wincmd " .. dir)
+    target_win = vim.api.nvim_get_current_win()
+  end
+  vim.api.nvim_win_set_buf(target_win, buf)
+  vim.api.nvim_set_current_win(cur_win)
+  local ok = pcall(vim.cmd, "bprevious")
+  if not ok or vim.api.nvim_get_current_buf() == buf then
+    vim.cmd("enew")
+  end
+  vim.api.nvim_set_current_win(target_win)
+end
+
+keymaps.set("n", "<C-h>", function() move_buf_to_win("h") end, { desc = "Move buffer to left window" })
+keymaps.set("n", "<C-l>", function() move_buf_to_win("l") end, { desc = "Move buffer to right window" })
+
+keymaps.set("n", "<C-w>z", function()
+  if vim.t.maximized then
+    vim.cmd("wincmd =")
+    vim.t.maximized = false
+  else
+    vim.cmd("wincmd _")
+    vim.cmd("wincmd |")
+    vim.t.maximized = true
+  end
+end, { desc = "Toggle maximize window" })
+
+keymaps.set("n", "<C-Tab>", function() Snacks.picker.buffers() end, { desc = "Find buffers" })
+keymaps.set("n", "<leader>bl", function() Snacks.picker.buffers() end, { desc = "Find buffers" })
+
+keymaps.set("n", "<Tab>", ">>", { desc = "Indent line" })
+keymaps.set("n", "<S-Tab>", "<<", { desc = "Unindent line" })
+keymaps.set("v", "<Tab>", ">gv", { desc = "Indent selection" })
+keymaps.set("v", "<S-Tab>", "<gv", { desc = "Unindent selection" })
+keymaps.set("i", "<Tab>", "<C-t>", { desc = "Indent" })
+keymaps.set("i", "<S-Tab>", "<C-d>", { desc = "Unindent" })
+keymaps.set("n", "<C-e>", vim.diagnostic.open_float, { desc = "Show line diagnostics" })
+
+-- Git (<C-g> chord — mirrors <leader>g* and .ideavimrc <C-g>* bindings)
+keymaps.set("n", "<C-g>g", function() Snacks.lazygit({ cwd = LazyVim.root.git() }) end, { desc = "Lazygit (root)" })
+keymaps.set("n", "<C-g>l", function() Snacks.picker.git_log({ cwd = LazyVim.root.git() }) end, { desc = "Git log (root)" })
+keymaps.set("n", "<C-g>L", function() Snacks.picker.git_log_line() end, { desc = "Git log line" })
+keymaps.set("n", "<C-g>s", function() Snacks.picker.git_status() end, { desc = "Git status" })
+keymaps.set("n", "<C-g>d", function() Snacks.picker.git_diff() end, { desc = "Git diff" })
+keymaps.set({ "n", "x" }, "<C-g>B", function() Snacks.gitbrowse() end, { desc = "Git browse" })
+keymaps.set("n", "<C-g>p", function() Snacks.terminal({ "git", "pull" }) end, { desc = "Git pull" })
+keymaps.set("n", "<C-g>P", function() Snacks.terminal({ "git", "push" }) end, { desc = "Git push" })
+keymaps.set("n", "<C-g>C", function() Snacks.lazygit() end, { desc = "Lazygit (commit)" })
+keymaps.set("n", "<C-g>c", function() Snacks.picker.git_branches() end, { desc = "Git branches" })
+keymaps.set("n", "<C-g>F", function() Snacks.terminal({ "git", "fetch" }) end, { desc = "Git fetch" })
+keymaps.set("n", "<C-g>ld", function() require("gitsigns").preview_hunk_inline() end, { desc = "Preview hunk inline" })
+keymaps.set("n", "<C-g>fd", function() require("gitsigns").diffthis() end, { desc = "Diff this" })
+keymaps.set("n", "<C-g>fh", function() Snacks.picker.git_log_file() end, { desc = "Git file history" })
+keymaps.set("n", "<C-g>lr", function() require("gitsigns").reset_hunk() end, { desc = "Revert line" })
+keymaps.set("n", "<C-g>fr", function() require("gitsigns").reset_buffer() end, { desc = "Revert file" })
+keymaps.set("n", "<C-g>fb", function() require("gitsigns").blame_line({ full = true }) end, { desc = "Blame line" })
+keymaps.set({ "n", "x" }, "<C-g>hs", ":Gitsigns stage_hunk<CR>", { desc = "Stage hunk" })
+keymaps.set("n", "<C-g>hS", function() require("gitsigns").stage_buffer() end, { desc = "Stage buffer" })
+keymaps.set("n", "<C-g>hu", function() require("gitsigns").undo_stage_hunk() end, { desc = "Undo stage hunk" })
+keymaps.set({ "n", "x" }, "<C-g>hr", ":Gitsigns reset_hunk<CR>", { desc = "Reset hunk" })
+keymaps.set("n", "<C-g>hR", function() require("gitsigns").reset_buffer() end, { desc = "Reset buffer" })
+keymaps.set("n", "<C-g>hp", function() require("gitsigns").preview_hunk_inline() end, { desc = "Preview hunk" })
+keymaps.set("n", "<C-g>hb", function() require("gitsigns").blame_line({ full = true }) end, { desc = "Blame line (full)" })
+keymaps.set("n", "<C-g>hB", function() require("gitsigns").blame() end, { desc = "Blame" })
+keymaps.set("n", "<C-g>hd", function() require("gitsigns").diffthis() end, { desc = "Diff this" })
+keymaps.set("n", "<C-g>hD", function() require("gitsigns").diffthis("~") end, { desc = "Diff this ~" })
