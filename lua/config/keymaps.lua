@@ -80,6 +80,7 @@ keymaps.set("n", "B", "^", { desc = "Go to beginning of line" })
 keymaps.set("n", "W", "$", { desc = "Go to end of line" })
 keymaps.set("v", "B", "^", { desc = "Go to beginning of line" })
 keymaps.set("v", "W", "$", { desc = "Go to end of line" })
+keymaps.set("n", "zc", "za", opts)
 
 -- Hover (show definition/error)
 keymaps.set("n", "<leader>k", function()
@@ -94,3 +95,17 @@ end, { desc = "Show diagnostic message" })
 -- Go to function definition
 keymaps.set("n", "<C-S-CR>", vim.lsp.buf.definition, { desc = "Go to definition" })
 keymaps.set("n", "<C-CR>", vim.lsp.buf.definition, { desc = "Go to definition" })
+
+keymaps.set("n", "<leader>fp", function()
+  local root = vim.fn.systemlist("git rev-parse --show-toplevel")[1]
+  if vim.v.shell_error ~= 0 then root = vim.fn.getcwd() end
+  local rel = vim.fn.expand("%:p"):sub(#root + 2)
+  vim.fn.setreg("+", rel)
+  vim.notify("Copied: " .. rel, vim.log.levels.INFO, { title = "Path" })
+end, { desc = "Copy path relative to project root" })
+
+keymaps.set("n", "<leader>fP", function()
+  local abs = vim.fn.expand("%:p")
+  vim.fn.setreg("+", abs)
+  vim.notify("Copied: " .. abs, vim.log.levels.INFO, { title = "Path" })
+end, { desc = "Copy absolute path" })
