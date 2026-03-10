@@ -109,3 +109,6 @@ keymaps.set("n", "<leader>fP", function()
   vim.fn.setreg("+", abs)
   vim.notify("Copied: " .. abs, vim.log.levels.INFO, { title = "Path" })
 end, { desc = "Copy absolute path" })
+
+keymaps.set("n", "<C-k>", vim.lsp.buf.hover, { desc = "Show hover information" })
+keymaps.set("i", "<C-n>", function() require("blink.cmp").show() end, { desc = "Show suggestions" })
