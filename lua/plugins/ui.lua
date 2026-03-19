@@ -35,6 +35,14 @@ return {
         [highlights.GIT_IGNORED]   = "NeoTreeGitIgnoredFolderName",
         [highlights.GIT_RENAMED]   = "NeoTreeGitRenamedFolderName",
         [highlights.GIT_STAGED]    = "NeoTreeGitAddedFolderName",
+        NeoTreeGitAdded            = "NeoTreeGitAddedFolderName",
+        NeoTreeGitUntracked        = "NeoTreeGitUntrackedFolderName",
+        NeoTreeGitModified         = "NeoTreeGitModifiedFolderName",
+        NeoTreeGitConflict         = "NeoTreeGitConflictFolderName",
+        NeoTreeGitDeleted          = "NeoTreeGitDeletedFolderName",
+        NeoTreeGitIgnored          = "NeoTreeGitIgnoredFolderName",
+        NeoTreeGitRenamed          = "NeoTreeGitRenamedFolderName",
+        NeoTreeGitStaged           = "NeoTreeGitAddedFolderName",
       }
 
       opts.popup_border_style = "rounded"

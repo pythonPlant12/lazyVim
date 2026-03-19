@@ -97,7 +97,7 @@ end
 --- @param markers string[]
 --- @return string
 local function nearest_root_by_markers(bufnr, markers)
-  local fname = vim.api.nvim_buf_get_name(bufnr)
+  local fname = type(bufnr) == "string" and bufnr or vim.api.nvim_buf_get_name(bufnr)
   local file_dir = dir_of(fname)
   local root = workspace_root()
 

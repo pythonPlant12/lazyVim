@@ -253,31 +253,37 @@ vim.schedule(function()
   require("which-key").add({ { "<leader>cF", group = "format" } })
 end)
 
-vim.schedule(function()
-  local to_del = {
-    { "n",          "<leader>gg" },
-    { "n",          "<leader>gG" },
-    { "n",          "<leader>gL" },
-    { "n",          "<leader>gb" },
-    { "n",          "<leader>gf" },
-    { { "n", "x" }, "<leader>gB" },
-    { { "n", "x" }, "<leader>gY" },
-  }
-  for _, m in ipairs(to_del) do
-    local modes = type(m[1]) == "table" and m[1] or { m[1] }
-    for _, mode in ipairs(modes) do
-      pcall(vim.keymap.del, mode, m[2])
-    end
-  end
-  keymaps.set("n", "<leader>gl", function()
-    vim.ui.input({ prompt = "Go to line: " }, function(input)
-      if input and input ~= "" then
-        local line = tonumber(input)
-        if line then vim.cmd(tostring(line)) end
+vim.api.nvim_create_autocmd("User", {
+  pattern = "VeryLazy",
+  once = true,
+  callback = function()
+    local to_del = {
+      { "n", "<leader>gg" },
+      { "n", "<leader>gG" },
+      { "n", "<leader>gL" },
+      { "n", "<leader>gb" },
+      { "n", "<leader>gf" },
+      { { "n", "x" }, "<leader>gB" },
+      { { "n", "x" }, "<leader>gY" },
+    }
+    for _, m in ipairs(to_del) do
+      local modes = type(m[1]) == "table" and m[1] or { m[1] }
+      for _, mode in ipairs(modes) do
+        pcall(vim.keymap.del, mode, m[2])
       end
-    end)
-  end, { desc = "Go to line" })
-end)
+    end
+    keymaps.set("n", "<leader>gl", function()
+      vim.ui.input({ prompt = "Go to line: " }, function(input)
+        if input and input ~= "" then
+          local line = tonumber(input)
+          if line then
+            vim.cmd(tostring(line))
+          end
+        end
+      end)
+    end, { desc = "Go to line" })
+  end,
+})
 
 keymaps.set("n", "<S-Up>",   "Vk", { desc = "Select line upward" })
 keymaps.set("n", "<S-Down>", "Vj", { desc = "Select line downward" })
