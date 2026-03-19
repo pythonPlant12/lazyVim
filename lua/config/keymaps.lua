@@ -123,6 +123,7 @@ end, { desc = "ESLint fix file" })
 
 keymaps.set("n", "<C-j>", ":tabprev<CR>", { desc = "Previous tab" })
 keymaps.set("n", "<C-k>", ":tabnext<CR>", { desc = "Next tab" })
+keymaps.set("n", "<leader><tab>q", ":tabclose<CR>", { desc = "Close tab" })
 
 local function move_buf_to_win(dir)
   local buf = vim.api.nvim_get_current_buf()
@@ -292,3 +293,13 @@ Snacks.toggle({
     vim.diagnostic.config({ virtual_text = enabled })
   end,
 }):map("<leader>ui")
+
+Snacks.toggle({
+  name = "Inlay Hints",
+  get = function()
+    return vim.lsp.inlay_hint.is_enabled({ bufnr = 0 })
+  end,
+  set = function(enabled)
+    vim.lsp.inlay_hint.enable(enabled, { bufnr = 0 })
+  end,
+}):map("<leader>up")

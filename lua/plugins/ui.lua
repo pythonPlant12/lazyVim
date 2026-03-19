@@ -23,43 +23,65 @@ return {
   -- neo-tree: always show hidden files
   {
     "nvim-neo-tree/neo-tree.nvim",
-    opts = {
-      popup_border_style = "rounded",
-      window = {
-        position = "left",
-        mappings = {
-          ["<Left>"] = function(state)
-            local node = state.tree:get_node()
-            if node.type == "directory" and node:is_expanded() then
-              node:collapse()
-              require("neo-tree.ui.renderer").redraw(state)
-            else
-              local parent_id = node:get_parent_id()
-              if parent_id then
-                require("neo-tree.ui.renderer").focus_node(state, parent_id)
-              end
-            end
-          end,
-          ["<Right>"] = function(state)
-            local node = state.tree:get_node()
-            if node.type == "directory" and not node:is_expanded() then
-              require("neo-tree.sources.filesystem").toggle_directory(state, node)
-            end
-          end,
-          ["<S-Left>"]  = "navigate_up",
-          ["<S-Right>"] = "set_root",
-        },
-      },
-      filesystem = {
-        filtered_items = {
-          visible = true,
-          hide_dotfiles = false,
-          hide_gitignored = false,
-        },
-        follow_current_file = { enabled = false },
-        bind_to_cwd = false,
-      },
-    },
+    opts = function(_, opts)
+      local highlights = require("neo-tree.ui.highlights")
+
+      local folder_hl_map = {
+        [highlights.GIT_ADDED]     = "NeoTreeGitAddedFolderName",
+        [highlights.GIT_UNTRACKED] = "NeoTreeGitUntrackedFolderName",
+        [highlights.GIT_MODIFIED]  = "NeoTreeGitModifiedFolderName",
+        [highlights.GIT_CONFLICT]  = "NeoTreeGitConflictFolderName",
+        [highlights.GIT_DELETED]   = "NeoTreeGitDeletedFolderName",
+        [highlights.GIT_IGNORED]   = "NeoTreeGitIgnoredFolderName",
+        [highlights.GIT_RENAMED]   = "NeoTreeGitRenamedFolderName",
+        [highlights.GIT_STAGED]    = "NeoTreeGitAddedFolderName",
+      }
+
+      opts.popup_border_style = "rounded"
+      opts.window = opts.window or {}
+      opts.window.position = "left"
+      opts.window.mappings = opts.window.mappings or {}
+      opts.window.mappings["<Left>"] = function(state)
+        local node = state.tree:get_node()
+        if node.type == "directory" and node:is_expanded() then
+          node:collapse()
+          require("neo-tree.ui.renderer").redraw(state)
+        else
+          local parent_id = node:get_parent_id()
+          if parent_id then
+            require("neo-tree.ui.renderer").focus_node(state, parent_id)
+          end
+        end
+      end
+      opts.window.mappings["<Right>"] = function(state)
+        local node = state.tree:get_node()
+        if node.type == "directory" and not node:is_expanded() then
+          require("neo-tree.sources.filesystem").toggle_directory(state, node)
+        end
+      end
+      opts.window.mappings["<S-Left>"]  = "navigate_up"
+      opts.window.mappings["<S-Right>"] = "set_root"
+
+      opts.filesystem = opts.filesystem or {}
+      opts.filesystem.filtered_items = {
+        visible = true,
+        hide_dotfiles = false,
+        hide_gitignored = false,
+      }
+      opts.filesystem.follow_current_file = { enabled = false }
+      opts.filesystem.bind_to_cwd = false
+
+      opts.components = opts.components or {}
+      opts.components.name = function(config, node, state)
+        local result = require("neo-tree.sources.common.components").name(config, node, state)
+        if node.type == "directory" and result.highlight then
+          result.highlight = folder_hl_map[result.highlight] or result.highlight
+        end
+        return result
+      end
+
+      return opts
+    end,
   },
   -- bufferline
   {
