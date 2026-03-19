@@ -320,7 +320,11 @@ return {
         end,
         settings = {
           format = true,
-          workingDirectory = { mode = "auto" },
+          -- "location" uses the file's own directory as the working directory,
+          -- avoiding the .gitignore walk that causes ENOENT on packages without
+          -- a .gitignore (e.g. packages/hub). Our eslint_root() already picks
+          -- the correct ESLint config root independently.
+          workingDirectory = { mode = "location" },
           onIgnoredFiles = "off",
         },
       }
