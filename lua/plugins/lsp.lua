@@ -220,6 +220,8 @@ return {
     opts = function(_, opts)
       opts = opts or {}
       opts.servers = opts.servers or {}
+      opts.diagnostics = opts.diagnostics or {}
+      opts.diagnostics.signs = false
 
       opts.servers.pylsp = { enabled = false }
       opts.servers.ts_ls = { enabled = false }

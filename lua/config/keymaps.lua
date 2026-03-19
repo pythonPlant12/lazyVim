@@ -222,7 +222,7 @@ keymaps.set("n", "N", function()
   end
 end, { desc = "Prev hunk / search prev" })
 
-LazyVim.format.snacks_toggle():map("<leader>cFf")
+keymaps.set("n", "<leader>se", function() require("trouble").toggle("workspace_diagnostics") end, { desc = "Workspace errors" })
 Snacks.toggle({
   name = "ESLint Auto-fix",
   get = function() return vim.g.eslint_autosave == nil or vim.g.eslint_autosave end,

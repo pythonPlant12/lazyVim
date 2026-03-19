@@ -4,6 +4,8 @@
 
 vim.o.smoothscroll = false
 
+vim.diagnostic.config({ signs = false })
+
 vim.g.root_spec = { "cwd" }
 
 -- Undercurl

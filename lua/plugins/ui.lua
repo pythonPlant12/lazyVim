@@ -70,6 +70,21 @@ return {
       opts.window.mappings["<S-Left>"]  = "navigate_up"
       opts.window.mappings["<S-Right>"] = "set_root"
 
+      opts.default_component_configs = opts.default_component_configs or {}
+      opts.default_component_configs.git_status = {
+        symbols = {
+          added     = "●",
+          modified  = "●",
+          deleted   = "●",
+          renamed   = "●",
+          untracked = "●",
+          ignored   = "",
+          unstaged  = "●",
+          staged    = "●",
+          conflict  = "●",
+        },
+      }
+
       opts.filesystem = opts.filesystem or {}
       opts.filesystem.filtered_items = {
         visible = true,
@@ -205,13 +220,33 @@ return {
     "nvim-lualine/lualine.nvim",
     event = "VeryLazy",
     opts = function(_, opts)
+      local mode_theme = {
+        normal   = { a = { fg = "#191A1C", bg = "#89b4fa", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#2B2D30" }, c = { fg = "#BCBEC4", bg = "#2B2D30" } },
+        insert   = { a = { fg = "#191A1C", bg = "#a6e3a1", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#2B2D30" } },
+        visual   = { a = { fg = "#191A1C", bg = "#B189F5", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#2B2D30" } },
+        replace  = { a = { fg = "#191A1C", bg = "#F75464", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#2B2D30" } },
+        command  = { a = { fg = "#191A1C", bg = "#D5B778", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#2B2D30" } },
+        inactive = { a = { fg = "#6F737A", bg = "#191A1C" }, b = { fg = "#6F737A", bg = "#191A1C" }, c = { fg = "#6F737A", bg = "#191A1C" } },
+      }
       opts.options = vim.tbl_extend("force", opts.options or {}, {
-        theme = "solarized_dark",
-        section_separators = { left = "", right = "" },
-        component_separators = { left = "", right = "" },
+        theme = mode_theme,
+        section_separators = { left = "", right = "" },
+        component_separators = { left = "", right = "" },
       })
       opts.sections = opts.sections or {}
       opts.sections.lualine_x = opts.sections.lualine_x or {}
+      opts.sections.lualine_b = {
+        {
+          function()
+            local branch = vim.b.gitsigns_head or vim.fn.system("git rev-parse --abbrev-ref HEAD 2>/dev/null"):gsub("\n", "")
+            if branch == "" or branch:find("fatal") then return "" end
+            return " " .. branch
+          end,
+          separator = { left = "", right = "" },
+          padding = { left = 0, right = 0 },
+          color = { fg = "#191A1C", bg = "#a6e3a1", gui = "bold" },
+        },
+      }
 
       local lsp_icons = {
         vtsls          = "󰛦 ",
@@ -252,7 +287,8 @@ return {
           end
           return table.concat(parts, "  ")
         end,
-        color = { fg = "#93a1a1" },
+        separator = { left = "", right = "" },
+        color = { fg = "#93a1a1", bg = "#45475a" },
         cond = function()
           local clients = vim.lsp.get_clients({ bufnr = 0 })
           for _, c in ipairs(clients) do
@@ -267,10 +303,11 @@ return {
           local fmt_active = vim.g.autoformat == nil or vim.g.autoformat
           return "󰉼 fmt" .. (fmt_active and " (A)" or "")
         end,
+        separator = { left = "", right = "" },
         color = function()
           return (vim.g.autoformat == nil or vim.g.autoformat)
-            and { fg = "#859900" }
-            or { fg = "#586e75" }
+            and { fg = "#a6e3a1", bg = "#45475a" }
+            or  { fg = "#586e75", bg = "#45475a" }
         end,
       })
 
@@ -281,13 +318,69 @@ return {
           if not eslint_attached then return "󰅪 eslint" end
           return "󰅪 eslint" .. (autosave_on and " (A)" or "")
         end,
+        separator = { left = "", right = "" },
         color = function()
           local eslint_attached = #vim.lsp.get_clients({ name = "eslint", bufnr = 0 }) > 0
           local autosave_on = vim.g.eslint_autosave == nil or vim.g.eslint_autosave
-          if not eslint_attached then return { fg = "#586e75" } end
-          return autosave_on and { fg = "#859900" } or { fg = "#93a1a1" }
+          if not eslint_attached then return { fg = "#586e75", bg = "#45475a" } end
+          return autosave_on and { fg = "#f9e2af", bg = "#45475a" } or { fg = "#93a1a1", bg = "#45475a" }
         end,
       })
+
+      opts.sections.lualine_z = {}
+
+      local function style_chip(component, bg)
+        local comp = component
+        if type(comp) == "function" then
+          comp = { comp }
+        end
+        if type(comp) == "string" then
+          comp = { comp }
+        end
+        if type(comp) ~= "table" then
+          return comp
+        end
+
+        local existing_color = comp.color
+        comp.separator = { left = "", right = "" }
+        comp.padding = comp.padding or { left = 1, right = 1 }
+        comp.color = function()
+          local color
+          if type(existing_color) == "function" then
+            color = existing_color() or {}
+          else
+            color = existing_color or {}
+          end
+          color.fg = color.fg or "#CED0D6"
+          color.bg = bg
+          return color
+        end
+
+        return comp
+      end
+
+      opts.sections.lualine_c = opts.sections.lualine_c or {}
+      local chip_bgs = { "#3A3D41", "#42464D", "#4A4F57" }
+      local chip_index = 1
+      for i, comp in ipairs(opts.sections.lualine_c) do
+        local head = type(comp) == "table" and comp[1] or comp
+        local is_path_like = type(head) == "function" or head == "filename"
+        if is_path_like then
+          local bg = chip_bgs[((chip_index - 1) % #chip_bgs) + 1]
+          opts.sections.lualine_c[i] = style_chip(comp, bg)
+          chip_index = chip_index + 1
+        end
+      end
+
+      -- Prettier path separator: ❯ instead of /
+      for _, comp in ipairs(opts.sections.lualine_c) do
+        if type(comp) == "table" and type(comp[1]) == "function" then
+          local original = comp[1]
+          comp[1] = function(self)
+            return (original(self) or ""):gsub("/", " ❯ ")
+          end
+        end
+      end
 
       return opts
     end,

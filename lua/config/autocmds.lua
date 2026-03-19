@@ -30,6 +30,19 @@ vim.api.nvim_create_autocmd("WinLeave", {
 
 local function apply_custom_hl()
   local hl = vim.api.nvim_set_hl
+
+  local function to_hex(color)
+    if not color then
+      return nil
+    end
+    return string.format("#%06x", color)
+  end
+
+  local visual = vim.api.nvim_get_hl(0, { name = "Visual", link = false })
+  local visual_bg = to_hex(visual.bg) or "#35538F"
+
+  hl(0, "Visual",                    { fg = "#CED0D6", bg = visual_bg })
+  hl(0, "VisualNOS",                 { fg = "#CED0D6", bg = visual_bg })
   hl(0, "LspReferenceText",            { bg = "#2a2d31" })
   hl(0, "LspReferenceRead",            { bg = "#2a2d31" })
   hl(0, "LspReferenceWrite",           { bg = "#2a2d31" })
@@ -37,6 +50,15 @@ local function apply_custom_hl()
   hl(0, "DiagnosticVirtualTextWarn",   { fg = "#aa9260" })
   hl(0, "DiagnosticVirtualTextInfo",   { fg = "#4487c4" })
   hl(0, "DiagnosticVirtualTextHint",   { fg = "#7a7e85" })
+
+  hl(0, "NeoTreeGitAdded",     { fg = "#a6e3a1" })
+  hl(0, "NeoTreeGitUntracked", { fg = "#a6e3a1" })
+  hl(0, "NeoTreeGitStaged",    { fg = "#a6e3a1" })
+  hl(0, "NeoTreeGitModified",  { fg = "#e5c07b" })
+  hl(0, "NeoTreeGitRenamed",   { fg = "#e5c07b" })
+  hl(0, "NeoTreeGitUnstaged",  { fg = "#e5c07b" })
+  hl(0, "NeoTreeGitDeleted",   { fg = "#f38ba8" })
+  hl(0, "NeoTreeGitConflict",  { fg = "#f38ba8" })
 end
 
 vim.api.nvim_create_autocmd("ColorScheme", {
