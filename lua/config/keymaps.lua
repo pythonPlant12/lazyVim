@@ -157,6 +157,9 @@ keymaps.set("n", "<C-w>z", function()
   end
 end, { desc = "Toggle maximize window" })
 
+keymaps.set("n", "<C-w>_", "<cmd>vsplit<CR>", { desc = "Split window vertically" })
+keymaps.set("n", "<C-w>-", "<cmd>split<CR>",  { desc = "Split window horizontally" })
+
 keymaps.set("n", "<C-Tab>", function() Snacks.picker.buffers() end, { desc = "Find buffers" })
 keymaps.set("n", "<leader>bl", function() Snacks.picker.buffers() end, { desc = "Find buffers" })
 
@@ -168,34 +171,55 @@ keymaps.set("i", "<Tab>", "<C-t>", { desc = "Indent" })
 keymaps.set("i", "<S-Tab>", "<C-d>", { desc = "Unindent" })
 keymaps.set("n", "<C-e>", vim.diagnostic.open_float, { desc = "Show line diagnostics" })
 
--- Git (<C-g> chord — mirrors <leader>g* and .ideavimrc <C-g>* bindings)
-keymaps.set("n", "<C-g>g", function() Snacks.lazygit({ cwd = LazyVim.root.git() }) end, { desc = "Lazygit (root)" })
-keymaps.set("n", "<C-g>l", function() Snacks.picker.git_log({ cwd = LazyVim.root.git() }) end, { desc = "Git log (root)" })
-keymaps.set("n", "<C-g>L", function() Snacks.picker.git_log_line() end, { desc = "Git log line" })
-keymaps.set("n", "<C-g>s", function() Snacks.picker.git_status() end, { desc = "Git status" })
-keymaps.set("n", "<C-g>d", function() Snacks.picker.git_diff() end, { desc = "Git diff" })
-keymaps.set({ "n", "x" }, "<C-g>B", function() Snacks.gitbrowse() end, { desc = "Git browse" })
-keymaps.set("n", "<C-g>p", function() Snacks.terminal({ "git", "pull" }) end, { desc = "Git pull" })
-keymaps.set("n", "<C-g>P", function() Snacks.terminal({ "git", "push" }) end, { desc = "Git push" })
-keymaps.set("n", "<C-g>C", function() Snacks.lazygit() end, { desc = "Lazygit (commit)" })
-keymaps.set("n", "<C-g>c", function() Snacks.picker.git_branches() end, { desc = "Git branches" })
-keymaps.set("n", "<C-g>F", function() Snacks.terminal({ "git", "fetch" }) end, { desc = "Git fetch" })
-keymaps.set("n", "<C-g>ld", function() require("gitsigns").preview_hunk_inline() end, { desc = "Preview hunk inline" })
-keymaps.set("n", "<C-g>fd", function() require("gitsigns").diffthis() end, { desc = "Diff this" })
-keymaps.set("n", "<C-g>fh", function() Snacks.picker.git_log_file() end, { desc = "Git file history" })
-keymaps.set("n", "<C-g>lr", function() require("gitsigns").reset_hunk() end, { desc = "Revert line" })
-keymaps.set("n", "<C-g>fr", function() require("gitsigns").reset_buffer() end, { desc = "Revert file" })
-keymaps.set("n", "<C-g>fb", function() require("gitsigns").blame_line({ full = true }) end, { desc = "Blame line" })
-keymaps.set({ "n", "x" }, "<C-g>hs", ":Gitsigns stage_hunk<CR>", { desc = "Stage hunk" })
-keymaps.set("n", "<C-g>hS", function() require("gitsigns").stage_buffer() end, { desc = "Stage buffer" })
-keymaps.set("n", "<C-g>hu", function() require("gitsigns").undo_stage_hunk() end, { desc = "Undo stage hunk" })
-keymaps.set({ "n", "x" }, "<C-g>hr", ":Gitsigns reset_hunk<CR>", { desc = "Reset hunk" })
-keymaps.set("n", "<C-g>hR", function() require("gitsigns").reset_buffer() end, { desc = "Reset buffer" })
-keymaps.set("n", "<C-g>hp", function() require("gitsigns").preview_hunk_inline() end, { desc = "Preview hunk" })
-keymaps.set("n", "<C-g>hb", function() require("gitsigns").blame_line({ full = true }) end, { desc = "Blame line (full)" })
-keymaps.set("n", "<C-g>hB", function() require("gitsigns").blame() end, { desc = "Blame" })
-keymaps.set("n", "<C-g>hd", function() require("gitsigns").diffthis() end, { desc = "Diff this" })
-keymaps.set("n", "<C-g>hD", function() require("gitsigns").diffthis("~") end, { desc = "Diff this ~" })
+
+
+keymaps.set("n", "<C-w>j", "<C-w>k", opts)
+keymaps.set("n", "<C-w>k", "<C-w>j", opts)
+
+-- Git (<C-g>)
+keymaps.set("n", "<C-g>g",  function() Snacks.lazygit({ cwd = LazyVim.root.git() }) end, { desc = "Lazygit" })
+keymaps.set("n", "<C-g>l",  "<Nop>", opts)
+keymaps.set("n", "<C-g>h",  function() Snacks.picker.git_log({ cwd = LazyVim.root.git() }) end, { desc = "Git history" })
+keymaps.set("n", "<C-g>s",  function() Snacks.picker.git_status() end, { desc = "Git status" })
+keymaps.set("n", "<C-g>d",  function() Snacks.picker.git_diff() end, { desc = "Git diff" })
+keymaps.set("n", "<C-g>ld", function() require("gitsigns").preview_hunk_inline() end, { desc = "Line diff" })
+keymaps.set("n", "<C-g>lh", function() Snacks.picker.git_log_line() end, { desc = "Line history" })
+keymaps.set("n", "<C-g>lr", function() require("gitsigns").reset_hunk() end, { desc = "Revert line/hunk to HEAD" })
+keymaps.set("n", "<C-g>fd", function() require("gitsigns").diffthis() end, { desc = "File diff" })
+keymaps.set("n", "<C-g>fq", function()
+  if not vim.wo.diff then return end
+  local cur_win = vim.api.nvim_get_current_win()
+  for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if w ~= cur_win and vim.wo[w].diff then
+      pcall(vim.api.nvim_win_close, w, false)
+    end
+  end
+  vim.cmd("diffoff!")
+end, { desc = "Close file diff" })
+keymaps.set("n", "<C-g>fh", function() Snacks.picker.git_log_file() end, { desc = "File history" })
+keymaps.set("n", "<C-g>fr", function() require("gitsigns").reset_buffer() end, { desc = "Revert file to HEAD" })
+
+local ns_inline = vim.api.nvim_create_namespace("gitsigns_preview_inline")
+
+local function has_inline_preview()
+  local bufnr = vim.api.nvim_get_current_buf()
+  return #vim.api.nvim_buf_get_extmarks(bufnr, ns_inline, 0, -1, { limit = 1 }) > 0
+end
+
+keymaps.set("n", "n", function()
+  if has_inline_preview() then
+    require("gitsigns").nav_hunk("next")
+  else
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("n", true, false, true), "n", false)
+  end
+end, { desc = "Next hunk / search next" })
+keymaps.set("n", "N", function()
+  if has_inline_preview() then
+    require("gitsigns").nav_hunk("prev")
+  else
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("N", true, false, true), "n", false)
+  end
+end, { desc = "Prev hunk / search prev" })
 
 LazyVim.format.snacks_toggle():map("<leader>cFf")
 Snacks.toggle({
@@ -227,3 +251,44 @@ end, { desc = "Choose formatter" })
 vim.schedule(function()
   require("which-key").add({ { "<leader>cF", group = "format" } })
 end)
+
+vim.schedule(function()
+  local to_del = {
+    { "n",          "<leader>gg" },
+    { "n",          "<leader>gG" },
+    { "n",          "<leader>gL" },
+    { "n",          "<leader>gb" },
+    { "n",          "<leader>gf" },
+    { { "n", "x" }, "<leader>gB" },
+    { { "n", "x" }, "<leader>gY" },
+  }
+  for _, m in ipairs(to_del) do
+    local modes = type(m[1]) == "table" and m[1] or { m[1] }
+    for _, mode in ipairs(modes) do
+      pcall(vim.keymap.del, mode, m[2])
+    end
+  end
+  keymaps.set("n", "<leader>gl", function()
+    vim.ui.input({ prompt = "Go to line: " }, function(input)
+      if input and input ~= "" then
+        local line = tonumber(input)
+        if line then vim.cmd(tostring(line)) end
+      end
+    end)
+  end, { desc = "Go to line" })
+end)
+
+keymaps.set("n", "<S-Up>",   "Vk", { desc = "Select line upward" })
+keymaps.set("n", "<S-Down>", "Vj", { desc = "Select line downward" })
+keymaps.set("v", "<S-Up>",   "k",  { desc = "Extend selection up" })
+keymaps.set("v", "<S-Down>", "j",  { desc = "Extend selection down" })
+
+Snacks.toggle({
+  name = "Inline Diagnostics",
+  get = function()
+    return vim.diagnostic.config().virtual_text ~= false
+  end,
+  set = function(enabled)
+    vim.diagnostic.config({ virtual_text = enabled })
+  end,
+}):map("<leader>ui")

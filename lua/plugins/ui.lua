@@ -1,4 +1,19 @@
+local function remove_gl_key(_, keys)
+  return vim.tbl_filter(function(k)
+    local lhs = type(k) == "string" and k or k[1]
+    return lhs ~= "<leader>gl"
+  end, keys)
+end
+
 return {
+  {
+    "nvim-telescope/telescope.nvim",
+    keys = remove_gl_key,
+  },
+  {
+    "ibhagwan/fzf-lua",
+    keys = remove_gl_key,
+  },
   {
     "LazyVim/LazyVim",
     init = function()
@@ -116,6 +131,18 @@ return {
     opts = {
       win = {
         border = "rounded",
+      },
+      spec = {
+        { "<leader>g",   group = nil },
+        { "<leader>gh",  group = nil },
+        { "<leader>gg",  hidden = true },
+        { "<leader>gG",  hidden = true },
+        { "<leader>gL",  hidden = true },
+        { "<leader>gb",  hidden = true },
+        { "<leader>gf",  hidden = true },
+        { "<leader>gB",  hidden = true },
+        { "<leader>gY",  hidden = true },
+        { "<leader>gl",  desc = "Go to line" },
       },
     },
   },
