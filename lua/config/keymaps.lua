@@ -70,9 +70,16 @@ keymaps.set("v", "x", '"_x', opts)
 keymaps.set("v", "s", '"_s', opts)
 
 -- Line navigation
-keymaps.set("n", "B", "^", { desc = "Go to beginning of line" })
+keymaps.set({ "n", "v" }, "B", function()
+  local col = vim.fn.col(".")
+  local first_nonblank = vim.fn.indent(".") + 1
+  if col == first_nonblank then
+    vim.cmd("normal! 0")
+  else
+    vim.cmd("normal! ^")
+  end
+end, { desc = "Go to beginning of line (toggle ^/0)" })
 keymaps.set("n", "W", "$", { desc = "Go to end of line" })
-keymaps.set("v", "B", "^", { desc = "Go to beginning of line" })
 keymaps.set("v", "W", "$", { desc = "Go to end of line" })
 keymaps.set("n", "zc", "za", opts)
 
@@ -189,3 +196,34 @@ keymaps.set("n", "<C-g>hb", function() require("gitsigns").blame_line({ full = t
 keymaps.set("n", "<C-g>hB", function() require("gitsigns").blame() end, { desc = "Blame" })
 keymaps.set("n", "<C-g>hd", function() require("gitsigns").diffthis() end, { desc = "Diff this" })
 keymaps.set("n", "<C-g>hD", function() require("gitsigns").diffthis("~") end, { desc = "Diff this ~" })
+
+LazyVim.format.snacks_toggle():map("<leader>cFf")
+Snacks.toggle({
+  name = "ESLint Auto-fix",
+  get = function() return vim.g.eslint_autosave == nil or vim.g.eslint_autosave end,
+  set = function(state) vim.g.eslint_autosave = state end,
+}):map("<leader>cFe")
+keymaps.set("n", "<C-b>", "<Nop>", opts)
+keymaps.set("n", "<C-b>b", "<cmd>BookmarksMark<cr>", { desc = "Toggle bookmark" })
+keymaps.set("n", "<C-b>l", "<cmd>BookmarksGoto<cr>", { desc = "List bookmarks" })
+keymaps.set("n", "<leader>cFc", function()
+  local conform = require("conform")
+  local formatters = conform.list_formatters(0)
+  local available = vim.tbl_filter(function(f) return f.available end, formatters)
+  if #available == 0 then
+    vim.notify("No formatters available for " .. vim.bo.filetype, vim.log.levels.WARN, { title = "Format" })
+    return
+  end
+  vim.ui.select(available, {
+    prompt = "Format with:",
+    format_item = function(f) return f.name end,
+  }, function(choice)
+    if choice then
+      conform.format({ formatters = { choice.name }, async = false, lsp_fallback = false })
+    end
+  end)
+end, { desc = "Choose formatter" })
+
+vim.schedule(function()
+  require("which-key").add({ { "<leader>cF", group = "format" } })
+end)

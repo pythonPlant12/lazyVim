@@ -143,12 +143,35 @@ return {
   {
     "nvim-lualine/lualine.nvim",
     event = "VeryLazy",
-    opts = {
-      options = {
+    opts = function(_, opts)
+      opts.options = vim.tbl_extend("force", opts.options or {}, {
         theme = "solarized_dark",
-        section_separators = { left = "", right = "" },
-        component_separators = { left = "", right = "" },
-      },
-    },
+        section_separators = { left = "", right = "" },
+        component_separators = { left = "", right = "" },
+      })
+      opts.sections = opts.sections or {}
+      opts.sections.lualine_x = opts.sections.lualine_x or {}
+      table.insert(opts.sections.lualine_x, {
+        function()
+          return "fmt"
+        end,
+        color = function()
+          return (vim.g.autoformat == nil or vim.g.autoformat)
+            and { fg = "#859900" }
+            or { fg = "#586e75" }
+        end,
+      })
+      table.insert(opts.sections.lualine_x, {
+        function()
+          return "eslint"
+        end,
+        color = function()
+          return (vim.g.eslint_autosave == nil or vim.g.eslint_autosave)
+            and { fg = "#859900" }
+            or { fg = "#586e75" }
+        end,
+      })
+      return opts
+    end,
   },
 }

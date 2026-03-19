@@ -19,6 +19,27 @@ return {
         pylsp = {
           enabled = false,
         },
+        eslint = {
+          settings = {
+            format = true,
+          },
+        },
+        vtsls = {
+          filetypes = {
+            "javascript",
+            "javascriptreact",
+            "javascript.jsx",
+            "typescript",
+            "typescriptreact",
+            "typescript.tsx",
+            "html",
+          },
+          on_attach = function(client, bufnr)
+            if vim.bo[bufnr].filetype == "html" then
+              client.server_capabilities.documentHighlightProvider = false
+            end
+          end,
+        },
       },
     },
     init = function()
