@@ -70,6 +70,10 @@ local function apply_custom_hl()
   hl(0, "@variable.builtin",                    { fg = "#C77DBB" })
   hl(0, "@lsp.typemod.variable.self",           { fg = "#C77DBB" })
 
+  hl(0, "@constructor",                         { fg = "#f9e2af" })
+  hl(0, "@lsp.type.class",                      { fg = "#f9e2af" })
+  hl(0, "@lsp.typemod.class.callable",          { fg = "#f9e2af" })
+
   hl(0, "BlinkCmpKindMethod",        { fg = "#cba6f7" })
   hl(0, "BlinkCmpKindFunction",      { fg = "#cba6f7" })
   hl(0, "BlinkCmpKindConstructor",   { fg = "#f5c2e7" })
