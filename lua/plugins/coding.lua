@@ -26,34 +26,6 @@ return {
   {
     "saghen/blink.cmp",
     opts = function(_, opts)
-      opts.appearance = opts.appearance or {}
-      opts.appearance.kind_icons = vim.tbl_extend("force", opts.appearance.kind_icons or {}, {
-        Text          = "󰉿 ",
-        Method        = "󰆧 ",
-        Function      = "󰊕 ",
-        Constructor   = "󰊓 ",
-        Field         = "󰜢 ",
-        Variable      = "󰆦 ",
-        Class         = "󰠱 ",
-        Interface     = "󰜰 ",
-        Module        = "󰅩 ",
-        Property      = "󰓹 ",
-        Unit          = "󰑭 ",
-        Value         = "󰎠 ",
-        Enum          = "󰍜 ",
-        Keyword       = "󰌋 ",
-        Snippet       = "󰅧 ",
-        Color         = "󰏘 ",
-        File          = "󰈙 ",
-        Reference     = "󰈇 ",
-        Folder        = "󰉋 ",
-        EnumMember    = "󰲣 ",
-        Constant      = "󰏿 ",
-        Struct        = "󰙅 ",
-        Event         = "󰑧 ",
-        Operator      = "󰆕 ",
-        TypeParameter = "󰬛 ",
-      })
       opts.sources = opts.sources or {}
       opts.sources.transform_items = function(_, items)
         for _, item in ipairs(items) do
