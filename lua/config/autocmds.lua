@@ -31,18 +31,10 @@ vim.api.nvim_create_autocmd("WinLeave", {
 local function apply_custom_hl()
   local hl = vim.api.nvim_set_hl
 
-  local function to_hex(color)
-    if not color then
-      return nil
-    end
-    return string.format("#%06x", color)
-  end
-
-  local visual = vim.api.nvim_get_hl(0, { name = "Visual", link = false })
-  local visual_bg = to_hex(visual.bg) or "#35538F"
-
-  hl(0, "Visual",                    { fg = "#CED0D6", bg = visual_bg })
-  hl(0, "VisualNOS",                 { fg = "#CED0D6", bg = visual_bg })
+  hl(0, "Visual",                    { bg = "#45475a" })
+  hl(0, "VisualNOS",                 { bg = "#45475a" })
+  hl(0, "PmenuSel",                  { bg = "#45475a" })
+  hl(0, "BlinkCmpMenuSelection",     { bg = "#45475a" })
   hl(0, "LspReferenceText",            { bg = "#2a2d31" })
   hl(0, "LspReferenceRead",            { bg = "#2a2d31" })
   hl(0, "LspReferenceWrite",           { bg = "#2a2d31" })
