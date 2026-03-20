@@ -8,9 +8,12 @@ This Neovim config uses LazyVim with custom frontend LSP root logic.
 - `vue_ls`: Vue single-file component language server (works together with `vtsls`)
 - `eslint`: ESLint language server for lint diagnostics and fixes
 
-Implementation location:
+Implementation locations:
 
-- `lua/plugins/lsp.lua`
+- `lua/plugins/lsp.lua` (generic LSP behavior + `:CheckLsp` command)
+- `lua/plugins/lsp-frontend.lua` (JS/TS/Vue + ESLint)
+- `lua/plugins/lsp-backend.lua` (Python + Ruff + Pyright/BasedPyright)
+- `lua/config/lsp_resolver.lua` (shared root and fallback logic)
 
 ## How root resolution works
 
