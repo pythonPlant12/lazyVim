@@ -33,7 +33,7 @@ return {
         Function      = "󰊕 ",
         Constructor   = "󰊓 ",
         Field         = "󰜢 ",
-        Variable      = "󰀫 ",
+        Variable      = "󰭨 ",
         Class         = "󰠱 ",
         Interface     = "󰜰 ",
         Module        = "󰅩 ",
@@ -54,6 +54,16 @@ return {
         Operator      = "󰆕 ",
         TypeParameter = "󰬛 ",
       })
+      opts.sources = opts.sources or {}
+      opts.sources.transform_items = function(_, items)
+        for _, item in ipairs(items) do
+          item.kind_icon = nil
+          if item.kind == 4 then
+            item.kind = 7
+          end
+        end
+        return items
+      end
     end,
   },
 }
