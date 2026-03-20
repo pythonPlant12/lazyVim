@@ -23,4 +23,37 @@ return {
       },
     },
   },
+  {
+    "saghen/blink.cmp",
+    opts = function(_, opts)
+      opts.appearance = opts.appearance or {}
+      opts.appearance.kind_icons = vim.tbl_extend("force", opts.appearance.kind_icons or {}, {
+        Text          = "󰉿 ",
+        Method        = "󰊕 ",
+        Function      = "󰊕 ",
+        Constructor   = "󰊓 ",
+        Field         = "󰣗 ",
+        Variable      = "󰢟 ",
+        Class         = "󰻷 ",
+        Interface     = "󰜰 ",
+        Module        = "󰅩 ",
+        Property      = "󰖷 ",
+        Unit          = "󰪚 ",
+        Value         = "󰦨 ",
+        Enum          = "󰦨 ",
+        Keyword       = "󰻾 ",
+        Snippet       = "󰱻 ",
+        Color         = "󰝥 ",
+        File          = "󰈔 ",
+        Reference     = "󰬲 ",
+        Folder        = "󰉋 ",
+        EnumMember    = "󰘱 ",
+        Constant      = "󰌇 ",
+        Struct        = "󰆼 ",
+        Event         = "󰑧 ",
+        Operator      = "󰬢 ",
+        TypeParameter = "󰬛 ",
+      })
+    end,
+  },
 }

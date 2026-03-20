@@ -23,6 +23,22 @@ return {
   -- neo-tree: always show hidden files
   {
     "nvim-neo-tree/neo-tree.nvim",
+    keys = {
+      {
+        "<leader>e",
+        function()
+          require("neo-tree.command").execute({ toggle = true, reveal = true, dir = LazyVim.root() })
+        end,
+        desc = "Explorer NeoTree (reveal current file)",
+      },
+      {
+        "<leader>fe",
+        function()
+          require("neo-tree.command").execute({ toggle = true, reveal = true, dir = LazyVim.root() })
+        end,
+        desc = "Explorer NeoTree (reveal current file)",
+      },
+    },
     opts = function(_, opts)
       local highlights = require("neo-tree.ui.highlights")
 
@@ -118,6 +134,7 @@ return {
         show_buffer_close_icons = false,
         show_close_icon = false,
         indicator = { style = "none" },
+        diagnostics = false,
       },
       highlights = {
         fill                   = { bg = "#1e1e2e" },
@@ -343,6 +360,7 @@ return {
       })
 
       opts.sections.lualine_z = {}
+      opts.sections.lualine_y = {}
 
       local function style_chip(component, bg)
         local comp = component

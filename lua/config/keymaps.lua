@@ -290,6 +290,27 @@ keymaps.set("n", "<S-Down>", "Vj", { desc = "Select line downward" })
 keymaps.set("v", "<S-Up>",   "k",  { desc = "Extend selection up" })
 keymaps.set("v", "<S-Down>", "j",  { desc = "Extend selection down" })
 
+local function comment_line()
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("gcc", true, false, true), "m", false)
+end
+local function comment_visual()
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("gc", true, false, true), "m", false)
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("gv", true, false, true), "m", false)
+end
+keymaps.set("n", "<C-/>", comment_line,   { desc = "Toggle comment" })
+keymaps.set("v", "<C-/>", comment_visual, { desc = "Toggle comment" })
+keymaps.set("n", "<C-_>", comment_line,   { desc = "Toggle comment" })
+keymaps.set("v", "<C-_>", comment_visual, { desc = "Toggle comment" })
+
+keymaps.set("n", "gl", function()
+  vim.ui.input({ prompt = "Go to line: " }, function(input)
+    if input and input ~= "" then
+      local line = tonumber(input)
+      if line then vim.cmd(tostring(line)) end
+    end
+  end)
+end, { desc = "Go to line" })
+
 Snacks.toggle({
   name = "Inline Diagnostics",
   get = function()
@@ -309,3 +330,7 @@ Snacks.toggle({
     vim.lsp.inlay_hint.enable(enabled, { bufnr = 0 })
   end,
 }):map("<leader>up")
+
+vim.keymap.set("n", "<leader>ut", function()
+  require("neo-tree.command").execute({ toggle = true, reveal = true, dir = LazyVim.root() })
+end, { desc = "Reveal file in tree" })

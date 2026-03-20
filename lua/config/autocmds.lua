@@ -59,6 +59,27 @@ local function apply_custom_hl()
   hl(0, "NeoTreeGitUnstaged",  { fg = "#e5c07b" })
   hl(0, "NeoTreeGitDeleted",   { fg = "#f38ba8" })
   hl(0, "NeoTreeGitConflict",  { fg = "#f38ba8" })
+
+  hl(0, "@variable.parameter",                  { fg = "#C5B8F0" })
+  hl(0, "@variable.parameter.builtin",          { fg = "#C5B8F0" })
+  hl(0, "@lsp.type.parameter",                  { fg = "#C5B8F0" })
+  hl(0, "@lsp.typemod.parameter.declaration",   { fg = "#C5B8F0" })
+  hl(0, "@lsp.typemod.variable.readonly",       { fg = "#C5B8F0" })
+  hl(0, "@lsp.typemod.variable.parameter",      { fg = "#C5B8F0" })
+
+  hl(0, "@variable.builtin",                    { fg = "#C77DBB" })
+  hl(0, "@lsp.typemod.variable.self",           { fg = "#C77DBB" })
+
+  hl(0, "BlinkCmpKindClass",         { fg = "#EE9D28" })
+  hl(0, "BlinkCmpKindEnum",          { fg = "#EE9D28" })
+  hl(0, "BlinkCmpKindEvent",         { fg = "#EE9D28" })
+  hl(0, "BlinkCmpKindMethod",        { fg = "#B180D7" })
+  hl(0, "BlinkCmpKindFunction",      { fg = "#B180D7" })
+  hl(0, "BlinkCmpKindConstructor",   { fg = "#B180D7" })
+  hl(0, "BlinkCmpKindField",         { fg = "#75BEFF" })
+  hl(0, "BlinkCmpKindVariable",      { fg = "#75BEFF" })
+  hl(0, "BlinkCmpKindInterface",     { fg = "#75BEFF" })
+  hl(0, "BlinkCmpKindEnumMember",    { fg = "#75BEFF" })
 end
 
 vim.api.nvim_create_autocmd("ColorScheme", {
