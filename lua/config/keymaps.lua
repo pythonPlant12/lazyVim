@@ -522,6 +522,22 @@ keymaps.set("n", "<leader>Lpi", function()
   end)
 end, { desc = "Indentation width" })
 
+local function apply_python_indent()
+  if vim.bo.filetype ~= "python" then return end
+  if vim.b.python_indent_width then return end
+  local width = read_project_indent_width() or detect_indent()
+  vim.bo.shiftwidth = width
+  vim.bo.tabstop = width
+  vim.bo.softtabstop = width
+end
+
+vim.api.nvim_create_autocmd("FileType", {
+  group = vim.api.nvim_create_augroup("PythonAutoIndent", { clear = true }),
+  pattern = "python",
+  callback = apply_python_indent,
+})
+if vim.bo.filetype == "python" then apply_python_indent() end
+
 vim.schedule(function()
   require("which-key").add({
     { "<leader>L", group = "Language" },
