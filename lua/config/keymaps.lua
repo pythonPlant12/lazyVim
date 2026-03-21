@@ -410,23 +410,99 @@ local function read_project_type_checking_mode(server_name)
   end) or "standard"
 end
 
-local function read_project_indent_width()
-  return walk_ancestors(function(dir)
-    for _, name in ipairs({ "ruff.toml", ".ruff.toml" }) do
-      local content = read_config_file(dir .. "/" .. name)
-      if content then
-        local val = toml_get(content, "format", "indent-width")
-          or toml_get(content, nil, "indent-width")
+local function read_python_indent_config(dir)
+  for _, name in ipairs({ "ruff.toml", ".ruff.toml" }) do
+    local content = read_config_file(dir .. "/" .. name)
+    if content then
+      local val = toml_get(content, "format", "indent-width")
+        or toml_get(content, nil, "indent-width")
+      if val then return val end
+    end
+  end
+  local content = read_config_file(dir .. "/pyproject.toml")
+  if content then
+    local val = toml_get(content, "tool.ruff.format", "indent-width")
+      or toml_get(content, "tool.ruff", "indent-width")
+    if val then return val end
+  end
+end
+
+local function json_decode_safe(content)
+  if not content then return nil end
+  local ok, data = pcall(vim.json.decode, content)
+  if ok and type(data) == "table" then return data end
+  return nil
+end
+
+local function json_get(data, ...)
+  local val = data
+  for _, key in ipairs({ ... }) do
+    if type(val) ~= "table" then return nil end
+    val = val[key]
+  end
+  return (type(val) == "number") and val or nil
+end
+
+local function strip_json_comments(text)
+  text = text:gsub("//[^\r\n]*", "")
+  text = text:gsub("/%*.-%*/", "")
+  return text
+end
+
+local function read_js_indent_config(dir)
+  for _, name in ipairs({ "biome.json", "biome.jsonc" }) do
+    local raw = read_config_file(dir .. "/" .. name)
+    if raw then
+      if name:find("jsonc$") then raw = strip_json_comments(raw) end
+      local data = json_decode_safe(raw)
+      if data then
+        local val = json_get(data, "javascript", "formatter", "indentWidth")
+          or json_get(data, "formatter", "indentWidth")
         if val then return val end
       end
     end
-    local content = read_config_file(dir .. "/pyproject.toml")
-    if content then
-      local val = toml_get(content, "tool.ruff.format", "indent-width")
-        or toml_get(content, "tool.ruff", "indent-width")
+  end
+  for _, name in ipairs({ ".prettierrc", ".prettierrc.json" }) do
+    local raw = read_config_file(dir .. "/" .. name)
+    if raw then
+      local data = json_decode_safe(raw)
+      if data then
+        local val = json_get(data, "tabWidth")
+        if val then return val end
+      else
+        local val = raw:match("tabWidth%s*:%s*(%d+)")
+        if val then return tonumber(val) end
+      end
+    end
+  end
+  local raw = read_config_file(dir .. "/package.json")
+  if raw then
+    local data = json_decode_safe(raw)
+    if data then
+      local val = json_get(data, "prettier", "tabWidth")
       if val then return val end
     end
-  end)
+  end
+end
+
+local js_filetypes = {
+  javascript = true, javascriptreact = true,
+  typescript = true, typescriptreact = true,
+  vue = true,
+}
+
+local auto_indent_filetypes = vim.tbl_extend("force", { python = true }, js_filetypes)
+
+local function read_project_indent()
+  local ft = vim.bo.filetype
+  local reader
+  if ft == "python" then
+    reader = read_python_indent_config
+  elseif js_filetypes[ft] then
+    reader = read_js_indent_config
+  end
+  if reader then return walk_ancestors(reader) end
+  return nil
 end
 
 local function detect_indent()
@@ -487,13 +563,14 @@ keymaps.set("n", "<leader>Lpt", function()
   end)
 end, { desc = "Type check level" })
 
-keymaps.set("n", "<leader>Lpi", function()
-  if vim.bo.filetype ~= "python" then
-    vim.notify("Not a Python buffer", vim.log.levels.WARN, { title = "Python" })
+keymaps.set("n", "<leader>Lsi", function()
+  local ft = vim.bo.filetype
+  if not auto_indent_filetypes[ft] then
+    vim.notify("Not a supported filetype: " .. ft, vim.log.levels.WARN, { title = "Indent" })
     return
   end
-  local project_indent = read_project_indent_width()
-  local current = vim.b.python_indent_width or project_indent
+  local project_indent = read_project_indent()
+  local current = vim.b.indent_width_override or project_indent
   local widths = { 1, 2, 3, 4 }
   local items = {}
   for _, w in ipairs(widths) do
@@ -510,10 +587,10 @@ keymaps.set("n", "<leader>Lpi", function()
     local width = choice.value
     if width == "auto" then
       width = detect_indent()
-      vim.b.python_indent_width = nil
+      vim.b.indent_width_override = nil
       vim.notify("Detected indent: " .. width, vim.log.levels.INFO, { title = "Indent" })
     else
-      vim.b.python_indent_width = width
+      vim.b.indent_width_override = width
     end
     vim.bo.shiftwidth = width
     vim.bo.tabstop = width
@@ -522,25 +599,90 @@ keymaps.set("n", "<leader>Lpi", function()
   end)
 end, { desc = "Indentation width" })
 
-local function apply_python_indent()
-  if vim.bo.filetype ~= "python" then return end
-  if vim.b.python_indent_width then return end
-  local width = read_project_indent_width() or detect_indent()
+keymaps.set("n", "<leader>LI", function()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local file = vim.api.nvim_buf_get_name(bufnr)
+  local ft = vim.bo.filetype
+  local lines = {}
+
+  lines[#lines + 1] = "file: " .. (file ~= "" and file or "(no file)")
+  lines[#lines + 1] = "filetype: " .. (ft ~= "" and ft or "(none)")
+  lines[#lines + 1] = ""
+
+  lines[#lines + 1] = "attached clients:"
+  local clients = vim.lsp.get_clients({ bufnr = bufnr })
+  if #clients == 0 then
+    lines[#lines + 1] = "  (none)"
+  else
+    for _, client in ipairs(clients) do
+      local root = client.root_dir
+      if (not root or root == "") and type(client.config) == "table" then
+        root = client.config.root_dir
+      end
+      lines[#lines + 1] = string.format("  %s -> %s", client.name, root or "(none)")
+    end
+  end
+
+  lines[#lines + 1] = ""
+  lines[#lines + 1] = "indentation:"
+  local source = "default"
+  local width = vim.bo.shiftwidth
+  if vim.b.indent_width_override then
+    source = "manual override"
+    width = vim.b.indent_width_override
+  elseif auto_indent_filetypes[ft] then
+    local proj = read_project_indent()
+    if proj then
+      source = "project config"
+      width = proj
+    else
+      local detected = detect_indent()
+      source = "file detection"
+      width = detected
+    end
+  end
+  lines[#lines + 1] = string.format("  width: %d (%s)", width, source)
+  lines[#lines + 1] = string.format("  shiftwidth=%d tabstop=%d softtabstop=%d",
+    vim.bo.shiftwidth, vim.bo.tabstop, vim.bo.softtabstop)
+
+  if ft == "python" then
+    lines[#lines + 1] = ""
+    lines[#lines + 1] = "type checking:"
+    local client, name = get_pyright_client()
+    if client then
+      local mode = vim.g.pyright_type_checking_mode or read_project_type_checking_mode(name)
+      local mode_source = vim.g.pyright_type_checking_mode and "manual override" or "project/default"
+      lines[#lines + 1] = string.format("  %s: %s (%s)", name, mode, mode_source)
+    else
+      lines[#lines + 1] = "  (no pyright/basedpyright attached)"
+    end
+  end
+
+  vim.notify(table.concat(lines, "\n"), vim.log.levels.INFO, { title = "Language Info" })
+end, { desc = "Language info" })
+
+local function apply_auto_indent()
+  if not auto_indent_filetypes[vim.bo.filetype] then return end
+  if vim.b.indent_width_override then return end
+  local width = read_project_indent() or detect_indent()
   vim.bo.shiftwidth = width
   vim.bo.tabstop = width
   vim.bo.softtabstop = width
 end
 
 vim.api.nvim_create_autocmd("FileType", {
-  group = vim.api.nvim_create_augroup("PythonAutoIndent", { clear = true }),
-  pattern = "python",
-  callback = apply_python_indent,
+  group = vim.api.nvim_create_augroup("AutoIndent", { clear = true }),
+  pattern = { "python", "javascript", "javascriptreact", "typescript", "typescriptreact", "vue" },
+  callback = apply_auto_indent,
 })
-if vim.bo.filetype == "python" then apply_python_indent() end
+if auto_indent_filetypes[vim.bo.filetype] then apply_auto_indent() end
+
+pcall(vim.keymap.del, "n", "<leader>L")
 
 vim.schedule(function()
   require("which-key").add({
     { "<leader>L", group = "Language" },
     { "<leader>Lp", group = "Python" },
+    { "<leader>Ls", group = "Shared" },
   })
 end)
