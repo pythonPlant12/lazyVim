@@ -334,3 +334,108 @@ Snacks.toggle({
 vim.keymap.set("n", "<leader>ut", function()
   require("neo-tree.command").execute({ toggle = true, reveal = true, dir = LazyVim.root() })
 end, { desc = "Reveal file in tree" })
+
+-- Language > Python keymaps
+
+local function get_pyright_client()
+  for _, name in ipairs({ "basedpyright", "pyright" }) do
+    local clients = vim.lsp.get_clients({ bufnr = 0, name = name })
+    if #clients > 0 then return clients[1], name end
+  end
+  return nil, nil
+end
+
+local function detect_indent()
+  local lines = vim.api.nvim_buf_get_lines(0, 0, math.min(200, vim.api.nvim_buf_line_count(0)), false)
+  local counts = {}
+  local prev_indent = 0
+  for _, line in ipairs(lines) do
+    if line:match("%S") then
+      local indent = #(line:match("^(%s*)") or "")
+      local diff = math.abs(indent - prev_indent)
+      if diff > 0 and diff <= 8 then
+        counts[diff] = (counts[diff] or 0) + 1
+      end
+      prev_indent = indent
+    end
+  end
+  local best, best_count = 2, 0
+  for width, count in pairs(counts) do
+    if count > best_count then
+      best, best_count = width, count
+    end
+  end
+  return best
+end
+
+keymaps.set("n", "<leader>Lpt", function()
+  if vim.bo.filetype ~= "python" then
+    vim.notify("Not a Python buffer", vim.log.levels.WARN, { title = "Python" })
+    return
+  end
+  local client, name = get_pyright_client()
+  if not client then
+    vim.notify("No pyright/basedpyright attached", vim.log.levels.WARN, { title = "Python" })
+    return
+  end
+  local modes = { "off", "basic", "standard", "strict" }
+  if name == "basedpyright" then
+    table.insert(modes, "recommended")
+    table.insert(modes, "all")
+  end
+  local current = vim.g.pyright_type_checking_mode or "standard"
+  local items = {}
+  for _, m in ipairs(modes) do
+    local marker = m == current and " \u{25cf}" or ""
+    table.insert(items, { label = m .. marker, value = m })
+  end
+  vim.ui.select(items, {
+    prompt = "Type checking mode (" .. name .. "):",
+    format_item = function(item) return item.label end,
+  }, function(choice)
+    if not choice then return end
+    vim.g.pyright_type_checking_mode = choice.value
+    client.settings = vim.tbl_deep_extend("force", client.settings or {}, {
+      python = { analysis = { typeCheckingMode = choice.value } },
+    })
+    client:notify("workspace/didChangeConfiguration", { settings = client.settings })
+    vim.notify("typeCheckingMode = " .. choice.value, vim.log.levels.INFO, { title = name })
+  end)
+end, { desc = "Type check level" })
+
+keymaps.set("n", "<leader>Lpi", function()
+  if vim.bo.filetype ~= "python" then
+    vim.notify("Not a Python buffer", vim.log.levels.WARN, { title = "Python" })
+    return
+  end
+  local current_sw = vim.bo.shiftwidth
+  local widths = { 1, 2, 3, 4 }
+  local items = {}
+  for _, w in ipairs(widths) do
+    local marker = w == current_sw and " \u{25cf}" or ""
+    table.insert(items, { label = tostring(w) .. marker, value = w })
+  end
+  table.insert(items, { label = "auto", value = "auto" })
+  vim.ui.select(items, {
+    prompt = "Indentation width:",
+    format_item = function(item) return item.label end,
+  }, function(choice)
+    if not choice then return end
+    local width = choice.value
+    if width == "auto" then
+      width = detect_indent()
+      vim.notify("Detected indent: " .. width, vim.log.levels.INFO, { title = "Indent" })
+    end
+    vim.bo.shiftwidth = width
+    vim.bo.tabstop = width
+    vim.bo.softtabstop = width
+    vim.notify("Indentation = " .. width, vim.log.levels.INFO, { title = "Indent" })
+  end)
+end, { desc = "Indentation width" })
+
+vim.schedule(function()
+  require("which-key").add({
+    { "<leader>L", group = "Language" },
+    { "<leader>Lp", group = "Python" },
+  })
+end)
