@@ -345,6 +345,40 @@ local function get_pyright_client()
   return nil, nil
 end
 
+local function read_project_type_checking_mode(client, server_name)
+  local root = client.root_dir or vim.fn.getcwd()
+
+  local pyright_json = root .. "/pyrightconfig.json"
+  local f = io.open(pyright_json, "r")
+  if f then
+    local content = f:read("*a")
+    f:close()
+    local mode = content:match('"typeCheckingMode"%s*:%s*"([^"]+)"')
+    if mode then return mode end
+  end
+
+  local pyproject = root .. "/pyproject.toml"
+  f = io.open(pyproject, "r")
+  if f then
+    local content = f:read("*a")
+    f:close()
+    local section = server_name == "basedpyright" and "tool%.basedpyright" or "tool%.pyright"
+    local in_section = false
+    for line in content:gmatch("[^\r\n]+") do
+      if line:match("^%[" .. section .. "[%.%]]") or line:match("^%[" .. section .. "$") then
+        in_section = true
+      elseif line:match("^%[") then
+        in_section = false
+      elseif in_section then
+        local mode = line:match('^%s*typeCheckingMode%s*=%s*"([^"]+)"')
+        if mode then return mode end
+      end
+    end
+  end
+
+  return "standard"
+end
+
 local function detect_indent()
   local lines = vim.api.nvim_buf_get_lines(0, 0, math.min(200, vim.api.nvim_buf_line_count(0)), false)
   local counts = {}
@@ -383,7 +417,7 @@ keymaps.set("n", "<leader>Lpt", function()
     table.insert(modes, "recommended")
     table.insert(modes, "all")
   end
-  local current = vim.g.pyright_type_checking_mode or "standard"
+  local current = vim.g.pyright_type_checking_mode or read_project_type_checking_mode(client, name)
   local items = {}
   for _, m in ipairs(modes) do
     local marker = m == current and " \u{25cf}" or ""
