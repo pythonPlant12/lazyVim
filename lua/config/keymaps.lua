@@ -679,8 +679,17 @@ if auto_indent_filetypes[vim.bo.filetype] then apply_auto_indent() end
 
 pcall(vim.keymap.del, "n", "<leader>L")
 
+vim.keymap.set("n", "<leader>If", function()
+  require("trouble").toggle({ mode = "diagnostics", filter = { buf = 0 } })
+end, { desc = "File diagnostics" })
+
+vim.keymap.set("n", "<leader>Iw", function()
+  require("trouble").toggle("diagnostics")
+end, { desc = "Workspace diagnostics" })
+
 vim.schedule(function()
   require("which-key").add({
+    { "<leader>I", group = "Inspect" },
     { "<leader>L", group = "Language" },
     { "<leader>Lp", group = "Python" },
     { "<leader>Ls", group = "Shared" },

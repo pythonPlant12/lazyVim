@@ -331,11 +331,11 @@ return {
     event = "VeryLazy",
     opts = function(_, opts)
       local mode_theme = {
-        normal   = { a = { fg = "#191A1C", bg = "#89b4fa", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#2B2D30" }, c = { fg = "#BCBEC4", bg = "#2B2D30" } },
-        insert   = { a = { fg = "#191A1C", bg = "#a6e3a1", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#2B2D30" } },
-        visual   = { a = { fg = "#191A1C", bg = "#B189F5", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#2B2D30" } },
-        replace  = { a = { fg = "#191A1C", bg = "#F75464", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#2B2D30" } },
-        command  = { a = { fg = "#191A1C", bg = "#D5B778", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#2B2D30" } },
+        normal   = { a = { fg = "#191A1C", bg = "#89b4fa", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#3B3F45", gui = "bold" }, c = { fg = "#BCBEC4", bg = "#2B2D30" } },
+        insert   = { a = { fg = "#191A1C", bg = "#a6e3a1", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#3B3F45", gui = "bold" } },
+        visual   = { a = { fg = "#191A1C", bg = "#B189F5", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#3B3F45", gui = "bold" } },
+        replace  = { a = { fg = "#191A1C", bg = "#F75464", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#3B3F45", gui = "bold" } },
+        command  = { a = { fg = "#191A1C", bg = "#D5B778", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#3B3F45", gui = "bold" } },
         inactive = { a = { fg = "#6F737A", bg = "#191A1C" }, b = { fg = "#6F737A", bg = "#191A1C" }, c = { fg = "#6F737A", bg = "#191A1C" } },
       }
       opts.options = vim.tbl_extend("force", opts.options or {}, {
@@ -345,18 +345,152 @@ return {
       })
       opts.sections = opts.sections or {}
       opts.sections.lualine_x = opts.sections.lualine_x or {}
+      -- Git ahead/behind async refresh
+      vim.g._git_ahead = vim.g._git_ahead or 0
+      vim.g._git_behind = vim.g._git_behind or 0
+      vim.g._git_untracked = vim.g._git_untracked or 0
+      vim.g._git_modified = vim.g._git_modified or 0
+      vim.g._git_deleted = vim.g._git_deleted or 0
+      vim.g._git_conflicted = vim.g._git_conflicted or 0
+      local function refresh_git_ab()
+        vim.fn.jobstart({ "git", "rev-list", "--left-right", "--count", "HEAD...@{upstream}" }, {
+          cwd = vim.fn.getcwd(),
+          stdout_buffered = true,
+          on_stdout = function(_, data)
+            if data and data[1] and data[1] ~= "" then
+              local a, b = data[1]:match("(%d+)%s+(%d+)")
+              vim.g._git_ahead = tonumber(a) or 0
+              vim.g._git_behind = tonumber(b) or 0
+            end
+          end,
+          on_exit = function(_, code)
+            if code ~= 0 then
+              vim.g._git_ahead = 0
+              vim.g._git_behind = 0
+            end
+          end,
+        })
+      end
+      local function refresh_git_status()
+        vim.fn.jobstart({ "git", "status", "--porcelain" }, {
+          cwd = vim.fn.getcwd(),
+          stdout_buffered = true,
+          on_stdout = function(_, data)
+            if not data then return end
+            local untracked, modified, deleted, conflicted = 0, 0, 0, 0
+            for _, line in ipairs(data) do
+              if line ~= "" then
+                local x, y = line:sub(1, 1), line:sub(2, 2)
+                if x == "?" then
+                  untracked = untracked + 1
+                elseif x == "U" or y == "U" or (x == "A" and y == "A") or (x == "D" and y == "D") then
+                  conflicted = conflicted + 1
+                else
+                  if y == "M" or x == "M" then modified = modified + 1 end
+                  if y == "D" or x == "D" then deleted = deleted + 1 end
+                end
+              end
+            end
+            vim.g._git_untracked = untracked
+            vim.g._git_modified = modified
+            vim.g._git_deleted = deleted
+            vim.g._git_conflicted = conflicted
+          end,
+          on_exit = function(_, code)
+            if code ~= 0 then
+              vim.g._git_untracked = 0
+              vim.g._git_modified = 0
+              vim.g._git_deleted = 0
+              vim.g._git_conflicted = 0
+            end
+          end,
+        })
+      end
+      local function refresh_git_all()
+        refresh_git_ab()
+        refresh_git_status()
+      end
+      local grp = vim.api.nvim_create_augroup("lualine_git_ab", { clear = true })
+      vim.api.nvim_create_autocmd({ "BufEnter", "FocusGained", "BufWritePost" }, { group = grp, callback = refresh_git_all })
+      refresh_git_all()
+
+      local function setup_git_hl()
+        vim.api.nvim_set_hl(0, "LualineGitBase", { fg = "#BCBEC4", bg = "#3B3F45", bold = true })
+        vim.api.nvim_set_hl(0, "LualineGitGreen", { fg = "#a6e3a1", bg = "#3B3F45", bold = true })
+        vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = "#f9e2af", bg = "#3B3F45", bold = true })
+        vim.api.nvim_set_hl(0, "LualineGitPeach", { fg = "#fab387", bg = "#3B3F45", bold = true })
+        vim.api.nvim_set_hl(0, "LualineGitRed", { fg = "#f38ba8", bg = "#3B3F45", bold = true })
+      end
+      setup_git_hl()
+      vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_git_hl })
+
       opts.sections.lualine_b = {
         {
           function()
             local branch = vim.b.gitsigns_head or vim.fn.system("git rev-parse --abbrev-ref HEAD 2>/dev/null"):gsub("\n", "")
             if branch == "" or branch:find("fatal") then return "" end
-            return " " .. branch
+            local parts = { " " .. branch }
+            local a, b = vim.g._git_ahead or 0, vim.g._git_behind or 0
+            local u, m, d, c = vim.g._git_untracked or 0, vim.g._git_modified or 0, vim.g._git_deleted or 0, vim.g._git_conflicted or 0
+            local indicators = {}
+            if a > 0 and b > 0 then table.insert(indicators, "%#LualineGitYellow#▲▼") end
+            if a > 0 and b == 0 then table.insert(indicators, "%#LualineGitGreen#▲") end
+            if b > 0 and a == 0 then table.insert(indicators, "%#LualineGitPeach#▼") end
+            if c > 0 then table.insert(indicators, "%#LualineGitRed#●") end
+            if u > 0 then table.insert(indicators, "%#LualineGitGreen#●") end
+            if m > 0 then table.insert(indicators, "%#LualineGitYellow#●") end
+            if d > 0 then table.insert(indicators, "%#LualineGitRed#●") end
+            if #indicators > 0 then
+              table.insert(parts, " " .. table.concat(indicators, "") .. "%#LualineGitBase#")
+            end
+            return table.concat(parts, "")
           end,
-          separator = { left = "", right = "" },
-          padding = { left = 0, right = 0 },
-          color = { fg = "#191A1C", bg = "#a6e3a1", gui = "bold" },
+          cond = function()
+            if vim.b.gitsigns_head and vim.b.gitsigns_head ~= "" then return true end
+            local b = vim.fn.system("git rev-parse --abbrev-ref HEAD 2>/dev/null"):gsub("\n", "")
+            return b ~= "" and not b:find("fatal")
+          end,
+          padding = { left = 1, right = 1 },
         },
       }
+
+      local function setup_diag_hl()
+        vim.api.nvim_set_hl(0, "DiagPillCap", { fg = "#313438", bg = "#2B2D30" })
+        vim.api.nvim_set_hl(0, "DiagPillBase", { fg = "#BCBEC4", bg = "#313438" })
+        vim.api.nvim_set_hl(0, "DiagPillError", { fg = "#f38ba8", bg = "#313438" })
+        vim.api.nvim_set_hl(0, "DiagPillWarn", { fg = "#f9e2af", bg = "#313438" })
+        vim.api.nvim_set_hl(0, "DiagPillInfo", { fg = "#89b4fa", bg = "#313438" })
+        vim.api.nvim_set_hl(0, "DiagPillHint", { fg = "#a6e3a1", bg = "#313438" })
+      end
+      setup_diag_hl()
+      vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_diag_hl })
+
+      local new_c = {}
+      for i, comp in ipairs(opts.sections.lualine_c or {}) do
+        if i == 1 then goto skip end
+        if type(comp) == "table" and comp[1] == "diagnostics" then goto skip end
+        table.insert(new_c, comp)
+        ::skip::
+      end
+      opts.sections.lualine_c = new_c
+
+      table.insert(opts.sections.lualine_x, 1, {
+        function()
+          local d = vim.diagnostic.count(0)
+          local e = d[vim.diagnostic.severity.ERROR] or 0
+          local w = d[vim.diagnostic.severity.WARN] or 0
+          local inf = d[vim.diagnostic.severity.INFO] or 0
+          local h = d[vim.diagnostic.severity.HINT] or 0
+          if e + w + inf + h == 0 then return "" end
+          local parts = {}
+          if e > 0 then table.insert(parts, "%#DiagPillError#✕ " .. e) end
+          if w > 0 then table.insert(parts, "%#DiagPillWarn#△ " .. w) end
+          if inf > 0 then table.insert(parts, "%#DiagPillInfo#○ " .. inf) end
+          if h > 0 then table.insert(parts, "%#DiagPillHint#◇ " .. h) end
+          return table.concat(parts, " ")
+        end,
+        padding = { left = 1, right = 1 },
+      })
 
       local lsp_icons = {
         vtsls          = "󰛦 ",
