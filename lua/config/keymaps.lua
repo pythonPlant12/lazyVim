@@ -345,38 +345,88 @@ local function get_pyright_client()
   return nil, nil
 end
 
-local function read_project_type_checking_mode(client, server_name)
-  local root = client.root_dir or vim.fn.getcwd()
+local function read_config_file(path)
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local content = f:read("*a")
+  f:close()
+  return content
+end
 
-  local pyright_json = root .. "/pyrightconfig.json"
-  local f = io.open(pyright_json, "r")
-  if f then
-    local content = f:read("*a")
-    f:close()
-    local mode = content:match('"typeCheckingMode"%s*:%s*"([^"]+)"')
-    if mode then return mode end
-  end
+local function escape_lua_pattern(s)
+  return s:gsub("([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1")
+end
 
-  local pyproject = root .. "/pyproject.toml"
-  f = io.open(pyproject, "r")
-  if f then
-    local content = f:read("*a")
-    f:close()
-    local section = server_name == "basedpyright" and "tool%.basedpyright" or "tool%.pyright"
-    local in_section = false
-    for line in content:gmatch("[^\r\n]+") do
-      if line:match("^%[" .. section .. "[%.%]]") or line:match("^%[" .. section .. "$") then
-        in_section = true
-      elseif line:match("^%[") then
-        in_section = false
-      elseif in_section then
-        local mode = line:match('^%s*typeCheckingMode%s*=%s*"([^"]+)"')
-        if mode then return mode end
-      end
+local function toml_get(content, section, key)
+  local key_pat = escape_lua_pattern(key)
+  local in_target = (section == nil)
+  for line in content:gmatch("[^\r\n]+") do
+    local hdr = line:match("^%[([^%]]+)%]")
+    if hdr then
+      in_target = (section ~= nil and hdr == section)
+    elseif in_target then
+      local sval = line:match("^%s*" .. key_pat .. "%s*=%s*\"([^\"]+)\"")
+      if sval then return sval end
+      local nval = line:match("^%s*" .. key_pat .. "%s*=%s*(%d+)")
+      if nval then return tonumber(nval) end
     end
   end
+  return nil
+end
 
-  return "standard"
+local function walk_ancestors(callback)
+  local bufpath = vim.api.nvim_buf_get_name(0)
+  if bufpath == "" then return nil end
+  local dir = vim.fn.fnamemodify(bufpath, ":h")
+  local stop = vim.fn.getcwd()
+  local checked_stop = false
+  while dir do
+    local result = callback(dir)
+    if result then return result end
+    if dir == stop then checked_stop = true; break end
+    local parent = vim.fn.fnamemodify(dir, ":h")
+    if parent == dir then break end
+    dir = parent
+  end
+  if not checked_stop then
+    return callback(stop)
+  end
+  return nil
+end
+
+local function read_project_type_checking_mode(server_name)
+  return walk_ancestors(function(dir)
+    local content = read_config_file(dir .. "/pyrightconfig.json")
+    if content then
+      local mode = content:match('"typeCheckingMode"%s*:%s*"([^"]+)"')
+      if mode then return mode end
+    end
+    content = read_config_file(dir .. "/pyproject.toml")
+    if content then
+      local section = server_name == "basedpyright" and "tool.basedpyright" or "tool.pyright"
+      local mode = toml_get(content, section, "typeCheckingMode")
+      if mode then return mode end
+    end
+  end) or "standard"
+end
+
+local function read_project_indent_width()
+  return walk_ancestors(function(dir)
+    for _, name in ipairs({ "ruff.toml", ".ruff.toml" }) do
+      local content = read_config_file(dir .. "/" .. name)
+      if content then
+        local val = toml_get(content, "format", "indent-width")
+          or toml_get(content, nil, "indent-width")
+        if val then return val end
+      end
+    end
+    local content = read_config_file(dir .. "/pyproject.toml")
+    if content then
+      local val = toml_get(content, "tool.ruff.format", "indent-width")
+        or toml_get(content, "tool.ruff", "indent-width")
+      if val then return val end
+    end
+  end)
 end
 
 local function detect_indent()
@@ -417,7 +467,7 @@ keymaps.set("n", "<leader>Lpt", function()
     table.insert(modes, "recommended")
     table.insert(modes, "all")
   end
-  local current = vim.g.pyright_type_checking_mode or read_project_type_checking_mode(client, name)
+  local current = vim.g.pyright_type_checking_mode or read_project_type_checking_mode(name)
   local items = {}
   for _, m in ipairs(modes) do
     local marker = m == current and " \u{25cf}" or ""
@@ -442,14 +492,16 @@ keymaps.set("n", "<leader>Lpi", function()
     vim.notify("Not a Python buffer", vim.log.levels.WARN, { title = "Python" })
     return
   end
-  local current_sw = vim.bo.shiftwidth
+  local project_indent = read_project_indent_width()
+  local current = vim.b.python_indent_width or project_indent
   local widths = { 1, 2, 3, 4 }
   local items = {}
   for _, w in ipairs(widths) do
-    local marker = w == current_sw and " \u{25cf}" or ""
+    local marker = (current == w) and " \u{25cf}" or ""
     table.insert(items, { label = tostring(w) .. marker, value = w })
   end
-  table.insert(items, { label = "auto", value = "auto" })
+  local auto_marker = (current == nil) and " \u{25cf}" or ""
+  table.insert(items, { label = "auto" .. auto_marker, value = "auto" })
   vim.ui.select(items, {
     prompt = "Indentation width:",
     format_item = function(item) return item.label end,
@@ -458,7 +510,10 @@ keymaps.set("n", "<leader>Lpi", function()
     local width = choice.value
     if width == "auto" then
       width = detect_indent()
+      vim.b.python_indent_width = nil
       vim.notify("Detected indent: " .. width, vim.log.levels.INFO, { title = "Indent" })
+    else
+      vim.b.python_indent_width = width
     end
     vim.bo.shiftwidth = width
     vim.bo.tabstop = width
