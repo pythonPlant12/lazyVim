@@ -36,6 +36,26 @@ return {
         end
         return items
       end
+
+      opts.keymap = opts.keymap or {}
+      opts.keymap["<Tab>"] = {
+        function(cmp)
+          if cmp.is_menu_visible() then
+            return cmp.select_next()
+          end
+        end,
+        LazyVim.cmp.map({ "snippet_forward", "ai_nes", "ai_accept" }),
+        "fallback",
+      }
+      opts.keymap["<S-Tab>"] = {
+        function(cmp)
+          if cmp.is_menu_visible() then
+            return cmp.select_prev()
+          end
+        end,
+        "snippet_backward",
+        "fallback",
+      }
     end,
   },
 }
