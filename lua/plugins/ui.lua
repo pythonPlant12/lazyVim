@@ -157,7 +157,7 @@ return {
         hide_dotfiles = false,
         hide_gitignored = false,
       }
-      opts.filesystem.follow_current_file = { enabled = false }
+      opts.filesystem.follow_current_file = { enabled = true }
       opts.filesystem.bind_to_cwd = false
 
       opts.components = opts.components or {}
@@ -362,7 +362,7 @@ return {
         component_separators = { left = "", right = "" },
       })
       opts.sections = opts.sections or {}
-      opts.sections.lualine_x = opts.sections.lualine_x or {}
+      opts.sections.lualine_x = {}
       -- Git ahead/behind async refresh
       vim.g._git_ahead = vim.g._git_ahead or 0
       vim.g._git_behind = vim.g._git_behind or 0
@@ -520,6 +520,7 @@ return {
         tailwindcss    = "󱏿 ",
         lua_ls         = "󰢱 ",
         pyright        = "󰌠 ",
+        basedpyright   = "󰌠 ",
         pylsp          = "󰌠 ",
         jsonls         = "󰘦 ",
         html           = "󰌝 ",
@@ -532,6 +533,41 @@ return {
         ["null-ls"]    = "󱏿 ",
       }
 
+      local lsp_colors = {
+        vtsls          = "#89b4fa",
+        ts_ls          = "#89b4fa",
+        tsserver       = "#89b4fa",
+        vue_ls         = "#a6e3a1",
+        volar          = "#a6e3a1",
+        tailwindcss    = "#94e2d5",
+        lua_ls         = "#89b4fa",
+        pyright        = "#fab387",
+        basedpyright   = "#fab387",
+        pylsp          = "#fab387",
+        jsonls         = "#f9e2af",
+        html           = "#fab387",
+        cssls          = "#74c7ec",
+        emmet_ls       = "#fab387",
+        bashls         = "#a6e3a1",
+        dockerls       = "#89dceb",
+        yamlls         = "#f9e2af",
+        copilot        = "#cba6f7",
+        ["null-ls"]    = "#94e2d5",
+      }
+
+      local function setup_lsp_hl()
+        vim.api.nvim_set_hl(0, "LualineLspBase",        { fg = "#93a1a1", bg = "#45475a" })
+        vim.api.nvim_set_hl(0, "LualineCopilotOn",      { fg = "#cba6f7", bg = "#45475a" })
+        vim.api.nvim_set_hl(0, "LualineCopilotSpinner", { fg = "#f9e2af", bg = "#45475a" })
+        vim.api.nvim_set_hl(0, "LualineCopilotOff",     { fg = "#6c7086", bg = "#45475a" })
+        for name, fg in pairs(lsp_colors) do
+          local hl = "LualineLsp_" .. name:gsub("[%-%.]", "_")
+          vim.api.nvim_set_hl(0, hl, { fg = fg, bg = "#45475a" })
+        end
+      end
+      setup_lsp_hl()
+      vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_lsp_hl })
+
       table.insert(opts.sections.lualine_x, {
         function()
           local clients = vim.lsp.get_clients({ bufnr = 0 })
@@ -539,11 +575,16 @@ return {
           local parts = {}
           local seen = {}
           for _, c in ipairs(clients) do
-            if c.name == "eslint" then goto continue end
+            if c.name == "eslint" or c.name == "copilot" then goto continue end
             if not seen[c.name] then
               seen[c.name] = true
               local icon = lsp_icons[c.name] or "󰒋 "
-              parts[#parts + 1] = icon .. c.name
+              local hl = "LualineLsp_" .. c.name:gsub("[%-%.]", "_")
+              if lsp_colors[c.name] then
+                parts[#parts + 1] = "%#" .. hl .. "#" .. icon .. c.name .. "%#LualineLspBase#"
+              else
+                parts[#parts + 1] = icon .. c.name
+              end
             end
             ::continue::
           end
@@ -554,9 +595,32 @@ return {
         cond = function()
           local clients = vim.lsp.get_clients({ bufnr = 0 })
           for _, c in ipairs(clients) do
-            if c.name ~= "eslint" then return true end
+            if c.name ~= "eslint" and c.name ~= "copilot" then return true end
           end
           return false
+        end,
+      })
+
+      table.insert(opts.sections.lualine_x, {
+        function()
+          local icon = " "
+          local ok, status = pcall(require, "copilot.status")
+          if not ok then
+            return "%#LualineCopilotOff#" .. icon .. "copilot%#LualineLspBase#"
+          end
+          local s = status.data and status.data.status or ""
+          if s == "InProgress" then
+            return "%#LualineCopilotSpinner#" .. icon .. "copilot%#LualineLspBase#"
+          elseif s == "Normal" then
+            return "%#LualineCopilotOn#" .. icon .. "copilot%#LualineLspBase#"
+          else
+            return "%#LualineCopilotOff#" .. icon .. "copilot%#LualineLspBase#"
+          end
+        end,
+        separator = { left = "", right = "" },
+        color = { fg = "#6c7086", bg = "#45475a" },
+        cond = function()
+          return LazyVim.has("copilot.lua")
         end,
       })
 
@@ -580,7 +644,7 @@ return {
           if not eslint_attached then return "󰅪 eslint" end
           return "󰅪 eslint" .. (autosave_on and " (A)" or "")
         end,
-        separator = { left = "", right = "" },
+        separator = { left = "", right = "" },
         color = function()
           local eslint_attached = #vim.lsp.get_clients({ name = "eslint", bufnr = 0 }) > 0
           local autosave_on = vim.g.eslint_autosave == nil or vim.g.eslint_autosave
