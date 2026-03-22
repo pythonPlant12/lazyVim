@@ -147,6 +147,32 @@ end
 keymaps.set("n", "<C-h>", function() move_buf_to_win("h") end, { desc = "Move buffer to left window" })
 keymaps.set("n", "<C-l>", function() move_buf_to_win("l") end, { desc = "Move buffer to right window" })
 
+-- Smart buffer goto: if the buffer is already visible in another tab, jump there
+local function smart_buf_goto(bufnr)
+  if not bufnr or bufnr <= 0 then return end
+  local cur_tab = vim.api.nvim_get_current_tabpage()
+  for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
+    if tab ~= cur_tab then
+      for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
+        if vim.api.nvim_win_get_buf(win) == bufnr then
+          vim.api.nvim_set_current_tabpage(tab)
+          vim.api.nvim_set_current_win(win)
+          return
+        end
+      end
+    end
+  end
+  vim.api.nvim_set_current_buf(bufnr)
+end
+
+-- Alternate buffer (C-^), tab-aware: jumps to the tab where the buffer is shown
+keymaps.set("n", "<C-^>", function()
+  local alt = vim.fn.bufnr('#')
+  if alt > 0 and vim.fn.buflisted(alt) == 1 then
+    smart_buf_goto(alt)
+  end
+end, { desc = "Alternate buffer (tab-aware)" })
+
 keymaps.set("n", "<C-w>z", function()
   if vim.t.maximized then
     vim.cmd("wincmd =")
@@ -161,8 +187,18 @@ end, { desc = "Toggle maximize window" })
 keymaps.set("n", "<C-w>_", "<cmd>vsplit<CR>", { desc = "Split window vertically" })
 keymaps.set("n", "<C-w>-", "<cmd>split<CR>",  { desc = "Split window horizontally" })
 
-keymaps.set("n", "<C-Tab>", function() Snacks.picker.buffers() end, { desc = "Find buffers" })
-keymaps.set("n", "<leader>bl", function() Snacks.picker.buffers() end, { desc = "Find buffers" })
+local function pick_buffers_smart()
+  Snacks.picker.buffers({
+    confirm = function(picker, item)
+      picker:close()
+      if item and item.buf then
+        smart_buf_goto(item.buf)
+      end
+    end,
+  })
+end
+keymaps.set("n", "<C-Tab>", pick_buffers_smart, { desc = "Find buffers" })
+keymaps.set("n", "<leader>bl", pick_buffers_smart, { desc = "Find buffers" })
 
 keymaps.set("n", "<Tab>", ">>", { desc = "Indent line" })
 keymaps.set("n", "<S-Tab>", "<<", { desc = "Unindent line" })
@@ -289,6 +325,12 @@ keymaps.set("n", "<S-Up>",   "Vk", { desc = "Select line upward" })
 keymaps.set("n", "<S-Down>", "Vj", { desc = "Select line downward" })
 keymaps.set("v", "<S-Up>",   "k",  { desc = "Extend selection up" })
 keymaps.set("v", "<S-Down>", "j",  { desc = "Extend selection down" })
+
+-- Option+Left/Right: move word by word
+keymaps.set({ "n", "v" }, "<M-Right>", "w",      { desc = "Move forward a word" })
+keymaps.set("i",           "<M-Right>", "<C-o>w", { desc = "Move forward a word" })
+keymaps.set({ "n", "v" }, "<M-Left>",  "b",      { desc = "Move backward a word" })
+keymaps.set("i",           "<M-Left>",  "<C-o>b", { desc = "Move backward a word" })
 
 local function comment_line()
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("gcc", true, false, true), "m", false)

@@ -94,12 +94,17 @@ return {
               },
             },
           },
-          typescript = {
-            updateImportsOnFileMove = { enabled = "always" },
-            suggest = {
-              completeFunctionCalls = true,
-            },
-            inlayHints = {
+        typescript = {
+          updateImportsOnFileMove = { enabled = "always" },
+          preferences = {
+            importModuleSpecifier = "non-relative",
+            importModuleSpecifierEnding = "js",
+            quoteStyle = "single",
+          },
+          suggest = {
+            completeFunctionCalls = true,
+          },
+          inlayHints = {
               enumMemberValues = { enabled = true },
               functionLikeReturnTypes = { enabled = true },
               parameterNames = { enabled = "literals" },
