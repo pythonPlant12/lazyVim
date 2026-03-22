@@ -125,6 +125,7 @@ return {
       end
       opts.window.mappings["<S-Left>"]  = "navigate_up"
       opts.window.mappings["<S-Right>"] = "set_root"
+      opts.window.mappings["<S-CR>"]    = "open_vsplit"
 
       opts.default_component_configs = opts.default_component_configs or {}
       opts.default_component_configs.git_status = {
@@ -170,7 +171,7 @@ return {
     opts = {
       options = {
         mode = "tabs",
-        separator_style = { "", "" },
+        separator_style = { "", "" },
         show_buffer_close_icons = false,
         show_close_icon = false,
         indicator = { style = "none" },
@@ -189,6 +190,14 @@ return {
         separator              = { fg = "#181825", bg = "#1e1e2e" },
         separator_selected     = { fg = "#89b4fa", bg = "#1e1e2e" },
         separator_visible      = { fg = "#181825", bg = "#1e1e2e" },
+        -- directory prefix shown when two tabs share the same filename
+        duplicate_selected     = { fg = "#1e1e2e", bg = "#89b4fa", bold = true,  italic = false },
+        duplicate              = { fg = "#6c7086", bg = "#181825",               italic = false },
+        duplicate_visible      = { fg = "#6c7086", bg = "#181825",               italic = false },
+        -- modified indicator (unsaved file): keep the blue background on the active tab
+        modified_selected      = { fg = "#1e1e2e", bg = "#89b4fa", italic = false },
+        modified               = { fg = "#6c7086", bg = "#181825", italic = false },
+        modified_visible       = { fg = "#6c7086", bg = "#181825", italic = false },
       },
     },
   },
