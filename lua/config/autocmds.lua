@@ -43,6 +43,22 @@ local function apply_custom_hl()
   hl(0, "DiagnosticVirtualTextInfo",   { fg = "#4487c4" })
   hl(0, "DiagnosticVirtualTextHint",   { fg = "#7a7e85" })
 
+  hl(0, "DiffAdd",    { bg = "#1e3028" })
+  hl(0, "DiffDelete", { bg = "#36192a" })
+  hl(0, "DiffChange", { bg = "#2c2518" })
+  hl(0, "DiffText",   { bg = "#453b25" })
+
+  hl(0, "GitSignsAdd",    { fg = "#a6e3a1" })
+  hl(0, "GitSignsChange", { fg = "#f9e2af" })
+  hl(0, "GitSignsDelete", { fg = "#f38ba8" })
+
+  hl(0, "GitSignsAddInline",      { bg = "#2a4535", fg = "#a6e3a1" })
+  hl(0, "GitSignsDeleteInline",   { bg = "#4a2838", fg = "#f38ba8" })
+  hl(0, "GitSignsChangeInline",   { bg = "#453b25", fg = "#f9e2af" })
+  hl(0, "GitSignsAddLnInline",    { bg = "#1e3028" })
+  hl(0, "GitSignsDeleteLnInline", { bg = "#36192a" })
+  hl(0, "GitSignsChangeLnInline", { bg = "#2c2518" })
+
   hl(0, "NeoTreeGitAdded",     { fg = "#a6e3a1" })
   hl(0, "NeoTreeGitUntracked", { fg = "#a6e3a1" })
   hl(0, "NeoTreeGitStaged",    { fg = "#a6e3a1" })
