@@ -13,6 +13,15 @@ return {
   {
     "ibhagwan/fzf-lua",
     keys = remove_gl_key,
+    opts = {
+      grep = {
+        formatter = "path.filename_first",
+        fzf_opts = {
+          ["--with-nth"] = "1..3",
+          ["--delimiter"] = ":",
+        },
+      },
+    },
   },
   {
     "LazyVim/LazyVim",

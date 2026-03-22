@@ -223,7 +223,7 @@ keymaps.set("n", "<C-g>ld", function() require("gitsigns").preview_hunk_inline()
 keymaps.set("n", "<C-g>lh", function() Snacks.picker.git_log_line() end, { desc = "Line history" })
 keymaps.set("n", "<C-g>lr", function() require("gitsigns").reset_hunk() end, { desc = "Revert line/hunk to HEAD" })
 keymaps.set("n", "<C-g>fd", function() require("gitsigns").diffthis() end, { desc = "File diff" })
-keymaps.set("n", "<C-g>fq", function()
+local function close_file_diff()
   if not vim.wo.diff then return end
   local cur_win = vim.api.nvim_get_current_win()
   for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
@@ -232,7 +232,16 @@ keymaps.set("n", "<C-g>fq", function()
     end
   end
   vim.cmd("diffoff!")
-end, { desc = "Close file diff" })
+end
+
+keymaps.set("n", "<C-g>fq", close_file_diff, { desc = "Close file diff" })
+keymaps.set("n", "q", function()
+  if vim.wo.diff then
+    close_file_diff()
+  else
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("q", true, false, true), "n", false)
+  end
+end, { desc = "Close file diff (in diff mode) / record macro" })
 keymaps.set("n", "<C-g>fh", function() Snacks.picker.git_log_file() end, { desc = "File history" })
 keymaps.set("n", "<C-g>fr", function() require("gitsigns").reset_buffer() end, { desc = "Revert file to HEAD" })
 
@@ -244,19 +253,44 @@ local function has_inline_preview()
 end
 
 keymaps.set("n", "n", function()
-  if has_inline_preview() then
+  if vim.wo.diff then
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("]c", true, false, true), "n", false)
+  elseif has_inline_preview() then
     require("gitsigns").nav_hunk("next")
   else
-    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("n", true, false, true), "n", false)
+    vim.cmd("normal! *")
   end
-end, { desc = "Next hunk / search next" })
+end, { desc = "Next occurrence of word under cursor" })
 keymaps.set("n", "N", function()
-  if has_inline_preview() then
+  if vim.wo.diff then
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("[c", true, false, true), "n", false)
+  elseif has_inline_preview() then
     require("gitsigns").nav_hunk("prev")
   else
-    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("N", true, false, true), "n", false)
+    vim.cmd("normal! #")
   end
-end, { desc = "Prev hunk / search prev" })
+end, { desc = "Prev occurrence of word under cursor" })
+
+local function visual_search_set()
+  local saved = vim.fn.getreg('"')
+  local saved_type = vim.fn.getregtype('"')
+  vim.cmd("normal! y")
+  local text = vim.fn.getreg('"')
+  vim.fn.setreg('"', saved, saved_type)
+  text = vim.fn.escape(text, "\\")
+  text = text:gsub("\n", "\\n")
+  vim.fn.setreg("/", "\\V" .. text)
+  vim.cmd("set hlsearch")
+end
+
+keymaps.set("v", "n", function()
+  visual_search_set()
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("n", true, false, true), "n", false)
+end, { desc = "Search selected text forward" })
+keymaps.set("v", "N", function()
+  visual_search_set()
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("N", true, false, true), "n", false)
+end, { desc = "Search selected text backward" })
 
 keymaps.set("n", "<leader>se", function() require("trouble").toggle("workspace_diagnostics") end, { desc = "Workspace errors" })
 Snacks.toggle({
