@@ -327,10 +327,16 @@ keymaps.set("v", "<S-Up>",   "k",  { desc = "Extend selection up" })
 keymaps.set("v", "<S-Down>", "j",  { desc = "Extend selection down" })
 
 -- Option+Left/Right: move word by word
+-- <M-Right>/<M-Left>  = xterm sequence  (iTerm2 / most modern terminals)
+-- <M-f>/<M-b>         = readline sequence (Terminal.app and some others)
 keymaps.set({ "n", "v" }, "<M-Right>", "w",      { desc = "Move forward a word" })
 keymaps.set("i",           "<M-Right>", "<C-o>w", { desc = "Move forward a word" })
+keymaps.set({ "n", "v" }, "<M-f>",     "w",      { desc = "Move forward a word" })
+keymaps.set("i",           "<M-f>",     "<C-o>w", { desc = "Move forward a word" })
 keymaps.set({ "n", "v" }, "<M-Left>",  "b",      { desc = "Move backward a word" })
 keymaps.set("i",           "<M-Left>",  "<C-o>b", { desc = "Move backward a word" })
+keymaps.set({ "n", "v" }, "<M-b>",     "b",      { desc = "Move backward a word" })
+keymaps.set("i",           "<M-b>",     "<C-o>b", { desc = "Move backward a word" })
 
 local function comment_line()
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("gcc", true, false, true), "m", false)
