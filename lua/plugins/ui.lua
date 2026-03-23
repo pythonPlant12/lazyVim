@@ -7,6 +7,19 @@ end
 
 return {
   {
+    "stevearc/aerial.nvim",
+    opts = {
+      -- Per-filetype allow-list. "_" is the default for all other filetypes.
+      -- Vue/HTML exclude Struct: template elements and custom component tags
+      -- are reported as Struct by the LSP and add noise to the breadcrumb.
+      filter_kind = {
+        _ = { "Class", "Constructor", "Enum", "Function", "Interface", "Module", "Method", "Struct" },
+        vue  = { "Class", "Constructor", "Enum", "Function", "Interface", "Module", "Method" },
+        html = { "Class", "Constructor", "Enum", "Function", "Interface", "Module", "Method" },
+      },
+    },
+  },
+  {
     "nvim-telescope/telescope.nvim",
     keys = remove_gl_key,
   },
@@ -689,15 +702,68 @@ return {
       opts.sections.lualine_c = opts.sections.lualine_c or {}
       local chip_bgs = { "#3A3D41", "#42464D", "#4A4F57" }
       local chip_index = 1
-      for i, comp in ipairs(opts.sections.lualine_c) do
+      local styled_c = {}
+      for _, comp in ipairs(opts.sections.lualine_c) do
         local head = type(comp) == "table" and comp[1] or comp
         local is_path_like = type(head) == "function" or head == "filename"
         if is_path_like then
           local bg = chip_bgs[((chip_index - 1) % #chip_bgs) + 1]
-          opts.sections.lualine_c[i] = style_chip(comp, bg)
+          local styled_comp = style_chip(comp, bg)
+          if chip_index > 1 then
+            -- For Vue/HTML: filter out Struct kind (template elements, custom
+            -- component tags) from navic — they add noise to the breadcrumb.
+            local orig_fn = type(styled_comp[1]) == "function" and styled_comp[1]
+            if orig_fn then
+              styled_comp[1] = function(self)
+                local ft = vim.bo.filetype
+                if ft == "vue" or ft == "html" then
+                  local ok, navic = pcall(require, "nvim-navic")
+                  if ok then
+                    local data = navic.get_data()
+                    if data then
+                      local parts = {}
+                      for _, item in ipairs(data) do
+                        if item.kind ~= "Struct" then
+                          table.insert(parts, (item.icon or "") .. item.name)
+                        end
+                      end
+                      return table.concat(parts, " > ")
+                    end
+                  end
+                  -- navic has no data: fall through to orig_fn (aerial),
+                  -- which will respect aerial's filter_kind excluding Struct
+                end
+                return orig_fn(self)
+              end
+            end
+            -- Code path (navic/aerial): cap its visible length so the file path
+            -- always has room. Walks the string char-by-char to skip %#HL# codes
+            -- when counting, so truncation lands on a real character boundary.
+            styled_comp.fmt = function(str)
+              local max = math.max(0, vim.o.columns - 100)
+              local visible = str:gsub("%%#[^#]*#", "")
+              if #visible <= max then return str end
+              if max < 5 then return "" end
+              local out, count, i = {}, 0, 1
+              while i <= #str and count < max - 1 do
+                if str:sub(i, i) == "%" and str:sub(i + 1, i + 1) == "#" then
+                  local j = str:find("#", i + 2)
+                  if j then table.insert(out, str:sub(i, j)); i = j + 1
+                  else i = i + 1 end
+                else
+                  table.insert(out, str:sub(i, i)); count = count + 1; i = i + 1
+                end
+              end
+              return table.concat(out) .. "…"
+            end
+          end
+          table.insert(styled_c, styled_comp)
           chip_index = chip_index + 1
+        else
+          table.insert(styled_c, comp)
         end
       end
+      opts.sections.lualine_c = styled_c
 
       -- Prettier path separator: ❯ instead of /
       for _, comp in ipairs(opts.sections.lualine_c) do
