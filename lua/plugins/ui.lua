@@ -1,8 +1,39 @@
+local tab_reuse = require("config.tab_reuse")
+
 local function remove_gl_key(_, keys)
   return vim.tbl_filter(function(k)
     local lhs = type(k) == "string" and k or k[1]
     return lhs ~= "<leader>gl"
   end, keys)
+end
+
+local function apply_item_pos(item)
+  if not (item and item.pos) then
+    return
+  end
+  pcall(vim.api.nvim_win_set_cursor, 0, { item.pos[1], item.pos[2] - 1 })
+end
+
+local function fzf_file_switch_or_edit(selected, opts)
+  if not (selected and selected[1]) then
+    return
+  end
+  local actions = require("fzf-lua.actions")
+  if #selected > 1 then
+    return actions.file_sel_to_qf(selected, opts)
+  end
+
+  local path_mod = require("fzf-lua.path")
+  local entry = path_mod.entry_to_file(selected[1], opts)
+  local target = entry.path or entry.bufname
+  if target and tab_reuse.jump_to_path(target, { prefer_other_tabs = true }) then
+    if (entry.line or 0) > 0 or (entry.col or 0) > 0 then
+      pcall(vim.api.nvim_win_set_cursor, 0, { math.max(1, entry.line), math.max(1, entry.col) - 1 })
+    end
+    return
+  end
+
+  actions.file_edit(selected, opts)
 end
 
 return {
@@ -27,6 +58,11 @@ return {
     "ibhagwan/fzf-lua",
     keys = remove_gl_key,
     opts = {
+      actions = {
+        files = {
+          ["enter"] = fzf_file_switch_or_edit,
+        },
+      },
       grep = {
         formatter = "path.filename_first",
         fzf_opts = {
@@ -225,6 +261,26 @@ return {
   },
   {
     "folke/snacks.nvim",
+    keys = {
+      {
+        "<leader>,",
+        function()
+          Snacks.picker.buffers({
+            confirm = function(picker, item)
+              if not item then return end
+              picker:close()
+              if item.buf and tab_reuse.jump_to_buf(item.buf, { prefer_other_tabs = true }) then
+                return
+              end
+              if item.buf then
+                vim.api.nvim_set_current_buf(item.buf)
+              end
+            end,
+          })
+        end,
+        desc = "Buffers",
+      },
+    },
     opts = {
       input = {
         win = {
@@ -232,6 +288,20 @@ return {
         },
       },
       picker = {
+        sources = {
+          buffers = {
+            confirm = function(picker, item)
+              if not item then return end
+              picker:close()
+              if item.buf and tab_reuse.jump_to_buf(item.buf, { prefer_other_tabs = true }) then
+                return
+              end
+              if item.buf then
+                vim.api.nvim_set_current_buf(item.buf)
+              end
+            end,
+          },
+        },
         win = {
           input = {
             border = "rounded",
@@ -242,6 +312,38 @@ return {
           preview = {
             border = "rounded",
           },
+        },
+        actions = {
+          confirm = function(picker, item)
+            if not item then return end
+            picker:close()
+
+            local path = Snacks.picker.util.path(item)
+            if path and tab_reuse.jump_to_path(path, { prefer_other_tabs = true }) then
+              apply_item_pos(item)
+              return
+            end
+
+            local bufnr = item.buf
+            if not bufnr and path then
+              bufnr = vim.fn.bufnr(path)
+              if bufnr == -1 then
+                vim.cmd("edit " .. vim.fn.fnameescape(path))
+                apply_item_pos(item)
+                return
+              end
+            end
+
+            if bufnr and tab_reuse.jump_to_buf(bufnr, { prefer_other_tabs = true }) then
+              apply_item_pos(item)
+              return
+            end
+
+            if not bufnr then return end
+            vim.bo[bufnr].buflisted = true
+            vim.api.nvim_set_current_buf(bufnr)
+            apply_item_pos(item)
+          end,
         },
       },
       notifier = {

@@ -165,13 +165,14 @@ local function smart_buf_goto(bufnr)
   vim.api.nvim_set_current_buf(bufnr)
 end
 
--- Alternate buffer (C-^), tab-aware: jumps to the tab where the buffer is shown
-keymaps.set("n", "<C-^>", function()
+local function goto_alt_buf()
   local alt = vim.fn.bufnr('#')
   if alt > 0 and vim.fn.buflisted(alt) == 1 then
     smart_buf_goto(alt)
   end
-end, { desc = "Alternate buffer (tab-aware)" })
+end
+keymaps.set("n", "<C-^>",      goto_alt_buf, { desc = "Alternate buffer (tab-aware)" })
+keymaps.set("n", "<leader>bb", goto_alt_buf, { desc = "Switch to Other Buffer" })
 
 keymaps.set("n", "<C-w>z", function()
   if vim.t.maximized then
@@ -198,7 +199,6 @@ local function pick_buffers_smart()
   })
 end
 keymaps.set("n", "<C-Tab>", pick_buffers_smart, { desc = "Find buffers" })
-keymaps.set("n", "<leader>bl", pick_buffers_smart, { desc = "Find buffers" })
 
 keymaps.set("n", "<Tab>", ">>", { desc = "Indent line" })
 keymaps.set("n", "<S-Tab>", "<<", { desc = "Unindent line" })
