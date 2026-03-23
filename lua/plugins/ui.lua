@@ -505,6 +505,42 @@ return {
       end
       opts.sections.lualine_c = new_c
 
+      -- Replace LazyVim's Trouble symbols component with a kind-filtered version.
+      -- The component is identified by: table with function at [1] and a cond function.
+      -- For Vue/HTML files, Struct kind items (template elements, custom component tags)
+      -- are excluded so they don't pollute the statusline breadcrumb.
+      do
+        local ok_t, trouble_api = pcall(require, "trouble")
+        if ok_t then
+          for i, comp in ipairs(opts.sections.lualine_c) do
+            if type(comp) == "table" and type(comp[1]) == "function" and type(comp.cond) == "function" then
+              local symbols = trouble_api.statusline({
+                mode = "symbols",
+                groups = {},
+                title = false,
+                filter = { range = true, no_vue_struct = true },
+                filters = {
+                  no_vue_struct = function(item)
+                    local ft = vim.bo.filetype
+                    if ft ~= "vue" and ft ~= "html" then return true end
+                    return not (item.item and item.item.kind == "Struct")
+                  end,
+                },
+                format = "{kind_icon}{symbol.name:Normal}",
+                hl_group = "lualine_c_normal",
+              })
+              opts.sections.lualine_c[i] = {
+                symbols and symbols.get,
+                cond = function()
+                  return vim.b.trouble_lualine ~= false and symbols.has()
+                end,
+              }
+              break
+            end
+          end
+        end
+      end
+
       table.insert(opts.sections.lualine_x, 1, {
         function()
           local d = vim.diagnostic.count(0)
@@ -710,33 +746,7 @@ return {
           local bg = chip_bgs[((chip_index - 1) % #chip_bgs) + 1]
           local styled_comp = style_chip(comp, bg)
           if chip_index > 1 then
-            -- For Vue/HTML: filter out Struct kind (template elements, custom
-            -- component tags) from navic — they add noise to the breadcrumb.
-            local orig_fn = type(styled_comp[1]) == "function" and styled_comp[1]
-            if orig_fn then
-              styled_comp[1] = function(self)
-                local ft = vim.bo.filetype
-                if ft == "vue" or ft == "html" then
-                  local ok, navic = pcall(require, "nvim-navic")
-                  if ok then
-                    local data = navic.get_data()
-                    if data then
-                      local parts = {}
-                      for _, item in ipairs(data) do
-                        if item.kind ~= "Struct" then
-                          table.insert(parts, (item.icon or "") .. item.name)
-                        end
-                      end
-                      return table.concat(parts, " > ")
-                    end
-                  end
-                  -- navic has no data: fall through to orig_fn (aerial),
-                  -- which will respect aerial's filter_kind excluding Struct
-                end
-                return orig_fn(self)
-              end
-            end
-            -- Code path (navic/aerial): cap its visible length so the file path
+            -- Code path (Trouble symbols): cap its visible length so the file path
             -- always has room. Walks the string char-by-char to skip %#HL# codes
             -- when counting, so truncation lands on a real character boundary.
             styled_comp.fmt = function(str)
