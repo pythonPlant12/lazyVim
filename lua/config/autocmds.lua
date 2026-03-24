@@ -142,6 +142,22 @@ local function apply_custom_hl()
   hl(0, "TroubleIconObject",        { fg = "#eba0ac" })
   hl(0, "TroubleIconPackage",       { fg = "#74c7ec" })
   hl(0, "TroubleIconString",        { fg = "#a6e3a1" })
+
+  hl(0, "SnacksPickerListCursorLine",    { fg = "#fab387", bg = "#313244" })
+  hl(0, "SnacksPickerFile",              { fg = "#cdd6f4", bold = true })
+  hl(0, "SnacksPickerDir",               { fg = "#7f849c" })
+  hl(0, "SnacksPickerMatch",             { fg = "#fab387", bold = true })
+  hl(0, "SnacksPickerRow",               { fg = "#94e2d5" })
+  hl(0, "SnacksPickerCol",               { fg = "#7f849c" })
+  hl(0, "SnacksPickerDirectory",         { fg = "#89b4fa" })
+  hl(0, "SnacksPickerPrompt",            { fg = "#cba6f7" })
+  hl(0, "SnacksPickerDelim",             { fg = "#6c7086" })
+  hl(0, "SnacksPickerSelected",          { fg = "#89b4fa" })
+  hl(0, "SnacksPickerComment",           { fg = "#6c7086" })
+  hl(0, "SnacksPickerGitStatusAdded",    { fg = "#a6e3a1" })
+  hl(0, "SnacksPickerGitStatusModified", { fg = "#f9e2af" })
+  hl(0, "SnacksPickerGitStatusDeleted",  { fg = "#f38ba8" })
+  hl(0, "SnacksPickerGitStatusUntracked",{ fg = "#94e2d5" })
 end
 
 vim.api.nvim_create_autocmd("ColorScheme", {
@@ -176,3 +192,70 @@ vim.api.nvim_create_autocmd("FileType", {
   pattern = { "html", "vue" },
   callback = apply_html_hl,
 })
+
+do
+  vim.g.buf_history = vim.g.buf_history or {}
+
+  local guard = false
+
+  local function is_picker_open()
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(vim.api.nvim_get_current_tabpage())) do
+      local ok, ft = pcall(function()
+        return vim.bo[vim.api.nvim_win_get_buf(win)].filetype or ""
+      end)
+      if ok and ft:find("^snacks_picker") then return true end
+    end
+    return false
+  end
+
+  local function push_buf_history(bufnr)
+    local h = vim.g.buf_history
+    if h[#h] == bufnr then return end
+    table.insert(h, bufnr)
+    if #h > 50 then table.remove(h, 1) end
+    vim.g.buf_history = h
+  end
+
+  vim.api.nvim_create_autocmd("BufEnter", {
+    group = vim.api.nvim_create_augroup("TabReuseOnBufEnter", { clear = true }),
+    callback = function(ev)
+      if guard then return end
+      if vim.bo[ev.buf].buftype ~= "" then return end
+      if vim.api.nvim_buf_get_name(ev.buf) == "" then return end
+      if is_picker_open() then return end
+
+      push_buf_history(ev.buf)
+
+      local cur_tab = vim.api.nvim_get_current_tabpage()
+      local cur_win = vim.api.nvim_get_current_win()
+      local target_tab, target_win
+
+      for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
+        if tab ~= cur_tab then
+          for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
+            if vim.api.nvim_win_get_buf(win) == ev.buf then
+              target_tab, target_win = tab, win
+              break
+            end
+          end
+          if target_tab then break end
+        end
+      end
+
+      if not target_tab then return end
+
+      guard = true
+      vim.schedule(function()
+        local prev = vim.fn.bufnr('#')
+        if prev > 0 and prev ~= ev.buf and vim.api.nvim_buf_is_valid(prev) then
+          vim.api.nvim_win_set_buf(cur_win, prev)
+        else
+          vim.api.nvim_win_call(cur_win, function() vim.cmd("bprevious") end)
+        end
+        vim.api.nvim_set_current_tabpage(target_tab)
+        vim.api.nvim_set_current_win(target_win)
+        guard = false
+      end)
+    end,
+  })
+end

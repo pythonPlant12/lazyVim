@@ -166,9 +166,14 @@ local function smart_buf_goto(bufnr)
 end
 
 local function goto_alt_buf()
-  local alt = vim.fn.bufnr('#')
-  if alt > 0 and vim.fn.buflisted(alt) == 1 then
-    smart_buf_goto(alt)
+  local cur = vim.api.nvim_get_current_buf()
+  local h = vim.g.buf_history or {}
+  for i = #h - 1, 1, -1 do
+    local bufnr = h[i]
+    if bufnr ~= cur and vim.api.nvim_buf_is_valid(bufnr) and vim.fn.buflisted(bufnr) == 1 then
+      smart_buf_goto(bufnr)
+      return
+    end
   end
 end
 keymaps.set("n", "<C-^>",      goto_alt_buf, { desc = "Alternate buffer (tab-aware)" })
@@ -191,14 +196,16 @@ keymaps.set("n", "<C-w>-", "<cmd>split<CR>",  { desc = "Split window horizontall
 local function pick_buffers_smart()
   Snacks.picker.buffers({
     confirm = function(picker, item)
+      local buf = item and item.buf
       picker:close()
-      if item and item.buf then
-        smart_buf_goto(item.buf)
-      end
+      vim.schedule(function()
+        if buf then smart_buf_goto(buf) end
+      end)
     end,
   })
 end
-keymaps.set("n", "<C-Tab>", pick_buffers_smart, { desc = "Find buffers" })
+keymaps.set("n", "<C-Tab>",    pick_buffers_smart, { desc = "Find buffers" })
+keymaps.set("n", "<leader>bl", pick_buffers_smart, { desc = "List buffers" })
 
 keymaps.set("n", "<Tab>", ">>", { desc = "Indent line" })
 keymaps.set("n", "<S-Tab>", "<<", { desc = "Unindent line" })

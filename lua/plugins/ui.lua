@@ -58,17 +58,17 @@ return {
     "ibhagwan/fzf-lua",
     keys = remove_gl_key,
     opts = {
+      fzf_colors = true,
       actions = {
         files = {
           ["enter"] = fzf_file_switch_or_edit,
         },
       },
+      files = {
+        formatter = { "path.filename_first", 2 },
+      },
       grep = {
-        formatter = "path.filename_first",
-        fzf_opts = {
-          ["--with-nth"] = "1..3",
-          ["--delimiter"] = ":",
-        },
+        formatter = { "path.filename_first", 2 },
       },
     },
   },
@@ -282,6 +282,7 @@ return {
       },
     },
     opts = {
+      image = { enabled = false },
       input = {
         win = {
           border = "rounded",
@@ -299,6 +300,31 @@ return {
               if item.buf then
                 vim.api.nvim_set_current_buf(item.buf)
               end
+            end,
+          },
+          grep = {
+            format = function(item, picker)
+              return require("snacks.picker.format").filename(item, picker)
+            end,
+          },
+          lsp_references = {
+            format = function(item, picker)
+              return require("snacks.picker.format").filename(item, picker)
+            end,
+          },
+          lsp_definitions = {
+            format = function(item, picker)
+              return require("snacks.picker.format").filename(item, picker)
+            end,
+          },
+          lsp_implementations = {
+            format = function(item, picker)
+              return require("snacks.picker.format").filename(item, picker)
+            end,
+          },
+          lsp_type_definitions = {
+            format = function(item, picker)
+              return require("snacks.picker.format").filename(item, picker)
             end,
           },
         },
@@ -344,6 +370,11 @@ return {
             vim.api.nvim_set_current_buf(bufnr)
             apply_item_pos(item)
           end,
+        },
+        formatters = {
+          file = {
+            filename_first = true,
+          },
         },
       },
       notifier = {
