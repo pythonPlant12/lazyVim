@@ -111,6 +111,42 @@ keymaps.set("n", "<leader>fP", function()
   vim.notify("Copied: " .. abs, vim.log.levels.INFO, { title = "Path" })
 end, { desc = "Copy absolute path" })
 
+keymaps.set("n", "<leader>of", function()
+  local path = vim.api.nvim_buf_get_name(0)
+  if path == "" then
+    vim.notify("Current buffer has no file path", vim.log.levels.WARN, { title = "Open File" })
+    return
+  end
+
+  path = vim.fn.fnamemodify(path, ":p")
+  if vim.fn.filereadable(path) ~= 1 and vim.fn.isdirectory(path) ~= 1 then
+    vim.notify("File not found: " .. path, vim.log.levels.WARN, { title = "Open File" })
+    return
+  end
+
+  local cmd
+  if vim.fn.has("macunix") == 1 then
+    cmd = { "open", path }
+  elseif vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1 then
+    cmd = { "cmd", "/c", "start", "", path }
+  else
+    cmd = { "xdg-open", path }
+  end
+
+  if vim.fn.executable(cmd[1]) ~= 1 then
+    vim.notify("Open command not found: " .. cmd[1], vim.log.levels.ERROR, { title = "Open File" })
+    return
+  end
+
+  local ok = pcall(vim.system, cmd, { detach = true })
+  if not ok then
+    vim.notify("Failed to open: " .. path, vim.log.levels.ERROR, { title = "Open File" })
+    return
+  end
+
+  vim.notify("Opened externally: " .. vim.fn.fnamemodify(path, ":t"), vim.log.levels.INFO, { title = "Open File" })
+end, { desc = "Open file externally" })
+
 keymaps.set("n", "<C-m>", vim.lsp.buf.hover, { desc = "Show hover information" })
 keymaps.set("i", "<C-n>", function() require("blink.cmp").show() end, { desc = "Show suggestions" })
 

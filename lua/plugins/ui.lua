@@ -8,10 +8,106 @@ local function remove_gl_key(_, keys)
 end
 
 local function apply_item_pos(item)
-  if not (item and item.pos) then
+  if not item then
     return
   end
-  pcall(vim.api.nvim_win_set_cursor, 0, { item.pos[1], item.pos[2] - 1 })
+
+  require("snacks.picker.util").resolve_loc(item)
+
+  local pos = item.pos
+  if not (pos and pos[1]) and item.loc and item.loc.range and item.loc.range.start then
+    local start = item.loc.range.start
+    pos = { start.line + 1, start.character }
+  end
+  if not (pos and pos[1]) then
+    return
+  end
+
+  local line_count = vim.api.nvim_buf_line_count(0)
+  local row = math.max(1, math.min(pos[1], line_count))
+  local col = math.max(0, pos[2] or 0)
+  pcall(vim.api.nvim_win_set_cursor, 0, { row, col })
+  pcall(vim.cmd, "normal! zv")
+end
+
+local uv = vim.uv or vim.loop
+
+local video_ext = {
+  mp4 = true,
+  mov = true,
+  avi = true,
+  mkv = true,
+  webm = true,
+}
+
+local function is_video_path(path)
+  if not path or path == "" then
+    return false
+  end
+  local ext = vim.fn.fnamemodify(path, ":e"):lower()
+  return video_ext[ext] == true
+end
+
+local function video_thumbnail_path(path)
+  local dir = vim.fn.stdpath("cache") .. "/snacks/video"
+  vim.fn.mkdir(dir, "p")
+  return dir .. "/" .. vim.fn.sha256(path) .. ".png"
+end
+
+local function generate_video_thumbnail(path)
+  local stat = uv.fs_stat(path)
+  if not stat then
+    return nil
+  end
+
+  local thumb = video_thumbnail_path(path)
+  local thumb_stat = uv.fs_stat(thumb)
+  if thumb_stat and thumb_stat.mtime and stat.mtime and thumb_stat.mtime.sec >= stat.mtime.sec then
+    return thumb
+  end
+
+  if vim.fn.executable("ffmpeg") ~= 1 then
+    return nil
+  end
+
+  local result = vim.system({
+    "ffmpeg",
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-y",
+    "-i",
+    path,
+    "-vf",
+    "thumbnail,scale=1920:-1",
+    "-frames:v",
+    "1",
+    thumb,
+  }, { text = true }):wait()
+
+  if result.code == 0 and uv.fs_stat(thumb) then
+    return thumb
+  end
+
+  return nil
+end
+
+local function snacks_file_preview_with_video(ctx)
+  local path = Snacks.picker.util.path(ctx.item)
+  if not is_video_path(path) then
+    return require("snacks.picker.preview").file(ctx)
+  end
+
+  local thumb = generate_video_thumbnail(path)
+  if not thumb then
+    return require("snacks.picker.preview").file(ctx)
+  end
+
+  local buf = ctx.preview:scratch()
+  local title = ctx.item.title or vim.fn.fnamemodify(path, ":t")
+  ctx.preview:set_title(title)
+  Snacks.image.buf.attach(buf, { src = thumb })
+  return true
 end
 
 local function fzf_file_switch_or_edit(selected, opts)
@@ -279,7 +375,29 @@ return {
       },
     },
     opts = {
-      image = { enabled = false },
+      image = {
+        enabled = true,
+        formats = {
+          "png",
+          "jpg",
+          "jpeg",
+          "gif",
+          "bmp",
+          "webp",
+          "tiff",
+          "heic",
+          "avif",
+          "pdf",
+          "icns",
+        },
+        doc = {
+          enabled = true,
+          inline = true,
+          float = true,
+          max_width = 80,
+          max_height = 40,
+        },
+      },
       input = {
         win = {
           border = "rounded",
@@ -299,7 +417,27 @@ return {
               end
             end,
           },
+          files = {
+            cmd = "fd",
+            hidden = true,
+            preview = snacks_file_preview_with_video,
+          },
+          git_files = {
+            preview = snacks_file_preview_with_video,
+          },
+          recent = {
+            preview = snacks_file_preview_with_video,
+          },
+          explorer = {
+            preview = snacks_file_preview_with_video,
+          },
           grep = {
+            hidden = true,
+            ignored = true,
+            args = {
+              "--glob=.git",
+              "--glob=.git/**",
+            },
             format = function(item, picker)
               return require("snacks.picker.format").filename(item, picker)
             end,
@@ -331,6 +469,27 @@ return {
             picker:close()
 
             local path = Snacks.picker.util.path(item)
+            if path and is_video_path(path) then
+              local thumb = generate_video_thumbnail(path)
+              if thumb then
+                local bufnr = vim.fn.bufnr(path)
+                if bufnr ~= -1 and tab_reuse.jump_to_buf(bufnr, { prefer_other_tabs = true }) then
+                  Snacks.image.buf.attach(bufnr, { src = thumb })
+                  return
+                end
+
+                if bufnr == -1 then
+                  bufnr = vim.api.nvim_create_buf(true, false)
+                  vim.api.nvim_buf_set_name(bufnr, path)
+                end
+
+                vim.bo[bufnr].buflisted = true
+                vim.api.nvim_set_current_buf(bufnr)
+                Snacks.image.buf.attach(bufnr, { src = thumb })
+                return
+              end
+            end
+
             if path and tab_reuse.jump_to_path(path, { prefer_other_tabs = true }) then
               apply_item_pos(item)
               return

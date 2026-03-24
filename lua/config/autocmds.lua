@@ -77,6 +77,7 @@ local function apply_custom_hl()
   hl(0, "NeoTreeGitUnstaged",  { fg = "#e5c07b" })
   hl(0, "NeoTreeGitDeleted",   { fg = "#f38ba8" })
   hl(0, "NeoTreeGitConflict",  { fg = "#f38ba8" })
+  hl(0, "NeoTreeCursorLine",   { fg = "#fab387", bg = "#313244", bold = true })
 
   hl(0, "@variable.parameter",                  { fg = "#C5B8F0" })
   hl(0, "@variable.parameter.builtin",          { fg = "#C5B8F0" })
