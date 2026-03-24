@@ -32,8 +32,8 @@ local hl = vim.api.nvim_set_hl
 -- UI
 hl(0, "Normal", { fg = palette.fg, bg = palette.bg })
 hl(0, "NormalNC", { fg = palette.fg, bg = palette.bg })
-hl(0, "NormalFloat", { fg = palette.fg, bg = palette.line_alt })
-hl(0, "FloatBorder", { fg = palette.border, bg = palette.line_alt })
+hl(0, "NormalFloat", { fg = palette.fg, bg = palette.bg })
+hl(0, "FloatBorder", { fg = "#585b70", bg = palette.bg })
 hl(0, "CursorLine", { bg = palette.line_alt })
 hl(0, "CursorLineNr", { fg = palette.fg_bright, bg = palette.line_alt, bold = true })
 hl(0, "LineNr", { fg = palette.muted })

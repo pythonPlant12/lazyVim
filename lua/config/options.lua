@@ -3,6 +3,7 @@
 -- Add any additional options here
 
 vim.o.smoothscroll = false
+vim.o.winborder = "rounded"
 
 vim.diagnostic.config({ signs = false })
 

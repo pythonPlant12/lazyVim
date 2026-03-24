@@ -74,9 +74,6 @@ return {
   },
   {
     "LazyVim/LazyVim",
-    init = function()
-      vim.o.winborder = "rounded"
-    end,
     opts = {
       icons = {
         kinds = {
@@ -326,17 +323,6 @@ return {
             format = function(item, picker)
               return require("snacks.picker.format").filename(item, picker)
             end,
-          },
-        },
-        win = {
-          input = {
-            border = "rounded",
-          },
-          list = {
-            border = "rounded",
-          },
-          preview = {
-            border = "rounded",
           },
         },
         actions = {

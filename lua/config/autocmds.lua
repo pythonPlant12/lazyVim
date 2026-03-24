@@ -30,7 +30,17 @@ vim.api.nvim_create_autocmd("WinLeave", {
 
 local function apply_custom_hl()
   local hl = vim.api.nvim_set_hl
+  local normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
+  local border_bg = (normal and normal.bg) and string.format("#%06x", normal.bg) or "#191A1C"
+  local normal_fg = (normal and normal.fg) and string.format("#%06x", normal.fg) or "#BCBEC4"
 
+  hl(0, "NormalFloat",               { fg = normal_fg, bg = border_bg })
+  hl(0, "FloatBorder",               { fg = "#585b70", bg = border_bg })
+  hl(0, "PmenuBorder",               { fg = "#585b70", bg = border_bg })
+  hl(0, "SnacksPickerBorder",        { fg = "#585b70", bg = border_bg })
+  hl(0, "SnacksInputBorder",         { fg = "#585b70", bg = border_bg })
+  hl(0, "NoiceCmdlinePopupBorder",   { fg = "#585b70", bg = border_bg })
+  hl(0, "WhichKeyBorder",            { fg = "#585b70", bg = border_bg })
   hl(0, "Visual",                    { bg = "#45475a" })
   hl(0, "VisualNOS",                 { bg = "#45475a" })
   hl(0, "PmenuSel",                  { bg = "#45475a" })
