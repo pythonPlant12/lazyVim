@@ -177,6 +177,31 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 })
 apply_custom_hl()
 
+local function normalize_float_cursor_windows()
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_is_valid(win) then
+      local cfg = vim.api.nvim_win_get_config(win)
+      if cfg and cfg.relative and cfg.relative ~= "" then
+        vim.wo[win].cursorline = false
+        vim.wo[win].cursorcolumn = false
+        vim.wo[win].conceallevel = 0
+        vim.wo[win].concealcursor = ""
+        local wh = vim.wo[win].winhighlight or ""
+        if not wh:find("CursorLine:", 1, true) then
+          vim.wo[win].winhighlight = (wh ~= "" and (wh .. ",") or "") .. "CursorLine:NormalFloat"
+        end
+      end
+    end
+  end
+end
+
+vim.api.nvim_create_autocmd({ "WinNew", "WinEnter", "BufWinEnter" }, {
+  group = vim.api.nvim_create_augroup("NoCursorlineInFloats", { clear = true }),
+  callback = function()
+    vim.schedule(normalize_float_cursor_windows)
+  end,
+})
+
 local function apply_html_hl()
   local hl = vim.api.nvim_set_hl
   local blue    = "#56A8F5"

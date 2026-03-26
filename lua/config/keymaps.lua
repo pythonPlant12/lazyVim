@@ -249,7 +249,25 @@ keymaps.set("v", "<Tab>", ">gv", { desc = "Indent selection" })
 keymaps.set("v", "<S-Tab>", "<gv", { desc = "Unindent selection" })
 keymaps.set("i", "<Tab>", "<C-t>", { desc = "Indent" })
 keymaps.set("i", "<S-Tab>", "<C-d>", { desc = "Unindent" })
-keymaps.set("n", "<C-e>", vim.diagnostic.open_float, { desc = "Show line diagnostics" })
+keymaps.set("n", "<C-e>", function()
+  local _, win = vim.diagnostic.open_float({
+    scope = "line",
+    focusable = true,
+    border = "rounded",
+    source = "if_many",
+    close_events = { "InsertEnter", "BufHidden", "WinLeave" },
+  })
+  if win and vim.api.nvim_win_is_valid(win) then
+    vim.wo[win].cursorline = false
+    vim.wo[win].cursorcolumn = false
+    vim.wo[win].conceallevel = 0
+    vim.wo[win].concealcursor = ""
+    local wh = vim.wo[win].winhighlight or ""
+    if not wh:find("CursorLine:", 1, true) then
+      vim.wo[win].winhighlight = (wh ~= "" and (wh .. ",") or "") .. "CursorLine:NormalFloat"
+    end
+  end
+end, { desc = "Show line diagnostics" })
 
 
 

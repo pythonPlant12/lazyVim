@@ -489,7 +489,7 @@ return {
             hidden = true,
             ignored = true,
             args = {
-              "--glob=.git",
+              "--glob=**",
               "--glob=.git/**",
             },
             format = function(item, picker)
@@ -501,7 +501,7 @@ return {
             ignored = true,
             args = {
               "--word-regexp",
-              "--glob=.git",
+              "--glob=**",
               "--glob=.git/**",
             },
             format = function(item, picker)
@@ -509,6 +509,7 @@ return {
             end,
           },
           lsp_references = {
+            confirm = "jump",
             format = function(item, picker)
               return require("snacks.picker.format").filename(item, picker)
             end,
@@ -596,6 +597,24 @@ return {
   {
     "folke/noice.nvim",
     opts = {
+      lsp = {
+        hover = {
+          enabled = false,
+        },
+        signature = {
+          enabled = false,
+        },
+        documentation = {
+          opts = {
+            win_options = {
+              concealcursor = "",
+              conceallevel = 0,
+              cursorline = false,
+              cursorcolumn = false,
+            },
+          },
+        },
+      },
       presets = {
         lsp_doc_border = true,
       },
@@ -611,8 +630,13 @@ return {
           },
         },
         hover = {
+          enter = true,
           border = {
             style = "rounded",
+          },
+          win_options = {
+            cursorline = false,
+            cursorcolumn = false,
           },
         },
       },

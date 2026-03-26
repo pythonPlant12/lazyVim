@@ -11,9 +11,10 @@ vim.g.root_spec = { "cwd" }
 
 -- Undercurl
 vim.cmd([[let &t_Cs = "\e[4:3m"]])
-vim.cmd([[let &t_Cs = "\e[4:0m"]])
+vim.cmd([[let &t_Ce = "\e[4:0m"]])
 
 vim.o.cmdheight = 2
+vim.o.guicursor = "n-v-c-sm:block,i-ci-ve:ver25,r-cr-o:hor20,t:block"
 
 vim.g.autoformat = false
 vim.g.eslint_autosave = false

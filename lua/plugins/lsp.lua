@@ -96,17 +96,22 @@ return {
       end, { expr = true, noremap = true, silent = true, desc = "Alias :check-lsp to :CheckLsp" })
 
       local max_width, max_height = max_popup_size()
+      local stable_float_close_events = { "InsertEnter", "BufHidden", "WinLeave" }
 
       vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
         border = "rounded",
         max_width = max_width,
         max_height = max_height,
+        focusable = true,
+        close_events = stable_float_close_events,
       })
 
       vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, {
         border = "rounded",
         max_width = max_width,
         max_height = max_height,
+        focusable = true,
+        close_events = stable_float_close_events,
       })
 
       vim.api.nvim_set_hl(0, "@lsp.type.component", { link = "@type" })
