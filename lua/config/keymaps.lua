@@ -12,12 +12,28 @@ keymaps.set("n", "-", "C-x")
 keymaps.set("n", "<C-a>", "gg<S-v>G")
 
 -- Jumplist
-keymaps.set("n", "<C-i>", "<C-o>", opts)
-keymaps.set("n", "<C-o>", "<C-i>", opts)
-keymaps.set("n", "<D-i>", "<C-o>", opts)
-keymaps.set("n", "<D-o>", "<C-i>", opts)
-keymaps.set("n", "<leader>i", "<C-o>", opts)
-keymaps.set("n", "<leader>o", "<C-i>", opts)
+local function feed_normal(keys)
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(keys, true, false, true), "n", false)
+end
+
+local function jump_back_smart()
+  local before = vim.api.nvim_win_get_cursor(0)
+  local stack = vim.fn.gettagstack(vim.api.nvim_get_current_win())
+  if type(stack) == "table" and stack.items and #stack.items > 0 and (stack.curidx or 0) > 0 then
+    feed_normal("<C-t>")
+    local after = vim.api.nvim_win_get_cursor(0)
+    if after[1] ~= before[1] or after[2] ~= before[2] then
+      return
+    end
+  end
+  feed_normal("<C-o>")
+end
+
+keymaps.set("n", "<C-i>", jump_back_smart, opts)
+keymaps.set("n", "<D-i>", jump_back_smart, opts)
+keymaps.set("n", "<D-o>", jump_back_smart, opts)
+keymaps.set("n", "<leader>i", jump_back_smart, opts)
+keymaps.set("n", "<leader>o", jump_back_smart, opts)
 
 keymaps.set("n", "zc", "za", opts)
 
@@ -243,8 +259,6 @@ end
 keymaps.set("n", "<C-Tab>",    pick_buffers_smart, { desc = "Find buffers" })
 keymaps.set("n", "<leader>bl", pick_buffers_smart, { desc = "List buffers" })
 
-keymaps.set("n", "<Tab>", ">>", { desc = "Indent line" })
-keymaps.set("n", "<S-Tab>", "<<", { desc = "Unindent line" })
 keymaps.set("v", "<Tab>", ">gv", { desc = "Indent selection" })
 keymaps.set("v", "<S-Tab>", "<gv", { desc = "Unindent selection" })
 keymaps.set("i", "<Tab>", "<C-t>", { desc = "Indent" })
@@ -283,7 +297,160 @@ keymaps.set("n", "<C-g>d",  function() Snacks.picker.git_diff() end, { desc = "G
 keymaps.set("n", "<C-g>ld", function() require("gitsigns").preview_hunk_inline() end, { desc = "Line diff" })
 keymaps.set("n", "<C-g>lh", function() Snacks.picker.git_log_line() end, { desc = "Line history" })
 keymaps.set("n", "<C-g>lr", function() require("gitsigns").reset_hunk() end, { desc = "Revert line/hunk to HEAD" })
-keymaps.set("n", "<C-g>fd", function() require("gitsigns").diffthis() end, { desc = "File diff" })
+local function open_file_diff_fullscreen(base)
+  vim.cmd("tab split")
+  require("gitsigns").diffthis(base)
+  if vim.wo.diff then
+    vim.cmd("wincmd =")
+  end
+end
+
+local function git_root_or_cwd()
+  local ok, root = pcall(function() return LazyVim.root.git() end)
+  return (ok and root and root ~= "") and root or vim.fn.getcwd()
+end
+
+local function git_lines(args)
+  local cmd = { "git" }
+  vim.list_extend(cmd, args)
+  local result = vim.system(cmd, { cwd = git_root_or_cwd(), text = true }):wait()
+  if result.code ~= 0 then
+    local err = vim.trim(result.stderr or "")
+    return nil, err ~= "" and err or "git command failed"
+  end
+  local out = vim.trim(result.stdout or "")
+  if out == "" then
+    return {}, nil
+  end
+  return vim.split(out, "\n", { trimempty = true }), nil
+end
+
+local function list_branches()
+  local lines, err = git_lines({ "for-each-ref", "--format=%(refname:short)", "refs/heads", "refs/remotes" })
+  if not lines then
+    return nil, err
+  end
+  local seen = {}
+  local items = {}
+  for _, ref in ipairs(lines) do
+    if ref ~= "origin/HEAD" and not seen[ref] then
+      seen[ref] = true
+      items[#items + 1] = {
+        ref = ref,
+        label = ref:find("/", 1, true) and ("[remote] " .. ref) or ("[local]  " .. ref),
+      }
+    end
+  end
+  return items, nil
+end
+
+local function list_commits(limit)
+  local lines, err = git_lines({ "log", "--pretty=format:%h\t%s", ("--max-count=%d"):format(limit or 120) })
+  if not lines then
+    return nil, err
+  end
+  local items = {}
+  for _, line in ipairs(lines) do
+    local sha, subj = line:match("^(%S+)%s+(.+)$")
+    if sha then
+      items[#items + 1] = { ref = sha, label = sha .. "  " .. (subj or "") }
+    end
+  end
+  return items, nil
+end
+
+_G.__git_ref_complete = function(arglead)
+  local refs = { "HEAD", "HEAD~1", "HEAD~2", "@{-1}" }
+  local branches = list_branches() or {}
+  for _, b in ipairs(branches) do
+    refs[#refs + 1] = b.ref
+  end
+  local ret, seen = {}, {}
+  local prefix = vim.pesc(arglead or "")
+  for _, ref in ipairs(refs) do
+    if not seen[ref] and ref:find("^" .. prefix) then
+      seen[ref] = true
+      ret[#ret + 1] = ref
+    end
+  end
+  table.sort(ret)
+  return ret
+end
+
+local function pick_diff_base_and_open()
+  local options = {
+    { key = "branch", label = "Compare with branch (local/origin)" },
+    { key = "commit", label = "Compare with commit from current branch" },
+    { key = "typed", label = "Type ref with completion" },
+    { key = "head", label = "Compare with HEAD" },
+    { key = "head1", label = "Compare with HEAD~1" },
+  }
+
+  vim.ui.select(options, {
+    prompt = "Choose diff base source:",
+    format_item = function(item) return item.label end,
+  }, function(choice)
+    if not choice then
+      return
+    end
+    if choice.key == "head" then
+      open_file_diff_fullscreen("HEAD")
+      return
+    end
+    if choice.key == "head1" then
+      open_file_diff_fullscreen("HEAD~1")
+      return
+    end
+    if choice.key == "typed" then
+      local ref = vim.fn.input({
+        prompt = "Diff base (branch/commit/tag): ",
+        default = "HEAD",
+        completion = "customlist,v:lua.__git_ref_complete",
+      })
+      ref = vim.trim(ref or "")
+      if ref ~= "" then
+        open_file_diff_fullscreen(ref)
+      end
+      return
+    end
+
+    if choice.key == "branch" then
+      local items, err = list_branches()
+      if not items then
+        vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = "Git Diff" })
+        return
+      end
+      vim.ui.select(items, {
+        prompt = "Compare against branch:",
+        format_item = function(item) return item.label end,
+      }, function(item)
+        if item then
+          open_file_diff_fullscreen(item.ref)
+        end
+      end)
+      return
+    end
+
+    if choice.key == "commit" then
+      local items, err = list_commits(150)
+      if not items then
+        vim.notify("Could not list commits: " .. err, vim.log.levels.ERROR, { title = "Git Diff" })
+        return
+      end
+      vim.ui.select(items, {
+        prompt = "Compare against commit:",
+        format_item = function(item) return item.label end,
+      }, function(item)
+        if item then
+          open_file_diff_fullscreen(item.ref)
+        end
+      end)
+    end
+  end)
+end
+
+keymaps.set("n", "<C-g>fd", open_file_diff_fullscreen, { desc = "File diff (fullscreen)" })
+keymaps.set("n", "<C-g>fD", pick_diff_base_and_open, { desc = "File diff against ref (picker)" })
 local function close_file_diff()
   if not vim.wo.diff then return end
   local cur_win = vim.api.nvim_get_current_win()

@@ -515,16 +515,19 @@ return {
             end,
           },
           lsp_definitions = {
+            confirm = "jump",
             format = function(item, picker)
               return require("snacks.picker.format").filename(item, picker)
             end,
           },
           lsp_implementations = {
+            confirm = "jump",
             format = function(item, picker)
               return require("snacks.picker.format").filename(item, picker)
             end,
           },
           lsp_type_definitions = {
+            confirm = "jump",
             format = function(item, picker)
               return require("snacks.picker.format").filename(item, picker)
             end,
