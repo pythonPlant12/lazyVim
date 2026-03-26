@@ -110,8 +110,8 @@ keymaps.set("n", "<leader>K", function()
 end, { desc = "Show diagnostic message" })
 
 -- Go to function definition
-keymaps.set("n", "<C-S-CR>", vim.lsp.buf.definition, { desc = "Go to definition" })
-keymaps.set("n", "<C-CR>", vim.lsp.buf.definition, { desc = "Go to definition" })
+keymaps.set("n", "<C-S-CR>", function() Snacks.picker.lsp_definitions() end, { desc = "Go to definition" })
+keymaps.set("n", "<C-CR>", function() Snacks.picker.lsp_definitions() end, { desc = "Go to definition" })
 
 keymaps.set("n", "<leader>fp", function()
   local root = vim.fn.systemlist("git rev-parse --show-toplevel")[1]
@@ -263,25 +263,7 @@ keymaps.set("v", "<Tab>", ">gv", { desc = "Indent selection" })
 keymaps.set("v", "<S-Tab>", "<gv", { desc = "Unindent selection" })
 keymaps.set("i", "<Tab>", "<C-t>", { desc = "Indent" })
 keymaps.set("i", "<S-Tab>", "<C-d>", { desc = "Unindent" })
-keymaps.set("n", "<C-e>", function()
-  local _, win = vim.diagnostic.open_float({
-    scope = "line",
-    focusable = true,
-    border = "rounded",
-    source = "if_many",
-    close_events = { "InsertEnter", "BufHidden", "WinLeave" },
-  })
-  if win and vim.api.nvim_win_is_valid(win) then
-    vim.wo[win].cursorline = false
-    vim.wo[win].cursorcolumn = false
-    vim.wo[win].conceallevel = 0
-    vim.wo[win].concealcursor = ""
-    local wh = vim.wo[win].winhighlight or ""
-    if not wh:find("CursorLine:", 1, true) then
-      vim.wo[win].winhighlight = (wh ~= "" and (wh .. ",") or "") .. "CursorLine:NormalFloat"
-    end
-  end
-end, { desc = "Show line diagnostics" })
+keymaps.set("n", "<C-e>", vim.diagnostic.open_float, { desc = "Show line diagnostics" })
 
 
 
@@ -298,7 +280,6 @@ keymaps.set("n", "<C-g>ld", function() require("gitsigns").preview_hunk_inline()
 keymaps.set("n", "<C-g>lh", function() Snacks.picker.git_log_line() end, { desc = "Line history" })
 keymaps.set("n", "<C-g>lr", function() require("gitsigns").reset_hunk() end, { desc = "Revert line/hunk to HEAD" })
 local function open_file_diff_fullscreen(base)
-  vim.cmd("tab split")
   require("gitsigns").diffthis(base)
   if vim.wo.diff then
     vim.cmd("wincmd =")
@@ -449,8 +430,8 @@ local function pick_diff_base_and_open()
   end)
 end
 
-keymaps.set("n", "<C-g>fd", open_file_diff_fullscreen, { desc = "File diff (fullscreen)" })
-keymaps.set("n", "<C-g>fD", pick_diff_base_and_open, { desc = "File diff against ref (picker)" })
+keymaps.set("n", "<C-g>fd", open_file_diff_fullscreen, { desc = "File diff" })
+keymaps.set("n", "<C-g>fD", pick_diff_base_and_open, { desc = "File diff against ref" })
 local function close_file_diff()
   if not vim.wo.diff then return end
   local cur_win = vim.api.nvim_get_current_win()

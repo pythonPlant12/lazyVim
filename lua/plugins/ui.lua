@@ -30,6 +30,28 @@ local function apply_item_pos(item)
   pcall(vim.cmd, "normal! zv")
 end
 
+local function confirm_lsp_location(picker, item)
+  if not item then
+    return
+  end
+
+  picker:close()
+  require("snacks.picker.util").resolve_loc(item)
+
+  local path = Snacks.picker.util.path(item) or item.file
+  if not path or path == "" then
+    return
+  end
+
+  if tab_reuse.jump_to_path(path, { prefer_other_tabs = true }) then
+    apply_item_pos(item)
+    return
+  end
+
+  vim.cmd("edit " .. vim.fn.fnameescape(path))
+  apply_item_pos(item)
+end
+
 local uv = vim.uv or vim.loop
 
 local video_ext = {
@@ -509,25 +531,25 @@ return {
             end,
           },
           lsp_references = {
-            confirm = "jump",
+            confirm = confirm_lsp_location,
             format = function(item, picker)
               return require("snacks.picker.format").filename(item, picker)
             end,
           },
           lsp_definitions = {
-            confirm = "jump",
+            confirm = confirm_lsp_location,
             format = function(item, picker)
               return require("snacks.picker.format").filename(item, picker)
             end,
           },
           lsp_implementations = {
-            confirm = "jump",
+            confirm = confirm_lsp_location,
             format = function(item, picker)
               return require("snacks.picker.format").filename(item, picker)
             end,
           },
           lsp_type_definitions = {
-            confirm = "jump",
+            confirm = confirm_lsp_location,
             format = function(item, picker)
               return require("snacks.picker.format").filename(item, picker)
             end,
@@ -600,24 +622,6 @@ return {
   {
     "folke/noice.nvim",
     opts = {
-      lsp = {
-        hover = {
-          enabled = false,
-        },
-        signature = {
-          enabled = false,
-        },
-        documentation = {
-          opts = {
-            win_options = {
-              concealcursor = "",
-              conceallevel = 0,
-              cursorline = false,
-              cursorcolumn = false,
-            },
-          },
-        },
-      },
       presets = {
         lsp_doc_border = true,
       },
@@ -633,13 +637,8 @@ return {
           },
         },
         hover = {
-          enter = true,
           border = {
             style = "rounded",
-          },
-          win_options = {
-            cursorline = false,
-            cursorcolumn = false,
           },
         },
       },
@@ -921,10 +920,10 @@ return {
           local h = d[vim.diagnostic.severity.HINT] or 0
           if e + w + inf + h == 0 then return "" end
           local parts = {}
-          if e > 0 then table.insert(parts, "%#DiagPillError#✕ " .. e) end
-          if w > 0 then table.insert(parts, "%#DiagPillWarn#△ " .. w) end
-          if inf > 0 then table.insert(parts, "%#DiagPillInfo#○ " .. inf) end
-          if h > 0 then table.insert(parts, "%#DiagPillHint#◇ " .. h) end
+          if e > 0 then table.insert(parts, "%#DiagPillError#E " .. e) end
+          if w > 0 then table.insert(parts, "%#DiagPillWarn#W " .. w) end
+          if inf > 0 then table.insert(parts, "%#DiagPillInfo#I " .. inf) end
+          if h > 0 then table.insert(parts, "%#DiagPillHint#H " .. h) end
           return table.concat(parts, " ")
         end,
         padding = { left = 1, right = 1 },
@@ -1146,12 +1145,11 @@ return {
       end
       opts.sections.lualine_c = styled_c
 
-      -- Prettier path separator: ❯ instead of /
       for _, comp in ipairs(opts.sections.lualine_c) do
         if type(comp) == "table" and type(comp[1]) == "function" then
           local original = comp[1]
           comp[1] = function(self)
-            return (original(self) or ""):gsub("/", " ❯ ")
+            return (original(self) or ""):gsub("/", " > ")
           end
         end
       end
