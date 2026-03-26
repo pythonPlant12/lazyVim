@@ -252,6 +252,39 @@ return {
         NeoTreeGitStaged           = "NeoTreeGitAddedFolderName",
       }
 
+      local detail_components = {
+        file_size = true,
+        type = true,
+        last_modified = true,
+        created = true,
+      }
+
+      local function toggle_renderer_details(components, show_all)
+        for _, component in ipairs(components or {}) do
+          local name = component[1]
+          if detail_components[name] then
+            if component.__orig_required_width == nil then
+              component.__orig_required_width = component.required_width
+            end
+            if component.__orig_enabled == nil then
+              component.__orig_enabled = component.enabled
+            end
+            if show_all then
+              component.required_width = 0
+              if name == "created" then
+                component.enabled = true
+              end
+            else
+              component.required_width = component.__orig_required_width
+              component.enabled = component.__orig_enabled
+            end
+          end
+          if name == "container" and component.content then
+            toggle_renderer_details(component.content, show_all)
+          end
+        end
+      end
+
       opts.popup_border_style = "rounded"
       opts.window = opts.window or {}
       opts.window.position = "left"
@@ -277,6 +310,27 @@ return {
       opts.window.mappings["<S-Left>"]  = "navigate_up"
       opts.window.mappings["<S-Right>"] = "set_root"
       opts.window.mappings["<S-CR>"]    = "open_vsplit"
+      opts.window.mappings["I"] = function(state)
+        state.__show_all_details = not state.__show_all_details
+        local show_all = state.__show_all_details
+        for _, renderer in pairs(state.renderers or {}) do
+          toggle_renderer_details(renderer, show_all)
+        end
+        require("neo-tree.ui.renderer").redraw(state)
+      end
+      opts.window.mappings["y"] = function(state)
+        local node = state.tree:get_node()
+        if not node then
+          return
+        end
+        local path = node:get_id()
+        if not path or path == "" then
+          return
+        end
+        vim.fn.setreg('"', path)
+        vim.fn.setreg("+", path)
+        vim.notify(path, vim.log.levels.INFO, { title = "Yanked path" })
+      end
 
       opts.default_component_configs = opts.default_component_configs or {}
       opts.default_component_configs.git_status = {
@@ -435,6 +489,18 @@ return {
             hidden = true,
             ignored = true,
             args = {
+              "--glob=.git",
+              "--glob=.git/**",
+            },
+            format = function(item, picker)
+              return require("snacks.picker.format").filename(item, picker)
+            end,
+          },
+          grep_word = {
+            hidden = true,
+            ignored = true,
+            args = {
+              "--word-regexp",
               "--glob=.git",
               "--glob=.git/**",
             },
