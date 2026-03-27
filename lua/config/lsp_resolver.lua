@@ -241,9 +241,14 @@ function M.python_exec_from_venv(venv_dir, executable)
   if is_windows() and not executable:match("%.exe$") then
     exec_name = executable .. ".exe"
   end
-  local path = normalize(join_path(join_path(venv_dir, python_bin_dir_name()), exec_name))
-  if path and vim.fn.executable(path) == 1 then
-    return path
+  local candidate = join_path(join_path(venv_dir, python_bin_dir_name()), exec_name)
+  if vim.fn.executable(candidate) == 1 then
+    return candidate
+  end
+
+  local resolved = normalize(candidate)
+  if resolved and vim.fn.executable(resolved) == 1 then
+    return resolved
   end
   return nil
 end

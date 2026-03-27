@@ -496,6 +496,7 @@ return {
           files = {
             cmd = "fd",
             hidden = true,
+            ignored = true,
             preview = snacks_file_preview_with_video,
           },
           git_files = {

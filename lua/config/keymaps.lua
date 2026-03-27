@@ -12,28 +12,8 @@ keymaps.set("n", "-", "C-x")
 keymaps.set("n", "<C-a>", "gg<S-v>G")
 
 -- Jumplist
-local function feed_normal(keys)
-  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(keys, true, false, true), "n", false)
-end
-
-local function jump_back_smart()
-  local before = vim.api.nvim_win_get_cursor(0)
-  local stack = vim.fn.gettagstack(vim.api.nvim_get_current_win())
-  if type(stack) == "table" and stack.items and #stack.items > 0 and (stack.curidx or 0) > 0 then
-    feed_normal("<C-t>")
-    local after = vim.api.nvim_win_get_cursor(0)
-    if after[1] ~= before[1] or after[2] ~= before[2] then
-      return
-    end
-  end
-  feed_normal("<C-o>")
-end
-
-keymaps.set("n", "<C-i>", jump_back_smart, opts)
-keymaps.set("n", "<D-i>", jump_back_smart, opts)
-keymaps.set("n", "<D-o>", jump_back_smart, opts)
-keymaps.set("n", "<leader>i", jump_back_smart, opts)
-keymaps.set("n", "<leader>o", jump_back_smart, opts)
+keymaps.set("n", "<leader>i", "<C-o>", opts)
+keymaps.set("n", "<leader>o", "<C-i>", opts)
 
 keymaps.set("n", "zc", "za", opts)
 
@@ -75,14 +55,14 @@ keymaps.set("n", "cw", '"_cw', opts)
 keymaps.set("n", "cW", '"_cW', opts)
 keymaps.set("n", "cb", '"_cb', opts)
 keymaps.set("n", "cB", '"_cB', opts)
-keymaps.set("n", "x", '"_x', opts)
-keymaps.set("n", "X", '"_X', opts)
+keymaps.set("n", "x", '"+x', opts)
+keymaps.set("n", "X", '"+X', opts)
 keymaps.set("n", "s", '"_s', opts)
 keymaps.set("v", "d", '"_d', opts)
 keymaps.set("v", "D", '"_D', opts)
 keymaps.set("v", "c", '"_c', opts)
 keymaps.set("v", "C", '"_C', opts)
-keymaps.set("v", "x", '"_x', opts)
+keymaps.set("v", "x", '"+x', opts)
 keymaps.set("v", "s", '"_s', opts)
 
 -- Line navigation
@@ -259,6 +239,8 @@ end
 keymaps.set("n", "<C-Tab>",    pick_buffers_smart, { desc = "Find buffers" })
 keymaps.set("n", "<leader>bl", pick_buffers_smart, { desc = "List buffers" })
 
+keymaps.set("n", "<Tab>", ">>", { desc = "Indent line" })
+keymaps.set("n", "<S-Tab>", "<<", { desc = "Unindent line" })
 keymaps.set("v", "<Tab>", ">gv", { desc = "Indent selection" })
 keymaps.set("v", "<S-Tab>", "<gv", { desc = "Unindent selection" })
 keymaps.set("i", "<Tab>", "<C-t>", { desc = "Indent" })
@@ -555,6 +537,11 @@ keymaps.set({ "n", "v" }, "<M-Left>",  "b",      { desc = "Move backward a word"
 keymaps.set("i",           "<M-Left>",  "<C-o>b", { desc = "Move backward a word" })
 keymaps.set({ "n", "v" }, "<M-b>",     "b",      { desc = "Move backward a word" })
 keymaps.set("i",           "<M-b>",     "<C-o>b", { desc = "Move backward a word" })
+
+keymaps.set("i", "<M-BS>", "<C-w>", { desc = "Delete previous word" })
+keymaps.set("i", "<A-BS>", "<C-w>", { desc = "Delete previous word" })
+keymaps.set("i", "<M-Del>", "<C-w>", { desc = "Delete previous word" })
+keymaps.set("i", "<A-Del>", "<C-w>", { desc = "Delete previous word" })
 
 local function comment_line()
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("gcc", true, false, true), "m", false)
