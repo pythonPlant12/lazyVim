@@ -306,127 +306,102 @@ local function git_lines(args)
   return vim.split(out, "\n", { trimempty = true }), nil
 end
 
-local function list_branches()
+local function current_branch()
+  local lines = git_lines({ "rev-parse", "--abbrev-ref", "HEAD" })
+  if type(lines) == "table" and lines[1] and lines[1] ~= "" then
+    return lines[1]
+  end
+  return "HEAD"
+end
+
+local function list_branches(active_branch)
   local lines, err = git_lines({ "for-each-ref", "--format=%(refname:short)", "refs/heads", "refs/remotes" })
   if not lines then
     return nil, err
   end
   local seen = {}
-  local items = {}
+  local current = {}
+  local local_refs = {}
+  local remote_refs = {}
   for _, ref in ipairs(lines) do
     if ref ~= "origin/HEAD" and not seen[ref] then
       seen[ref] = true
-      items[#items + 1] = {
+      local is_remote = ref:find("/", 1, true) ~= nil
+      local item = {
         ref = ref,
-        label = ref:find("/", 1, true) and ("[remote] " .. ref) or ("[local]  " .. ref),
+        label = is_remote and ("[remote] " .. ref) or ("[local]  " .. ref),
       }
+      if (not is_remote) and active_branch and ref == active_branch then
+        item.label = item.label .. " (current)"
+        current[#current + 1] = item
+      elseif is_remote then
+        remote_refs[#remote_refs + 1] = item
+      else
+        local_refs[#local_refs + 1] = item
+      end
     end
   end
+  local items = {}
+  vim.list_extend(items, current)
+  vim.list_extend(items, local_refs)
+  vim.list_extend(items, remote_refs)
   return items, nil
 end
 
-local function list_commits(limit)
-  local lines, err = git_lines({ "log", "--pretty=format:%h\t%s", ("--max-count=%d"):format(limit or 120) })
+local function list_commits(ref, limit)
+  local lines, err = git_lines({ "log", ref, "--pretty=format:%h\t%s", ("--max-count=%d"):format(limit or 150) })
   if not lines then
     return nil, err
   end
   local items = {}
-  for _, line in ipairs(lines) do
+  for i, line in ipairs(lines) do
     local sha, subj = line:match("^(%S+)%s+(.+)$")
     if sha then
-      items[#items + 1] = { ref = sha, label = sha .. "  " .. (subj or "") }
+      local head = i == 1 and "HEAD" or "    "
+      items[#items + 1] = { ref = sha, label = string.format("%s %s  %s", head, sha, subj or "") }
     end
   end
   return items, nil
 end
 
-_G.__git_ref_complete = function(arglead)
-  local refs = { "HEAD", "HEAD~1", "HEAD~2", "@{-1}" }
-  local branches = list_branches() or {}
-  for _, b in ipairs(branches) do
-    refs[#refs + 1] = b.ref
-  end
-  local ret, seen = {}, {}
-  local prefix = vim.pesc(arglead or "")
-  for _, ref in ipairs(refs) do
-    if not seen[ref] and ref:find("^" .. prefix) then
-      seen[ref] = true
-      ret[#ret + 1] = ref
-    end
-  end
-  table.sort(ret)
-  return ret
-end
-
 local function pick_diff_base_and_open()
-  local options = {
-    { key = "branch", label = "Compare with branch (local/origin)" },
-    { key = "commit", label = "Compare with commit from current branch" },
-    { key = "typed", label = "Type ref with completion" },
-    { key = "head", label = "Compare with HEAD" },
-    { key = "head1", label = "Compare with HEAD~1" },
-  }
+  local active = current_branch()
+  local branches, err = list_branches(active)
+  if not branches then
+    vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = "Git Diff" })
+    return
+  end
+  if #branches == 0 then
+    vim.notify("No branches found", vim.log.levels.WARN, { title = "Git Diff" })
+    return
+  end
 
-  vim.ui.select(options, {
-    prompt = "Choose diff base source:",
+  vim.ui.select(branches, {
+    prompt = "Select branch:",
     format_item = function(item) return item.label end,
-  }, function(choice)
-    if not choice then
-      return
-    end
-    if choice.key == "head" then
-      open_file_diff_fullscreen("HEAD")
-      return
-    end
-    if choice.key == "head1" then
-      open_file_diff_fullscreen("HEAD~1")
-      return
-    end
-    if choice.key == "typed" then
-      local ref = vim.fn.input({
-        prompt = "Diff base (branch/commit/tag): ",
-        default = "HEAD",
-        completion = "customlist,v:lua.__git_ref_complete",
-      })
-      ref = vim.trim(ref or "")
-      if ref ~= "" then
-        open_file_diff_fullscreen(ref)
-      end
+  }, function(branch_item)
+    if not branch_item then
       return
     end
 
-    if choice.key == "branch" then
-      local items, err = list_branches()
-      if not items then
-        vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = "Git Diff" })
-        return
-      end
-      vim.ui.select(items, {
-        prompt = "Compare against branch:",
-        format_item = function(item) return item.label end,
-      }, function(item)
-        if item then
-          open_file_diff_fullscreen(item.ref)
-        end
-      end)
+    local commits, commits_err = list_commits(branch_item.ref, 150)
+    if not commits then
+      vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Diff" })
+      return
+    end
+    if #commits == 0 then
+      vim.notify("No commits found for " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Diff" })
       return
     end
 
-    if choice.key == "commit" then
-      local items, err = list_commits(150)
-      if not items then
-        vim.notify("Could not list commits: " .. err, vim.log.levels.ERROR, { title = "Git Diff" })
-        return
+    vim.ui.select(commits, {
+      prompt = "Select commit from " .. branch_item.ref .. ":",
+      format_item = function(item) return item.label end,
+    }, function(commit_item)
+      if commit_item then
+        open_file_diff_fullscreen(commit_item.ref)
       end
-      vim.ui.select(items, {
-        prompt = "Compare against commit:",
-        format_item = function(item) return item.label end,
-      }, function(item)
-        if item then
-          open_file_diff_fullscreen(item.ref)
-        end
-      end)
-    end
+    end)
   end)
 end
 
