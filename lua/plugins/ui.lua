@@ -473,7 +473,8 @@ return {
     keys = {
     },
     opts = function(_, opts)
-      local is_light = vim.o.background == "light"
+      local _appearance = vim.fn.system("defaults read -g AppleInterfaceStyle 2>/dev/null"):gsub("%s+", "")
+      local is_light = _appearance ~= "Dark"
       opts = opts or {}
       opts.options = vim.tbl_deep_extend("force", opts.options or {}, {
         mode = "tabs",
@@ -487,19 +488,21 @@ return {
         fill                   = { bg = "#E2DFDB" },
         background             = { fg = "#7A7880", bg = "#D5D0CA" },
         tab                    = { fg = "#7A7880", bg = "#D5D0CA" },
-        tab_selected           = { fg = "#F0EDE8", bg = "#5A8FD4", bold = true },
-        tab_separator          = { fg = "#C8C3BC", bg = "#E2DFDB" },
-        tab_separator_selected = { fg = "#5A8FD4", bg = "#E2DFDB" },
+        tab_selected           = { fg = "#1e1e2e", bg = "#89b4fa", bold = true },
+        tab_separator          = { fg = "#D5D0CA", bg = "#E2DFDB" },
+        tab_separator_selected = { fg = "#89b4fa", bg = "#E2DFDB" },
         tab_close              = { fg = "#7A7880", bg = "#E2DFDB" },
-        buffer_selected        = { fg = "#F0EDE8", bg = "#5A8FD4", bold = true, italic = false },
-        numbers_selected       = { fg = "#F0EDE8", bg = "#5A8FD4", bold = true },
+        buffer_selected        = { fg = "#1e1e2e", bg = "#89b4fa", bold = true, italic = false },
+        numbers_selected       = { fg = "#1e1e2e", bg = "#89b4fa", bold = true },
+        close_button_selected  = { fg = "#1e1e2e", bg = "#89b4fa" },
+        indicator_selected     = { fg = "#89b4fa", bg = "#89b4fa" },
         separator              = { fg = "#C8C3BC", bg = "#E2DFDB" },
-        separator_selected     = { fg = "#5A8FD4", bg = "#E2DFDB" },
+        separator_selected     = { fg = "#89b4fa", bg = "#E2DFDB" },
         separator_visible      = { fg = "#C8C3BC", bg = "#E2DFDB" },
-        duplicate_selected     = { fg = "#F0EDE8", bg = "#5A8FD4", bold = true, italic = false },
+        duplicate_selected     = { fg = "#1e1e2e", bg = "#89b4fa", bold = true, italic = false },
         duplicate              = { fg = "#7A7880", bg = "#D5D0CA", italic = false },
         duplicate_visible      = { fg = "#7A7880", bg = "#D5D0CA", italic = false },
-        modified_selected      = { fg = "#F0EDE8", bg = "#5A8FD4", italic = false },
+        modified_selected      = { fg = "#1e1e2e", bg = "#89b4fa", italic = false },
         modified               = { fg = "#7A7880", bg = "#D5D0CA", italic = false },
         modified_visible       = { fg = "#7A7880", bg = "#D5D0CA", italic = false },
       } or {
@@ -899,7 +902,8 @@ return {
     "nvim-lualine/lualine.nvim",
     event = "VeryLazy",
     opts = function(_, opts)
-      local is_light = vim.o.background == "light"
+      local _appearance = vim.fn.system("defaults read -g AppleInterfaceStyle 2>/dev/null"):gsub("%s+", "")
+      local is_light = _appearance ~= "Dark"
       local mode_theme = is_light and {
         normal   = { a = { fg = "#F0EDE8", bg = "#5A8FD4", gui = "bold" }, b = { fg = "#4C4F69", bg = "#D5D0CA", gui = "bold" }, c = { fg = "#4C4F69", bg = "#E2DFDB" } },
         insert   = { a = { fg = "#F0EDE8", bg = "#7CA686", gui = "bold" }, b = { fg = "#4C4F69", bg = "#D5D0CA", gui = "bold" } },
