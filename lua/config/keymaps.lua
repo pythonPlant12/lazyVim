@@ -3,6 +3,7 @@
 -- Add any additional keymaps here
 local keymaps = vim.keymap
 local opts = { noremap = true, silent = true }
+local tab_reuse = require("config.tab_reuse")
 
 -- Increment/decrement
 keymaps.set("n", "+", "C-a")
@@ -107,7 +108,7 @@ keymaps.set("n", "<leader>fP", function()
   vim.notify("Copied: " .. abs, vim.log.levels.INFO, { title = "Path" })
 end, { desc = "Copy absolute path" })
 
-keymaps.set("n", "<leader>of", function()
+keymaps.set("n", "<leader>fo", function()
   local path = vim.api.nvim_buf_get_name(0)
   if path == "" then
     vim.notify("Current buffer has no file path", vim.log.levels.WARN, { title = "Open File" })
@@ -199,10 +200,36 @@ end
 
 local function goto_alt_buf()
   local cur = vim.api.nvim_get_current_buf()
+  local alt = vim.fn.bufnr("#")
+
+  local function usable(bufnr)
+    if not bufnr or bufnr <= 0 or bufnr == cur then
+      return false
+    end
+    if not vim.api.nvim_buf_is_valid(bufnr) then
+      return false
+    end
+    if vim.fn.buflisted(bufnr) ~= 1 then
+      return false
+    end
+    if vim.bo[bufnr].buftype ~= "" then
+      return false
+    end
+    if vim.api.nvim_buf_get_name(bufnr) == "" then
+      return false
+    end
+    return true
+  end
+
+  if usable(alt) then
+    smart_buf_goto(alt)
+    return
+  end
+
   local h = vim.g.buf_history or {}
-  for i = #h - 1, 1, -1 do
+  for i = #h, 1, -1 do
     local bufnr = h[i]
-    if bufnr ~= cur and vim.api.nvim_buf_is_valid(bufnr) and vim.fn.buflisted(bufnr) == 1 then
+    if usable(bufnr) then
       smart_buf_goto(bufnr)
       return
     end
@@ -245,6 +272,49 @@ keymaps.set("v", "<Tab>", ">gv", { desc = "Indent selection" })
 keymaps.set("v", "<S-Tab>", "<gv", { desc = "Unindent selection" })
 keymaps.set("i", "<Tab>", "<C-t>", { desc = "Indent" })
 keymaps.set("i", "<S-Tab>", "<C-d>", { desc = "Unindent" })
+
+local function move_current_line(delta)
+  vim.cmd(delta < 0 and "move .-2" or "move .+1")
+  vim.cmd("normal! ==")
+end
+
+local function move_selected_lines(delta)
+  local start_line = vim.fn.line("v")
+  local end_line = vim.fn.line(".")
+  if start_line == 0 or end_line == 0 then
+    return
+  end
+  if start_line > end_line then
+    start_line, end_line = end_line, start_line
+  end
+
+  local line_count = vim.api.nvim_buf_line_count(0)
+  if delta < 0 and start_line == 1 then
+    return
+  end
+  if delta > 0 and end_line == line_count then
+    return
+  end
+
+  local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+  vim.api.nvim_buf_set_lines(0, start_line - 1, end_line, false, {})
+
+  local target = delta < 0 and (start_line - 2) or start_line
+  vim.api.nvim_buf_set_lines(0, target, target, false, lines)
+
+  local new_start = start_line + delta
+  local new_end = end_line + delta
+  vim.fn.setpos("'<", { 0, new_start, 1, 0 })
+  vim.fn.setpos("'>", { 0, new_end, 1, 0 })
+  vim.api.nvim_win_set_cursor(0, { new_end, 0 })
+  vim.cmd("normal! gv=gv")
+end
+
+keymaps.set("n", "<C-S-Up>", function() move_current_line(-1) end, { desc = "Move line up" })
+keymaps.set("n", "<C-S-Down>", function() move_current_line(1) end, { desc = "Move line down" })
+keymaps.set("v", "<C-S-Up>", function() move_selected_lines(-1) end, { desc = "Move selection up" })
+keymaps.set("v", "<C-S-Down>", function() move_selected_lines(1) end, { desc = "Move selection down" })
+
 keymaps.set("n", "<C-e>", vim.diagnostic.open_float, { desc = "Show line diagnostics" })
 
 
@@ -424,18 +494,143 @@ keymaps.set("n", "n", function()
   elseif has_inline_preview() then
     require("gitsigns").nav_hunk("next")
   else
-    vim.cmd("normal! *")
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("n", true, false, true), "n", false)
   end
-end, { desc = "Next occurrence of word under cursor" })
+end, { desc = "Next hunk in diff, otherwise next search match" })
+
 keymaps.set("n", "N", function()
   if vim.wo.diff then
     vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("[c", true, false, true), "n", false)
   elseif has_inline_preview() then
     require("gitsigns").nav_hunk("prev")
   else
-    vim.cmd("normal! #")
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("N", true, false, true), "n", false)
   end
-end, { desc = "Prev occurrence of word under cursor" })
+end, { desc = "Prev hunk in diff, otherwise previous search match" })
+
+local function set_exact_visual_search(text)
+  if not text or text == "" then
+    return false
+  end
+  text = vim.fn.escape(text, "/\\")
+  text = text:gsub("\n", "\\n")
+  vim.fn.setreg("/", "\\V" .. text)
+  vim.cmd("set hlsearch")
+  return true
+end
+
+local function parse_search_query(input)
+  if not input or input == "" then
+    return nil
+  end
+
+  local has_prefix = false
+  local regex = false
+  local case_sensitive = false
+  local whole_word = false
+  local search_text = input
+
+  local colon = input:find(":", 1, true)
+  if colon then
+    local prefix = vim.trim(input:sub(1, colon - 1)):lower()
+    local rest = input:sub(colon + 1)
+
+    if prefix ~= "" then
+      local i = 1
+      local ok_prefix = true
+      while i <= #prefix do
+        local two = prefix:sub(i, i + 1)
+        local one = prefix:sub(i, i)
+        if two == "re" then
+          regex = true
+          has_prefix = true
+          i = i + 2
+        elseif one == "c" then
+          case_sensitive = true
+          has_prefix = true
+          i = i + 1
+        elseif one == "w" then
+          whole_word = true
+          has_prefix = true
+          i = i + 1
+        elseif one == " " then
+          i = i + 1
+        else
+          ok_prefix = false
+          break
+        end
+      end
+
+      if ok_prefix and has_prefix then
+        search_text = rest
+      end
+    end
+  end
+
+  search_text = vim.trim(search_text)
+  if search_text == "" then
+    return nil
+  end
+
+  local case_flag = case_sensitive and "\\C" or "\\c"
+  local pattern
+
+  if regex then
+    pattern = case_flag .. search_text
+    if whole_word then
+      pattern = case_flag .. "\\<" .. search_text .. "\\>"
+    end
+  else
+    local escaped = vim.fn.escape(search_text, "/\\")
+    if whole_word then
+      pattern = case_flag .. "\\V\\<" .. escaped .. "\\>"
+    else
+      pattern = case_flag .. "\\V" .. escaped
+    end
+  end
+
+  return {
+    pattern = pattern,
+  }
+end
+
+local function set_prefixed_search(input)
+  local parsed = parse_search_query(input)
+  if not parsed then
+    return false
+  end
+
+  vim.fn.setreg("/", parsed.pattern)
+  vim.fn.histadd("search", parsed.pattern)
+  vim.cmd("set hlsearch")
+  return true
+end
+
+keymaps.set("n", "/", function()
+  local input = vim.fn.input("/ ")
+  if not set_prefixed_search(input) then
+    return
+  end
+
+  local pattern = vim.fn.getreg("/")
+  if pattern == "" then
+    vim.notify("No search pattern set", vim.log.levels.INFO, { title = "Search" })
+    return
+  end
+
+  local ok, match_line = pcall(vim.fn.search, pattern, "sw")
+  if not ok then
+    vim.notify("Invalid search pattern", vim.log.levels.WARN, { title = "Search" })
+    return
+  end
+
+  if not match_line or match_line == 0 then
+    vim.notify("No matches found", vim.log.levels.INFO, { title = "Search" })
+    return
+  end
+
+  pcall(vim.cmd, "normal! zv")
+end, { desc = "Search (prefix flags before ':' e.g. re:, c:, w:, cw:, wcre:)" })
 
 local function visual_search_set()
   local saved = vim.fn.getreg('"')
@@ -443,20 +638,152 @@ local function visual_search_set()
   vim.cmd("normal! y")
   local text = vim.fn.getreg('"')
   vim.fn.setreg('"', saved, saved_type)
-  text = vim.fn.escape(text, "\\")
-  text = text:gsub("\n", "\\n")
-  vim.fn.setreg("/", "\\V" .. text)
-  vim.cmd("set hlsearch")
+  set_exact_visual_search(text)
 end
 
 keymaps.set("v", "n", function()
   visual_search_set()
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("n", true, false, true), "n", false)
 end, { desc = "Search selected text forward" })
-keymaps.set("v", "N", function()
-  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("N", true, false, true), "n", false)
+keymaps.set("v", "/", function()
   visual_search_set()
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("n", true, false, true), "n", false)
+end, { desc = "Search selected text" })
+keymaps.set("v", "N", function()
+  visual_search_set()
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("N", true, false, true), "n", false)
 end, { desc = "Search selected text backward" })
+
+local function project_root_or_cwd()
+  local ok, root = pcall(function()
+    return LazyVim.root()
+  end)
+  if ok and root and root ~= "" then
+    return root
+  end
+  return vim.fn.getcwd()
+end
+
+local function grep_project(overrides)
+  local opts_ = vim.tbl_deep_extend("force", {
+    cwd = project_root_or_cwd(),
+    regex = false,
+  }, overrides or {})
+  Snacks.picker.grep(opts_)
+end
+
+local function stop_insert_if_needed()
+  if vim.api.nvim_get_mode().mode:sub(1, 1) == "i" then
+    vim.cmd("stopinsert")
+  end
+end
+
+local function get_visual_selection_text()
+  local saved = vim.fn.getreg('"')
+  local saved_type = vim.fn.getregtype('"')
+  vim.cmd("normal! y")
+  local text = vim.fn.getreg('"')
+  vim.fn.setreg('"', saved, saved_type)
+  text = vim.trim((text or ""):gsub("\n", " "))
+  if text == "" then
+    return nil
+  end
+  return text
+end
+
+keymaps.set("n", "<C-s>", "<Nop>", opts)
+keymaps.set("i", "<C-s>", "<Nop>", opts)
+keymaps.set("x", "<C-s>", "<Nop>", opts)
+keymaps.set("s", "<C-s>", "<Nop>", opts)
+
+local function search_all()
+  grep_project({
+    hidden = true,
+    ignored = true,
+    args = { "--ignore-case" },
+    camel_case = false,
+  })
+end
+
+local function search_project()
+  grep_project({
+    hidden = false,
+    ignored = false,
+    args = { "--ignore-case" },
+    camel_case = false,
+  })
+end
+
+local function search_project_sensitive()
+  grep_project({
+    hidden = false,
+    ignored = false,
+    args = { "--case-sensitive" },
+    camel_case = true,
+  })
+end
+
+local function search_word_insensitive()
+  local word = vim.fn.expand("<cword>")
+  if not word or word == "" then
+    return
+  end
+  grep_project({
+    search = word,
+    hidden = true,
+    ignored = true,
+    args = { "--word-regexp", "--ignore-case" },
+    camel_case = false,
+  })
+end
+
+keymaps.set("n", "<C-s>a", function()
+  search_all()
+end, { desc = "Search all (include hidden)" })
+keymaps.set("i", "<C-s>a", function()
+  stop_insert_if_needed()
+  search_all()
+end, { desc = "Search all (include hidden)" })
+
+keymaps.set("n", "<C-s>g", function()
+  search_project()
+end, { desc = "Search project" })
+keymaps.set("i", "<C-s>g", function()
+  stop_insert_if_needed()
+  search_project()
+end, { desc = "Search project" })
+
+keymaps.set("n", "<C-s>s", function()
+  search_project_sensitive()
+end, { desc = "Search project (case-sensitive)" })
+keymaps.set("i", "<C-s>s", function()
+  stop_insert_if_needed()
+  search_project_sensitive()
+end, { desc = "Search project (case-sensitive)" })
+
+keymaps.set("n", "<C-s>w", function()
+  search_word_insensitive()
+end, { desc = "Search word in project (insensitive)" })
+keymaps.set("i", "<C-s>w", function()
+  stop_insert_if_needed()
+  search_word_insensitive()
+end, { desc = "Search word in project (insensitive)" })
+
+keymaps.set("x", "<C-s>w", function()
+  local text = get_visual_selection_text()
+  if not text then
+    vim.notify("No visual selection found", vim.log.levels.WARN, { title = "Search" })
+    return
+  end
+  grep_project({
+    search = text,
+    hidden = true,
+    ignored = true,
+    args = { "--case-sensitive" },
+    camel_case = true,
+    regex = false,
+  })
+end, { desc = "Search selection in project (case-sensitive)" })
 
 keymaps.set("n", "<leader>se", function() require("trouble").toggle("workspace_diagnostics") end, { desc = "Workspace errors" })
 Snacks.toggle({
@@ -556,13 +883,61 @@ keymaps.set("n", "<C-_>", comment_line,   { desc = "Toggle comment" })
 keymaps.set("v", "<C-_>", comment_visual, { desc = "Toggle comment" })
 
 keymaps.set("n", "gl", function()
-  vim.ui.input({ prompt = "Go to line: " }, function(input)
-    if input and input ~= "" then
-      local line = tonumber(input)
-      if line then vim.cmd(tostring(line)) end
-    end
-  end)
+  local input = vim.fn.input(": ")
+  if not input or input == "" then
+    return
+  end
+
+  local line = tonumber(vim.trim(input))
+  if not line then
+    vim.notify("Invalid line number", vim.log.levels.WARN, { title = "Go to line" })
+    return
+  end
+
+  local max_line = vim.api.nvim_buf_line_count(0)
+  line = math.max(1, math.min(line, max_line))
+  vim.cmd(tostring(line))
+  pcall(vim.cmd, "normal! zv")
 end, { desc = "Go to line" })
+
+local function apply_theme_mode(mode)
+  local background = mode == "light" and "light" or "dark"
+  vim.o.background = background
+
+  local schemes = background == "dark"
+      and { "islands-dark", "solarized-osaka", "habamax" }
+    or { "islands-light", "solarized-osaka", "morning", "habamax" }
+
+  for _, scheme in ipairs(schemes) do
+    if pcall(vim.cmd.colorscheme, scheme) then
+      vim.g.theme_mode = background
+      return
+    end
+  end
+
+  vim.notify("No colorscheme available for " .. background .. " mode", vim.log.levels.ERROR, { title = "Theme" })
+end
+
+keymaps.set("n", "<leader>ut", function()
+  local items = {
+    { label = "Default Dark Theme", mode = "dark" },
+    { label = "Default Light Theme", mode = "light" },
+  }
+
+  local current = vim.o.background == "light" and 2 or 1
+  vim.ui.select(items, {
+    prompt = "Select theme",
+    kind = "theme",
+    format_item = function(item)
+      return item.label
+    end,
+  }, function(choice)
+    if not choice then
+      return
+    end
+    apply_theme_mode(choice.mode)
+  end)
+end, { desc = "Select default theme" })
 
 Snacks.toggle({
   name = "Inline Diagnostics",
@@ -584,7 +959,7 @@ Snacks.toggle({
   end,
 }):map("<leader>up")
 
-vim.keymap.set("n", "<leader>ut", function()
+vim.keymap.set("n", "<leader>ue", function()
   require("neo-tree.command").execute({ toggle = true, reveal = true, dir = LazyVim.root() })
 end, { desc = "Reveal file in tree" })
 

@@ -57,6 +57,14 @@ function M.jump_to_path(path, opts)
   return true
 end
 
+function M.find_window_for_path(path, opts)
+  local target = M.canonical(path)
+  if not target then
+    return nil, nil
+  end
+  return find_window_for_path(target, opts)
+end
+
 function M.jump_to_buf(bufnr, opts)
   if not bufnr or bufnr <= 0 or not vim.api.nvim_buf_is_valid(bufnr) then
     return false

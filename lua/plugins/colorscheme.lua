@@ -1,8 +1,11 @@
+local appearance = vim.fn.system("defaults read -g AppleInterfaceStyle 2>/dev/null"):gsub("%s+", "")
+local cs = appearance == "Dark" and "islands-dark" or "islands-light"
+
 return {
   {
     "LazyVim/LazyVim",
     opts = {
-      colorscheme = "islands-dark",
+      colorscheme = cs,
     },
   },
   {

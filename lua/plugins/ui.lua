@@ -7,6 +7,51 @@ local function remove_gl_key(_, keys)
   end, keys)
 end
 
+local picker_excludes = {
+  "node_modules/**",
+  "venv/**",
+  ".venv/**",
+  ".idea",
+  ".idea/**",
+  "**/.idea/**",
+  ".vscode/**",
+  ".zed/**",
+  ".git/**",
+  "shelved.patch",
+  "**/shelved.patch",
+}
+
+local function grep_case_mode_args(args, camel_case)
+  local filtered = {}
+  for _, arg in ipairs(args or {}) do
+    if arg ~= "--ignore-case" and arg ~= "--case-sensitive" and arg ~= "--smart-case" then
+      filtered[#filtered + 1] = arg
+    end
+  end
+  if not camel_case then
+    filtered[#filtered + 1] = "--ignore-case"
+  end
+  return filtered
+end
+
+local function toggle_grep_camel_case(picker)
+  local source = picker and picker.opts and picker.opts.source or nil
+  if source ~= "grep" and source ~= "grep_word" then
+    return
+  end
+
+  picker.opts.camel_case = not picker.opts.camel_case
+  picker.opts.args = grep_case_mode_args(picker.opts.args, picker.opts.camel_case)
+  picker.list:set_target()
+  picker:find()
+
+  vim.notify(
+    picker.opts.camel_case and "Grep case mode: camel/smart" or "Grep case mode: insensitive",
+    vim.log.levels.INFO,
+    { title = "Grep" }
+  )
+end
+
 local function apply_item_pos(item)
   if not item then
     return
@@ -26,7 +71,10 @@ local function apply_item_pos(item)
   local line_count = vim.api.nvim_buf_line_count(0)
   local row = math.max(1, math.min(pos[1], line_count))
   local col = math.max(0, pos[2] or 0)
-  pcall(vim.api.nvim_win_set_cursor, 0, { row, col })
+  local ok = pcall(vim.cmd, ("keepjumps call cursor(%d, %d)"):format(row, col + 1))
+  if not ok then
+    pcall(vim.api.nvim_win_set_cursor, 0, { row, col })
+  end
   pcall(vim.cmd, "normal! zv")
 end
 
@@ -34,6 +82,25 @@ local function confirm_lsp_location(picker, item)
   if not item then
     return
   end
+
+  local function remember_jump_origin()
+    local win = vim.api.nvim_get_current_win()
+    local buf = vim.api.nvim_get_current_buf()
+    local is_empty = vim.bo[buf].buftype == ""
+      and vim.bo[buf].filetype == ""
+      and vim.api.nvim_buf_line_count(buf) == 1
+      and vim.api.nvim_buf_get_lines(buf, 0, -1, false)[1] == ""
+      and vim.api.nvim_buf_get_name(buf) == ""
+    if is_empty then
+      return
+    end
+
+    vim.api.nvim_win_call(win, function()
+      vim.cmd("normal! m'")
+    end)
+  end
+
+  remember_jump_origin()
 
   picker:close()
   require("snacks.picker.util").resolve_loc(item)
@@ -48,7 +115,11 @@ local function confirm_lsp_location(picker, item)
     return
   end
 
-  vim.cmd("edit " .. vim.fn.fnameescape(path))
+  local escaped = vim.fn.fnameescape(path)
+  local ok = pcall(vim.cmd, "drop " .. escaped)
+  if not ok then
+    vim.cmd("edit " .. escaped)
+  end
   apply_item_pos(item)
 end
 
@@ -146,7 +217,12 @@ local function fzf_file_switch_or_edit(selected, opts)
   local target = entry.path or entry.bufname
   if target and tab_reuse.jump_to_path(target, { prefer_other_tabs = true }) then
     if (entry.line or 0) > 0 or (entry.col or 0) > 0 then
-      pcall(vim.api.nvim_win_set_cursor, 0, { math.max(1, entry.line), math.max(1, entry.col) - 1 })
+      local row = math.max(1, entry.line)
+      local col = math.max(1, entry.col)
+      local ok = pcall(vim.cmd, ("keepjumps call cursor(%d, %d)"):format(row, col))
+      if not ok then
+        pcall(vim.api.nvim_win_set_cursor, 0, { row, col - 1 })
+      end
     end
     return
   end
@@ -310,6 +386,7 @@ return {
       opts.popup_border_style = "rounded"
       opts.window = opts.window or {}
       opts.window.position = "left"
+      opts.window.border = "rounded"
       opts.window.mappings = opts.window.mappings or {}
       opts.window.mappings["<Left>"] = function(state)
         local node = state.tree:get_node()
@@ -395,16 +472,37 @@ return {
     "akinsho/bufferline.nvim",
     keys = {
     },
-    opts = {
-      options = {
+    opts = function(_, opts)
+      local is_light = vim.o.background == "light"
+      opts = opts or {}
+      opts.options = vim.tbl_deep_extend("force", opts.options or {}, {
         mode = "tabs",
         separator_style = { "", "" },
         show_buffer_close_icons = false,
         show_close_icon = false,
         indicator = { style = "none" },
         diagnostics = false,
-      },
-      highlights = {
+      })
+      opts.highlights = is_light and {
+        fill                   = { bg = "#E2DFDB" },
+        background             = { fg = "#7A7880", bg = "#D5D0CA" },
+        tab                    = { fg = "#7A7880", bg = "#D5D0CA" },
+        tab_selected           = { fg = "#F0EDE8", bg = "#5A8FD4", bold = true },
+        tab_separator          = { fg = "#C8C3BC", bg = "#E2DFDB" },
+        tab_separator_selected = { fg = "#5A8FD4", bg = "#E2DFDB" },
+        tab_close              = { fg = "#7A7880", bg = "#E2DFDB" },
+        buffer_selected        = { fg = "#F0EDE8", bg = "#5A8FD4", bold = true, italic = false },
+        numbers_selected       = { fg = "#F0EDE8", bg = "#5A8FD4", bold = true },
+        separator              = { fg = "#C8C3BC", bg = "#E2DFDB" },
+        separator_selected     = { fg = "#5A8FD4", bg = "#E2DFDB" },
+        separator_visible      = { fg = "#C8C3BC", bg = "#E2DFDB" },
+        duplicate_selected     = { fg = "#F0EDE8", bg = "#5A8FD4", bold = true, italic = false },
+        duplicate              = { fg = "#7A7880", bg = "#D5D0CA", italic = false },
+        duplicate_visible      = { fg = "#7A7880", bg = "#D5D0CA", italic = false },
+        modified_selected      = { fg = "#F0EDE8", bg = "#5A8FD4", italic = false },
+        modified               = { fg = "#7A7880", bg = "#D5D0CA", italic = false },
+        modified_visible       = { fg = "#7A7880", bg = "#D5D0CA", italic = false },
+      } or {
         fill                   = { bg = "#1e1e2e" },
         background             = { fg = "#6c7086", bg = "#181825" },
         tab                    = { fg = "#6c7086", bg = "#181825" },
@@ -417,16 +515,15 @@ return {
         separator              = { fg = "#181825", bg = "#1e1e2e" },
         separator_selected     = { fg = "#89b4fa", bg = "#1e1e2e" },
         separator_visible      = { fg = "#181825", bg = "#1e1e2e" },
-        -- directory prefix shown when two tabs share the same filename
-        duplicate_selected     = { fg = "#1e1e2e", bg = "#89b4fa", bold = true,  italic = false },
-        duplicate              = { fg = "#6c7086", bg = "#181825",               italic = false },
-        duplicate_visible      = { fg = "#6c7086", bg = "#181825",               italic = false },
-        -- modified indicator (unsaved file): keep the blue background on the active tab
+        duplicate_selected     = { fg = "#1e1e2e", bg = "#89b4fa", bold = true, italic = false },
+        duplicate              = { fg = "#6c7086", bg = "#181825", italic = false },
+        duplicate_visible      = { fg = "#6c7086", bg = "#181825", italic = false },
         modified_selected      = { fg = "#1e1e2e", bg = "#89b4fa", italic = false },
         modified               = { fg = "#6c7086", bg = "#181825", italic = false },
         modified_visible       = { fg = "#6c7086", bg = "#181825", italic = false },
-      },
-    },
+      }
+      return opts
+    end,
   },
   {
     "folke/snacks.nvim",
@@ -448,6 +545,14 @@ return {
           })
         end,
         desc = "Buffers",
+      },
+      { "<leader>sG", false },
+      {
+        "<leader>sG",
+        function()
+          require("config.search_grep").cwd_with_filter_mode()
+        end,
+        desc = "Grep (cwd, path filters)",
       },
     },
     opts = {
@@ -497,6 +602,19 @@ return {
             cmd = "fd",
             hidden = true,
             ignored = true,
+            exclude = picker_excludes,
+            win = {
+              input = {
+                keys = {
+                  ["<c-h>"] = { "toggle_hidden", mode = { "i", "n" } },
+                },
+              },
+              list = {
+                keys = {
+                  ["<c-h>"] = "toggle_hidden",
+                },
+              },
+            },
             preview = snacks_file_preview_with_video,
           },
           git_files = {
@@ -511,9 +629,33 @@ return {
           grep = {
             hidden = true,
             ignored = true,
+            regex = false,
+            camel_case = false,
+            toggles = {
+              regex = false,
+            },
+            exclude = picker_excludes,
             args = {
-              "--glob=**",
-              "--glob=.git/**",
+              "--ignore-case",
+            },
+            win = {
+              input = {
+                keys = {
+                  ["<c-h>"] = { "toggle_hidden", mode = { "i", "n" } },
+                  ["<c-r>"] = { "toggle_camel_case", mode = { "i", "n" }, nowait = true },
+                  ["<C-R>"] = { "toggle_camel_case", mode = { "i", "n" }, nowait = true },
+                  ["c"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
+                  ["<a-r>"] = false,
+                },
+              },
+              list = {
+                keys = {
+                  ["<c-h>"] = "toggle_hidden",
+                  ["c"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
+                  ["<c-r>"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
+                  ["<C-R>"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
+                },
+              },
             },
             format = function(item, picker)
               return require("snacks.picker.format").filename(item, picker)
@@ -522,10 +664,34 @@ return {
           grep_word = {
             hidden = true,
             ignored = true,
+            regex = false,
+            camel_case = false,
+            toggles = {
+              regex = false,
+            },
+            exclude = picker_excludes,
             args = {
               "--word-regexp",
-              "--glob=**",
-              "--glob=.git/**",
+              "--ignore-case",
+            },
+            win = {
+              input = {
+                keys = {
+                  ["<c-h>"] = { "toggle_hidden", mode = { "i", "n" } },
+                  ["<c-r>"] = { "toggle_camel_case", mode = { "i", "n" }, nowait = true },
+                  ["<C-R>"] = { "toggle_camel_case", mode = { "i", "n" }, nowait = true },
+                  ["c"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
+                  ["<a-r>"] = false,
+                },
+              },
+              list = {
+                keys = {
+                  ["<c-h>"] = "toggle_hidden",
+                  ["c"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
+                  ["<c-r>"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
+                  ["<C-R>"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
+                },
+              },
             },
             format = function(item, picker)
               return require("snacks.picker.format").filename(item, picker)
@@ -557,6 +723,7 @@ return {
           },
         },
         actions = {
+          toggle_camel_case = toggle_grep_camel_case,
           confirm = function(picker, item)
             if not item then return end
             picker:close()
@@ -732,7 +899,15 @@ return {
     "nvim-lualine/lualine.nvim",
     event = "VeryLazy",
     opts = function(_, opts)
-      local mode_theme = {
+      local is_light = vim.o.background == "light"
+      local mode_theme = is_light and {
+        normal   = { a = { fg = "#F0EDE8", bg = "#5A8FD4", gui = "bold" }, b = { fg = "#4C4F69", bg = "#D5D0CA", gui = "bold" }, c = { fg = "#4C4F69", bg = "#E2DFDB" } },
+        insert   = { a = { fg = "#F0EDE8", bg = "#7CA686", gui = "bold" }, b = { fg = "#4C4F69", bg = "#D5D0CA", gui = "bold" } },
+        visual   = { a = { fg = "#F0EDE8", bg = "#9B87C4", gui = "bold" }, b = { fg = "#4C4F69", bg = "#D5D0CA", gui = "bold" } },
+        replace  = { a = { fg = "#F0EDE8", bg = "#B85C5C", gui = "bold" }, b = { fg = "#4C4F69", bg = "#D5D0CA", gui = "bold" } },
+        command  = { a = { fg = "#F0EDE8", bg = "#C87A3A", gui = "bold" }, b = { fg = "#4C4F69", bg = "#D5D0CA", gui = "bold" } },
+        inactive = { a = { fg = "#7A7880", bg = "#E2DFDB" }, b = { fg = "#7A7880", bg = "#E2DFDB" }, c = { fg = "#7A7880", bg = "#E2DFDB" } },
+      } or {
         normal   = { a = { fg = "#191A1C", bg = "#89b4fa", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#3B3F45", gui = "bold" }, c = { fg = "#BCBEC4", bg = "#2B2D30" } },
         insert   = { a = { fg = "#191A1C", bg = "#a6e3a1", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#3B3F45", gui = "bold" } },
         visual   = { a = { fg = "#191A1C", bg = "#B189F5", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#3B3F45", gui = "bold" } },
@@ -742,10 +917,13 @@ return {
       }
       opts.options = vim.tbl_extend("force", opts.options or {}, {
         theme = mode_theme,
-        section_separators = { left = "", right = "" },
-        component_separators = { left = "", right = "" },
+        section_separators = { left = "", right = "" },
+        component_separators = { left = "", right = "" },
       })
       opts.sections = opts.sections or {}
+      opts.sections.lualine_a = {
+        { "mode", separator = { left = "\u{E0B6}", right = "\u{E0B4}" }, padding = { left = 1, right = 1 } },
+      }
       opts.sections.lualine_x = {}
       -- Git ahead/behind async refresh
       vim.g._git_ahead = vim.g._git_ahead or 0
@@ -816,12 +994,35 @@ return {
       vim.api.nvim_create_autocmd({ "BufEnter", "FocusGained", "BufWritePost" }, { group = grp, callback = refresh_git_all })
       refresh_git_all()
 
+      local function setup_breadcrumb_hl()
+        local chip_bgs_hl = vim.o.background == "light"
+          and { "#D5D0CA", "#D5D0CA", "#D5D0CA" }
+          or  { "#3A3D41", "#42464D", "#4A4F57" }
+        local breadcrumb_bg = chip_bgs_hl[2] or chip_bgs_hl[1]
+        local breadcrumb_fg = vim.o.background == "light" and "#4C4F69" or "#CED0D6"
+        local arrow_fg = vim.o.background == "light" and "#2F3147" or "#DCE0E8"
+        for i, bg in ipairs(chip_bgs_hl) do
+          vim.api.nvim_set_hl(0, "LualineBreadcrumbSep" .. i, { fg = arrow_fg, bg = bg })
+        end
+        vim.api.nvim_set_hl(0, "LualineBreadcrumbStatus", { fg = breadcrumb_fg, bg = breadcrumb_bg })
+      end
+      setup_breadcrumb_hl()
+      vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_breadcrumb_hl })
+
       local function setup_git_hl()
-        vim.api.nvim_set_hl(0, "LualineGitBase", { fg = "#BCBEC4", bg = "#3B3F45", bold = true })
-        vim.api.nvim_set_hl(0, "LualineGitGreen", { fg = "#a6e3a1", bg = "#3B3F45", bold = true })
-        vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = "#f9e2af", bg = "#3B3F45", bold = true })
-        vim.api.nvim_set_hl(0, "LualineGitPeach", { fg = "#fab387", bg = "#3B3F45", bold = true })
-        vim.api.nvim_set_hl(0, "LualineGitRed", { fg = "#f38ba8", bg = "#3B3F45", bold = true })
+        if vim.o.background == "light" then
+          vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = "#7A7880", bg = "#D5D0CA", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = "#7CA686", bg = "#D5D0CA", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = "#A8983A", bg = "#D5D0CA", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = "#C87A3A", bg = "#D5D0CA", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = "#B85C5C", bg = "#D5D0CA", bold = true })
+        else
+          vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = "#BCBEC4", bg = "#3B3F45", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = "#a6e3a1", bg = "#3B3F45", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = "#f9e2af", bg = "#3B3F45", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = "#fab387", bg = "#3B3F45", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = "#f38ba8", bg = "#3B3F45", bold = true })
+        end
       end
       setup_git_hl()
       vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_git_hl })
@@ -853,16 +1054,26 @@ return {
             return b ~= "" and not b:find("fatal")
           end,
           padding = { left = 1, right = 1 },
+          separator = { left = "\u{E0B6}", right = "\u{E0B4}" },
         },
       }
 
       local function setup_diag_hl()
-        vim.api.nvim_set_hl(0, "DiagPillCap", { fg = "#313438", bg = "#2B2D30" })
-        vim.api.nvim_set_hl(0, "DiagPillBase", { fg = "#BCBEC4", bg = "#313438" })
-        vim.api.nvim_set_hl(0, "DiagPillError", { fg = "#f38ba8", bg = "#313438" })
-        vim.api.nvim_set_hl(0, "DiagPillWarn", { fg = "#f9e2af", bg = "#313438" })
-        vim.api.nvim_set_hl(0, "DiagPillInfo", { fg = "#89b4fa", bg = "#313438" })
-        vim.api.nvim_set_hl(0, "DiagPillHint", { fg = "#a6e3a1", bg = "#313438" })
+        if vim.o.background == "light" then
+          vim.api.nvim_set_hl(0, "DiagPillCap",   { fg = "#D5D0CA", bg = "#E2DFDB" })
+          vim.api.nvim_set_hl(0, "DiagPillBase",  { fg = "#7A7880", bg = "#D5D0CA" })
+          vim.api.nvim_set_hl(0, "DiagPillError", { fg = "#B85C5C", bg = "#D5D0CA" })
+          vim.api.nvim_set_hl(0, "DiagPillWarn",  { fg = "#A8983A", bg = "#D5D0CA" })
+          vim.api.nvim_set_hl(0, "DiagPillInfo",  { fg = "#5A8FD4", bg = "#D5D0CA" })
+          vim.api.nvim_set_hl(0, "DiagPillHint",  { fg = "#7CA686", bg = "#D5D0CA" })
+        else
+          vim.api.nvim_set_hl(0, "DiagPillCap",   { fg = "#313438", bg = "#2B2D30" })
+          vim.api.nvim_set_hl(0, "DiagPillBase",  { fg = "#BCBEC4", bg = "#313438" })
+          vim.api.nvim_set_hl(0, "DiagPillError", { fg = "#f38ba8", bg = "#313438" })
+          vim.api.nvim_set_hl(0, "DiagPillWarn",  { fg = "#f9e2af", bg = "#313438" })
+          vim.api.nvim_set_hl(0, "DiagPillInfo",  { fg = "#89b4fa", bg = "#313438" })
+          vim.api.nvim_set_hl(0, "DiagPillHint",  { fg = "#a6e3a1", bg = "#313438" })
+        end
       end
       setup_diag_hl()
       vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_diag_hl })
@@ -898,7 +1109,7 @@ return {
                   end,
                 },
                 format = "{kind_icon}{symbol.name:Normal}",
-                hl_group = "lualine_c_normal",
+                hl_group = "LualineBreadcrumbStatus",
               })
               opts.sections.lualine_c[i] = {
                 symbols and symbols.get,
@@ -926,6 +1137,19 @@ return {
           if inf > 0 then table.insert(parts, "%#DiagPillInfo#I " .. inf) end
           if h > 0 then table.insert(parts, "%#DiagPillHint#H " .. h) end
           return table.concat(parts, " ")
+        end,
+        cond = function()
+          local d = vim.diagnostic.count(0)
+          local e = d[vim.diagnostic.severity.ERROR] or 0
+          local w = d[vim.diagnostic.severity.WARN] or 0
+          local inf = d[vim.diagnostic.severity.INFO] or 0
+          local h = d[vim.diagnostic.severity.HINT] or 0
+          return e + w + inf + h > 0
+        end,
+        separator = { left = "\u{E0B6}", right = "\u{E0B4}" },
+        color = function()
+          local light = vim.o.background == "light"
+          return { fg = light and "#7A7880" or "#7A7E85", bg = light and "#D5D0CA" or "#2B2D30" }
         end,
         padding = { left = 1, right = 1 },
       })
@@ -975,14 +1199,39 @@ return {
         ["null-ls"]    = "#94e2d5",
       }
 
+      local lsp_colors_light = {
+        vtsls          = "#0B74D6",
+        ts_ls          = "#0B74D6",
+        tsserver       = "#0B74D6",
+        vue_ls         = "#2E7D4F",
+        volar          = "#2E7D4F",
+        tailwindcss    = "#1A8894",
+        lua_ls         = "#0B74D6",
+        pyright        = "#A04B10",
+        basedpyright   = "#A04B10",
+        pylsp          = "#A04B10",
+        jsonls         = "#7A5C00",
+        html           = "#A04B10",
+        cssls          = "#1A8894",
+        emmet_ls       = "#A04B10",
+        bashls         = "#2E7D4F",
+        dockerls       = "#1A8894",
+        yamlls         = "#7A5C00",
+        copilot        = "#6B3CC8",
+        ["null-ls"]    = "#1A8894",
+      }
+
       local function setup_lsp_hl()
-        vim.api.nvim_set_hl(0, "LualineLspBase",        { fg = "#93a1a1", bg = "#45475a" })
-        vim.api.nvim_set_hl(0, "LualineCopilotOn",      { fg = "#cba6f7", bg = "#45475a" })
-        vim.api.nvim_set_hl(0, "LualineCopilotSpinner", { fg = "#f9e2af", bg = "#45475a" })
-        vim.api.nvim_set_hl(0, "LualineCopilotOff",     { fg = "#6c7086", bg = "#45475a" })
-        for name, fg in pairs(lsp_colors) do
+        local light = vim.o.background == "light"
+        local lsp_bg = light and "#D5D0CA" or "#45475a"
+        local colors = light and lsp_colors_light or lsp_colors
+        vim.api.nvim_set_hl(0, "LualineLspBase",        { fg = light and "#7A7880" or "#93a1a1",  bg = lsp_bg })
+        vim.api.nvim_set_hl(0, "LualineCopilotOn",      { fg = light and "#7B72C9" or "#cba6f7",  bg = lsp_bg })
+        vim.api.nvim_set_hl(0, "LualineCopilotSpinner", { fg = light and "#A8983A" or "#f9e2af",  bg = lsp_bg })
+        vim.api.nvim_set_hl(0, "LualineCopilotOff",     { fg = light and "#7A7880" or "#6c7086",  bg = lsp_bg })
+        for name, fg in pairs(colors) do
           local hl = "LualineLsp_" .. name:gsub("[%-%.]", "_")
-          vim.api.nvim_set_hl(0, hl, { fg = fg, bg = "#45475a" })
+          vim.api.nvim_set_hl(0, hl, { fg = fg, bg = lsp_bg })
         end
       end
       setup_lsp_hl()
@@ -1010,20 +1259,16 @@ return {
           end
           return table.concat(parts, "  ")
         end,
-        separator = { left = "", right = "" },
-        color = { fg = "#93a1a1", bg = "#45475a" },
-        cond = function()
-          local clients = vim.lsp.get_clients({ bufnr = 0 })
-          for _, c in ipairs(clients) do
-            if c.name ~= "eslint" and c.name ~= "copilot" then return true end
-          end
-          return false
+        separator = { left = "\u{E0B6}", right = "\u{E0B4}" },
+        color = function()
+          local light = vim.o.background == "light"
+          return { fg = light and "#7A7880" or "#93a1a1", bg = light and "#D5D0CA" or "#45475a" }
         end,
       })
 
       table.insert(opts.sections.lualine_x, {
         function()
-          local icon = " "
+          local icon = " "
           local ok, status = pcall(require, "copilot.status")
           if not ok then
             return "%#LualineCopilotOff#" .. icon .. "copilot%#LualineLspBase#"
@@ -1037,8 +1282,11 @@ return {
             return "%#LualineCopilotOff#" .. icon .. "copilot%#LualineLspBase#"
           end
         end,
-        separator = { left = "", right = "" },
-        color = { fg = "#6c7086", bg = "#45475a" },
+        separator = { left = "", right = "" },
+        color = function()
+          local light = vim.o.background == "light"
+          return { fg = light and "#9BA5B0" or "#6c7086", bg = light and "#C8CCD1" or "#45475a" }
+        end,
         cond = function()
           return LazyVim.has("copilot.lua")
         end,
@@ -1049,11 +1297,13 @@ return {
           local fmt_active = vim.g.autoformat == nil or vim.g.autoformat
           return "󰉼 fmt" .. (fmt_active and " (A)" or "")
         end,
-        separator = { left = "", right = "" },
+        separator = { left = "", right = "" },
         color = function()
+          local light = vim.o.background == "light"
+          local lsp_bg = light and "#C8CCD1" or "#45475a"
           return (vim.g.autoformat == nil or vim.g.autoformat)
-            and { fg = "#a6e3a1", bg = "#45475a" }
-            or  { fg = "#586e75", bg = "#45475a" }
+            and { fg = light and "#7CA686" or "#a6e3a1", bg = lsp_bg }
+            or  { fg = light and "#7A7880" or "#586e75", bg = lsp_bg }
         end,
       })
 
@@ -1064,12 +1314,16 @@ return {
           if not eslint_attached then return "󰅪 eslint" end
           return "󰅪 eslint" .. (autosave_on and " (A)" or "")
         end,
-        separator = { left = "", right = "" },
+        separator = { left = "\u{E0B6}", right = "\u{E0B4}" },
         color = function()
+          local light = vim.o.background == "light"
+          local lsp_bg = light and "#D5D0CA" or "#45475a"
           local eslint_attached = #vim.lsp.get_clients({ name = "eslint", bufnr = 0 }) > 0
           local autosave_on = vim.g.eslint_autosave == nil or vim.g.eslint_autosave
-          if not eslint_attached then return { fg = "#586e75", bg = "#45475a" } end
-          return autosave_on and { fg = "#f9e2af", bg = "#45475a" } or { fg = "#93a1a1", bg = "#45475a" }
+          if not eslint_attached then return { fg = light and "#7A7880" or "#586e75", bg = lsp_bg } end
+          return autosave_on
+            and { fg = light and "#A8983A" or "#f9e2af", bg = lsp_bg }
+            or  { fg = light and "#7A7880" or "#93a1a1", bg = lsp_bg }
         end,
       })
 
@@ -1098,7 +1352,7 @@ return {
           else
             color = existing_color or {}
           end
-          color.fg = color.fg or "#CED0D6"
+          color.fg = color.fg or (vim.o.background == "light" and "#4C4F69" or "#CED0D6")
           color.bg = bg
           return color
         end
@@ -1107,7 +1361,9 @@ return {
       end
 
       opts.sections.lualine_c = opts.sections.lualine_c or {}
-      local chip_bgs = { "#3A3D41", "#42464D", "#4A4F57" }
+      local chip_bgs = vim.o.background == "light"
+        and { "#D5D0CA", "#D5D0CA", "#D5D0CA" }
+        or  { "#3A3D41", "#42464D", "#4A4F57" }
       local chip_index = 1
       local styled_c = {}
       for _, comp in ipairs(opts.sections.lualine_c) do
@@ -1116,10 +1372,28 @@ return {
         if is_path_like then
           local bg = chip_bgs[((chip_index - 1) % #chip_bgs) + 1]
           local styled_comp = style_chip(comp, bg)
+          if chip_index == 1 then
+            styled_comp.padding = { left = 1, right = 0 }
+            local original_fn = styled_comp[1]
+            if type(original_fn) == "function" then
+              styled_comp[1] = function(self)
+                local str = original_fn(self) or ""
+                str = str:gsub(" +%%*", "%%*")
+                str = str:gsub("%s+$", "")
+                return str
+              end
+            end
+          end
           if chip_index > 1 then
-            -- Code path (Trouble symbols): cap its visible length so the file path
-            -- always has room. Walks the string char-by-char to skip %#HL# codes
-            -- when counting, so truncation lands on a real character boundary.
+            local sep_hl = "LualineBreadcrumbSep" .. (((chip_index - 1) % 3) + 1)
+            styled_comp.padding = { left = 0, right = 0 }
+            local original = styled_comp[1]
+            if type(original) == "function" then
+              styled_comp[1] = function(self)
+                local str = (original(self) or ""):gsub("^%s+", ""):gsub("%s+$", "")
+                return str:gsub(" %%#", "%%#" .. sep_hl .. "#  %%#")
+              end
+            end
             styled_comp.fmt = function(str)
               local max = math.max(0, vim.o.columns - 100)
               local visible = str:gsub("%%#[^#]*#", "")
@@ -1145,15 +1419,6 @@ return {
         end
       end
       opts.sections.lualine_c = styled_c
-
-      for _, comp in ipairs(opts.sections.lualine_c) do
-        if type(comp) == "table" and type(comp[1]) == "function" then
-          local original = comp[1]
-          comp[1] = function(self)
-            return (original(self) or ""):gsub("/", " > ")
-          end
-        end
-      end
 
       return opts
     end,
