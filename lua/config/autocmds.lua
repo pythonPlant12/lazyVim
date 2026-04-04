@@ -318,11 +318,11 @@ local function apply_html_hl()
   local hl = vim.api.nvim_set_hl
   local blue, amber, muted, cyan, purple
   if vim.o.background == "light" then
-    blue   = "#004FE0"
-    amber  = "#BC4800"
-    muted  = "#3D5068"
-    cyan   = "#007A90"
-    purple = "#5220D4"
+    blue   = "#5A9AE0"
+    amber  = "#D4924A"
+    muted  = "#8A96A8"
+    cyan   = "#2A90A8"
+    purple = "#9A88D8"
   else
     blue   = "#56A8F5"
     amber  = "#CF8E6D"
