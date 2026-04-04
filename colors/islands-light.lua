@@ -8,20 +8,20 @@ local palette = {
   bg = "#FFFFFF",
   fg = "#4C4F69",
   fg_bright = "#1E2030",
-  muted = "#7A7880",
-  comment = "#7A7880",
+  muted = "#6E7380",
+  comment = "#6E7380",
   line = "#FBFAF8",
   line_alt = "#FEFDFC",
-  blue = "#5A8FD4",
-  cyan = "#2A90A8",
-  green = "#7CA686",
-  amber = "#D4924A",
-  gold = "#B8A040",
-  magenta = "#B098D0",
-  red = "#CC7070",
-  purple = "#9E8ED4",
-  selection = "#F1EFEC",
-  search = "#C5D8E8",
+  blue = "#356FAF",
+  cyan = "#2A6678",
+  green = "#4F7C61",
+  amber = "#9C5F2B",
+  gold = "#857125",
+  magenta = "#775EAA",
+  red = "#B85A64",
+  purple = "#6E52A8",
+  selection = "#DEE9F5",
+  search = "#D6E5F2",
   border = "#F3F1EE",
 }
 
@@ -33,7 +33,7 @@ local hl = vim.api.nvim_set_hl
 hl(0, "Normal", { fg = palette.fg, bg = palette.bg })
 hl(0, "NormalNC", { fg = palette.fg, bg = palette.bg })
 hl(0, "NormalFloat", { fg = palette.fg, bg = palette.bg })
-hl(0, "FloatBorder", { fg = "#a4a9b3", bg = palette.bg })
+hl(0, "FloatBorder", { fg = "#9098A6", bg = palette.bg })
 hl(0, "CursorLine", { bg = palette.line_alt })
 hl(0, "CursorLineNr", { fg = palette.fg_bright, bg = palette.line_alt, bold = true })
 hl(0, "LineNr", { fg = palette.muted })
@@ -95,36 +95,53 @@ hl(0, "NvimTreeFolderName", { fg = palette.fg, bold = true })
 hl(0, "NvimTreeFolderIcon", { fg = palette.fg })
 hl(0, "NvimTreeOpenedFolderName", { fg = palette.fg, bold = true })
 
-hl(0, "htmlTag", { fg = palette.muted })
-hl(0, "htmlEndTag", { fg = palette.muted })
-hl(0, "htmlTagName", { fg = "#E0A060" })
-hl(0, "htmlSpecialTagName", { fg = "#7AAEE0" })
-hl(0, "htmlArg", { fg = "#E0A060" })
+hl(0, "htmlTag", { fg = "#7B8596" })
+hl(0, "htmlEndTag", { fg = "#7B8596" })
+hl(0, "htmlTagName", { fg = "#356FAF" })
+hl(0, "htmlSpecialTagName", { fg = "#356FAF" })
+hl(0, "htmlArg", { fg = "#8E5324" })
 hl(0, "htmlString", { fg = palette.green })
 hl(0, "htmlValue", { fg = palette.green })
 hl(0, "htmlSpecialChar", { fg = palette.cyan })
 hl(0, "htmlComment", { fg = palette.comment, italic = false })
 hl(0, "htmlCommentPart", { fg = palette.comment, italic = false })
 
-hl(0, "@tag", { fg = "#B8A8E0" })
-hl(0, "@tag.builtin", { fg = "#7AAEE0" })
-hl(0, "@tag.attribute", { fg = "#E0A060" })
-hl(0, "@tag.delimiter", { fg = palette.muted })
-hl(0, "@punctuation.bracket", { fg = palette.muted })
-hl(0, "@string.special.url", { fg = palette.cyan, underline = true })
+hl(0, "@tag", { fg = "#356FAF" })
+hl(0, "@tag.builtin", { fg = "#356FAF" })
+hl(0, "@tag.attribute", { fg = "#8E5324" })
+hl(0, "@tag.delimiter", { fg = "#7B8596" })
+hl(0, "@punctuation.bracket", { fg = "#7B8596" })
+hl(0, "@punctuation.special", { fg = "#356FAF" })
+hl(0, "@attribute", { fg = "#8E5324" })
+hl(0, "@string.special.url", { fg = "#2A6678", underline = true })
 
-hl(0, "@tag.html", { fg = "#E0A060" })
-hl(0, "@tag.builtin.html", { fg = "#7AAEE0" })
-hl(0, "@tag.attribute.html", { fg = "#E0A060" })
-hl(0, "@tag.delimiter.html", { fg = palette.muted })
-hl(0, "@punctuation.bracket.html", { fg = palette.muted })
-hl(0, "@string.special.url.html", { fg = palette.cyan, underline = true })
+hl(0, "@tag.html", { fg = "#356FAF" })
+hl(0, "@tag.builtin.html", { fg = "#356FAF" })
+hl(0, "@tag.attribute.html", { fg = "#8E5324" })
+hl(0, "@tag.delimiter.html", { fg = "#7B8596" })
+hl(0, "@punctuation.bracket.html", { fg = "#7B8596" })
+hl(0, "@string.special.url.html", { fg = "#2A6678", underline = true })
 
-hl(0, "@tag.vue", { fg = "#B8A8E0" })
-hl(0, "@tag.builtin.vue", { fg = "#7AAEE0" })
-hl(0, "@tag.attribute.vue", { fg = "#E0A060" })
-hl(0, "@tag.delimiter.vue", { fg = palette.muted })
-hl(0, "@punctuation.bracket.vue", { fg = palette.muted })
+hl(0, "@tag.vue", { fg = "#356FAF" })
+hl(0, "@tag.builtin.vue", { fg = "#356FAF" })
+hl(0, "@tag.attribute.vue", { fg = "#8E5324" })
+hl(0, "@tag.delimiter.vue", { fg = "#7B8596" })
+hl(0, "@punctuation.bracket.vue", { fg = "#7B8596" })
+hl(0, "@punctuation.special.vue", { fg = "#356FAF" })
+hl(0, "@constructor.vue", { fg = "#356FAF" })
+hl(0, "@attribute.vue", { fg = "#8E5324" })
+hl(0, "@keyword.directive.vue", { fg = "#356FAF" })
+hl(0, "@keyword.modifier.vue", { fg = "#356FAF" })
+hl(0, "@function.method.vue", { fg = "#356FAF" })
+hl(0, "@character.special.vue", { fg = "#356FAF" })
+hl(0, "@variable.vue", { fg = palette.fg })
+hl(0, "@variable.member.vue", { fg = palette.fg })
+hl(0, "@none.vue", { fg = palette.fg })
+hl(0, "@property", { fg = palette.fg })
+hl(0, "@property.vue", { fg = palette.fg })
+hl(0, "@string", { fg = palette.green })
+hl(0, "@string.html", { fg = palette.green })
+hl(0, "@string.vue", { fg = palette.green })
 
 hl(0, "@lsp.type.keyword.vue", { fg = palette.amber })
 

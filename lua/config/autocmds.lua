@@ -37,12 +37,12 @@ local function apply_custom_hl()
 
   local c = is_light and {
     border = "#8F98A8",
-    select_bg = "#ACC5E8",
+    select_bg = "#D9E7F4",
     ref_bg = "#D6E1F0",
-    diag_err = "#C8626D",
-    diag_warn = "#A88A4A",
-    diag_info = "#4E8DC0",
-    diag_hint = "#848E98",
+    diag_err = "#B54A5C",
+    diag_warn = "#8A6B20",
+    diag_info = "#2A6296",
+    diag_hint = "#6B7582",
     diff_add = "#DFF1E4",
     diff_del = "#F5DEDE",
     diff_change = "#F3E8D6",
@@ -58,19 +58,19 @@ local function apply_custom_hl()
     neotree_red = "#B54A5C",
     neotree_cursor_fg = "#9E6534",
     neotree_cursor_bg = "#D8E2F0",
-    param = "#9488C4",
-    vbuiltin = "#C070A8",
-    ctor = "#B8963A",
-    blue = "#2E6EA8",
-    pink = "#B062A8",
-    rose = "#B87180",
-    yellow = "#A8873A",
-    purple = "#7A5EB4",
-    cyan = "#3C7E8F",
-    peach = "#A66A3F",
+    param = "#6E52A8",
+    vbuiltin = "#A15391",
+    ctor = "#8A6B20",
+    blue = "#2A6296",
+    pink = "#A15391",
+    rose = "#B06276",
+    yellow = "#8A6B20",
+    purple = "#6E52A8",
+    cyan = "#2F6E7E",
+    peach = "#8E5324",
     green = "#4D8454",
-    text = "#55606E",
-    muted_text = "#6B7582",
+    text = "#4F5966",
+    muted_text = "#66707C",
     snacks_line_fg = "#8E5D33",
     snacks_line_bg = "#D6E0EE",
     snacks_file = "#3E464F",
@@ -87,7 +87,7 @@ local function apply_custom_hl()
     bl_bg = "#DDE1E7",
     bl_fg = "#6B7582",
     bl_sel_fg = "#2A313A",
-    bl_sel_bg = "#8FB2E8",
+    bl_sel_bg = "#D9E7F4",
     bl_sep = "#D0D5DC",
   } or {
     border = "#585b70",
@@ -316,45 +316,78 @@ apply_custom_hl()
 
 local function apply_html_hl()
   local hl = vim.api.nvim_set_hl
-  local blue, amber, muted, cyan, purple
+  local blue, amber, muted, cyan, text, green
   if vim.o.background == "light" then
-    blue   = "#5A9AE0"
-    amber  = "#D4924A"
-    muted  = "#8A96A8"
-    cyan   = "#2A90A8"
-    purple = "#9A88D8"
+    blue   = "#356FAF"
+    amber  = "#8E5324"
+    muted  = "#7B8596"
+    cyan   = "#2A6678"
+    text   = "#4C4F69"
+    green  = "#4F7C61"
   else
     blue   = "#56A8F5"
     amber  = "#CF8E6D"
     muted  = "#6F737A"
     cyan   = "#2AACB8"
-    purple = "#cba6f7"
+    text   = "#BCBEC4"
+    green  = "#a6e3a1"
   end
-  hl(0, "@tag",                     { fg = purple })
+  hl(0, "htmlTag",                  { fg = muted })
+  hl(0, "htmlEndTag",               { fg = muted })
+  hl(0, "htmlTagName",              { fg = amber })
+  hl(0, "htmlSpecialTagName",       { fg = blue })
+  hl(0, "htmlArg",                  { fg = amber })
+  hl(0, "htmlSpecialChar",          { fg = cyan })
+  hl(0, "htmlString",               { fg = green })
+  hl(0, "htmlValue",                { fg = green })
+  hl(0, "@tag",                     { fg = blue })
   hl(0, "@tag.builtin",             { fg = blue })
   hl(0, "@tag.attribute",           { fg = amber })
   hl(0, "@tag.delimiter",           { fg = muted })
-  hl(0, "@tag.html",                { fg = amber })
+  hl(0, "@punctuation.bracket",     { fg = muted })
+  hl(0, "@punctuation.special",     { fg = blue })
+  hl(0, "@attribute",               { fg = amber })
+  hl(0, "@tag.html",                { fg = blue })
   hl(0, "@tag.builtin.html",        { fg = blue })
   hl(0, "@tag.attribute.html",      { fg = amber })
   hl(0, "@tag.delimiter.html",      { fg = muted })
+  hl(0, "@punctuation.bracket.html", { fg = muted })
   hl(0, "@string.special.url.html", { fg = cyan, underline = true })
-  hl(0, "@tag.vue",                 { fg = purple })
+  hl(0, "@tag.vue",                 { fg = blue })
   hl(0, "@tag.builtin.vue",         { fg = blue })
   hl(0, "@tag.attribute.vue",       { fg = amber })
   hl(0, "@tag.delimiter.vue",       { fg = muted })
+  hl(0, "@punctuation.bracket.vue", { fg = muted })
+  hl(0, "@punctuation.special.vue", { fg = blue })
+  hl(0, "@constructor.vue",         { fg = blue })
+  hl(0, "@attribute.vue",           { fg = amber })
+  hl(0, "@keyword.directive.vue",   { fg = blue })
+  hl(0, "@keyword.modifier.vue",    { fg = blue })
+  hl(0, "@function.method.vue",     { fg = blue })
+  hl(0, "@character.special.vue",   { fg = blue })
+  hl(0, "@variable.vue",            { fg = text })
+  hl(0, "@variable.member.vue",     { fg = text })
+  hl(0, "@none.vue",                { fg = text })
+  hl(0, "@property",                { fg = text })
+  hl(0, "@property.vue",            { fg = text })
+  hl(0, "@string",                  { fg = green })
+  hl(0, "@string.html",             { fg = green })
+  hl(0, "@string.vue",              { fg = green })
 end
 
 vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("HtmlTsColors", { clear = true }),
   pattern = { "html", "vue" },
-  callback = apply_html_hl,
+  callback = function()
+    vim.schedule(apply_html_hl)
+  end,
 })
 
 vim.api.nvim_create_autocmd("ColorScheme", {
   group = vim.api.nvim_create_augroup("HtmlTsColorsScheme", { clear = true }),
   callback = apply_html_hl,
 })
+apply_html_hl()
 
 do
   vim.g.buf_history = vim.g.buf_history or {}
