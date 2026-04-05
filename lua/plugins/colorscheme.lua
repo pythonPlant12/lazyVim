@@ -21,4 +21,12 @@ return {
       return opts
     end,
   },
+  {
+    "catppuccin/nvim",
+    name = "catppuccin",
+    lazy = true,
+    opts = {
+      flavour = "mocha",
+    },
+  },
 }

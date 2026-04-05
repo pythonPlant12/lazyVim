@@ -84,12 +84,8 @@ local function apply_custom_hl()
     snacks_selected = "#2E6EA8",
     snacks_comment = "#7B8491",
     snacks_search_bg = "#C8D8EE",
-    bl_fill_bg = "#E6E9ED",
-    bl_bg = "#DDE1E7",
-    bl_fg = "#6B7582",
-    bl_sel_fg = "#2A313A",
-    bl_sel_bg = "#D9E7F4",
-    bl_sep = "#D0D5DC",
+    indent_fg = "#D8DAE0",
+    indent_scope_fg = "#8FA8C8",
   } or {
     border = "#585b70",
     select_bg = "#45475a",
@@ -139,12 +135,8 @@ local function apply_custom_hl()
     snacks_selected = "#89b4fa",
     snacks_comment = "#6c7086",
     snacks_search_bg = "#1e3a5f",
-    bl_fill_bg = "#1e1e2e",
-    bl_bg = "#181825",
-    bl_fg = "#6c7086",
-    bl_sel_fg = "#1e1e2e",
-    bl_sel_bg = "#89b4fa",
-    bl_sep = "#181825",
+    indent_fg = "#2E3138",
+    indent_scope_fg = "#5B6B8A",
   }
 
   hl(0, "NormalFloat",               { fg = normal_fg, bg = border_bg })
@@ -182,14 +174,14 @@ local function apply_custom_hl()
   hl(0, "GitSignsDeleteLnInline", { bg = c.gdel_ln })
   hl(0, "GitSignsChangeLnInline", { bg = c.gchg_ln })
 
-  hl(0, "NeoTreeGitAdded",     { fg = c.neotree_added })
-  hl(0, "NeoTreeGitUntracked", { fg = c.neotree_added })
-  hl(0, "NeoTreeGitStaged",    { fg = c.neotree_added })
-  hl(0, "NeoTreeGitModified",  { fg = c.neotree_mod })
-  hl(0, "NeoTreeGitRenamed",   { fg = c.neotree_mod })
-  hl(0, "NeoTreeGitUnstaged",  { fg = c.neotree_mod })
-  hl(0, "NeoTreeGitDeleted",   { fg = c.neotree_red })
-  hl(0, "NeoTreeGitConflict",  { fg = c.neotree_red })
+   hl(0, "NeoTreeGitAdded",     { fg = c.neotree_added, bold = true })
+   hl(0, "NeoTreeGitUntracked", { fg = c.neotree_added, bold = true })
+   hl(0, "NeoTreeGitStaged",    { fg = c.neotree_added, bold = true })
+   hl(0, "NeoTreeGitModified",  { fg = c.neotree_mod,   bold = true })
+   hl(0, "NeoTreeGitRenamed",   { fg = c.neotree_mod,   bold = true })
+   hl(0, "NeoTreeGitUnstaged",  { fg = c.neotree_mod,   bold = true })
+   hl(0, "NeoTreeGitDeleted",   { fg = c.neotree_red,   bold = true })
+   hl(0, "NeoTreeGitConflict",  { fg = c.neotree_red,   bold = true })
   hl(0, "NeoTreeCursorLine",   { fg = c.neotree_cursor_fg, bg = c.neotree_cursor_bg, bold = true })
 
   hl(0, "@variable.parameter",                { fg = c.param })
@@ -280,28 +272,9 @@ local function apply_custom_hl()
   hl(0, "SnacksPickerSelected",          { fg = c.snacks_selected })
   hl(0, "SnacksPickerComment",           { fg = c.snacks_comment })
   hl(0, "SnacksPickerGitStatusAdded",    { fg = c.green })
-  hl(0, "SnacksPickerGitStatusModified", { fg = c.yellow })
+   hl(0, "SnacksPickerGitStatusModified", { fg = c.yellow })
   hl(0, "SnacksPickerGitStatusDeleted",  { fg = c.rose })
   hl(0, "SnacksPickerGitStatusUntracked",{ fg = c.cyan })
-
-  hl(0, "BufferLineFill",                 { bg = c.bl_fill_bg })
-  hl(0, "BufferLineBackground",           { fg = c.bl_fg, bg = c.bl_bg })
-  hl(0, "BufferLineTab",                  { fg = c.bl_fg, bg = c.bl_bg })
-  hl(0, "BufferLineTabSelected",          { fg = c.bl_sel_fg, bg = c.bl_sel_bg, bold = true })
-  hl(0, "BufferLineTabSeparator",         { fg = c.bl_sep, bg = c.bl_fill_bg })
-  hl(0, "BufferLineTabSeparatorSelected", { fg = c.bl_sel_bg, bg = c.bl_fill_bg })
-  hl(0, "BufferLineTabClose",             { fg = c.bl_fg, bg = c.bl_fill_bg })
-  hl(0, "BufferLineBufferSelected",       { fg = c.bl_sel_fg, bg = c.bl_sel_bg, bold = true })
-  hl(0, "BufferLineNumbersSelected",      { fg = c.bl_sel_fg, bg = c.bl_sel_bg, bold = true })
-  hl(0, "BufferLineSeparator",            { fg = c.bl_sep, bg = c.bl_fill_bg })
-  hl(0, "BufferLineSeparatorSelected",    { fg = c.bl_sel_bg, bg = c.bl_fill_bg })
-  hl(0, "BufferLineSeparatorVisible",     { fg = c.bl_sep, bg = c.bl_fill_bg })
-  hl(0, "BufferLineDuplicateSelected",    { fg = c.bl_sel_fg, bg = c.bl_sel_bg, bold = true })
-  hl(0, "BufferLineDuplicate",            { fg = c.bl_fg, bg = c.bl_bg })
-  hl(0, "BufferLineDuplicateVisible",     { fg = c.bl_fg, bg = c.bl_bg })
-  hl(0, "BufferLineModifiedSelected",     { fg = c.bl_sel_fg, bg = c.bl_sel_bg })
-  hl(0, "BufferLineModified",             { fg = c.bl_fg, bg = c.bl_bg })
-  hl(0, "BufferLineModifiedVisible",      { fg = c.bl_fg, bg = c.bl_bg })
 
   hl(0, "RainbowDelimiterBlueMuted",   { fg = "#7a98bd" })
   hl(0, "RainbowDelimiterGoldMuted",   { fg = "#b29a72" })
@@ -309,6 +282,9 @@ local function apply_custom_hl()
   hl(0, "RainbowDelimiterPurpleMuted", { fg = "#9c86c9" })
   hl(0, "RainbowDelimiterGreenMuted",  { fg = "#7f9f85" })
   hl(0, "RainbowDelimiterAmberMuted",  { fg = "#b48770" })
+
+  hl(0, "SnacksIndent",      { fg = c.indent_fg })
+  hl(0, "SnacksIndentScope", { fg = c.indent_scope_fg, bold = false })
 end
 
 vim.api.nvim_create_autocmd("ColorScheme", {

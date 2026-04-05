@@ -78,9 +78,16 @@ return {
         return string.format("%s │ %s │ %s", fit(title, max_title), fit(filename, max_file), fit(location, max_path))
       end
 
+      local is_light = vim.o.background == "light"
       require("bookmarks").setup({
         picker = {
           entry_display = bookmark_entry_display,
+        },
+        signs = {
+          mark = {
+            color = is_light and "#7B5EA7" or "#9D85C9",
+            line_bg = is_light and "#EDE6F5" or "#2E2540",
+          },
         },
       })
     end,

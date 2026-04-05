@@ -329,26 +329,6 @@ return {
       },
     },
     opts = function(_, opts)
-      local highlights = require("neo-tree.ui.highlights")
-
-      local folder_hl_map = {
-        [highlights.GIT_ADDED]     = "NeoTreeGitAddedFolderName",
-        [highlights.GIT_UNTRACKED] = "NeoTreeGitUntrackedFolderName",
-        [highlights.GIT_MODIFIED]  = "NeoTreeGitModifiedFolderName",
-        [highlights.GIT_CONFLICT]  = "NeoTreeGitConflictFolderName",
-        [highlights.GIT_DELETED]   = "NeoTreeGitDeletedFolderName",
-        [highlights.GIT_IGNORED]   = "NeoTreeGitIgnoredFolderName",
-        [highlights.GIT_RENAMED]   = "NeoTreeGitRenamedFolderName",
-        [highlights.GIT_STAGED]    = "NeoTreeGitAddedFolderName",
-        NeoTreeGitAdded            = "NeoTreeGitAddedFolderName",
-        NeoTreeGitUntracked        = "NeoTreeGitUntrackedFolderName",
-        NeoTreeGitModified         = "NeoTreeGitModifiedFolderName",
-        NeoTreeGitConflict         = "NeoTreeGitConflictFolderName",
-        NeoTreeGitDeleted          = "NeoTreeGitDeletedFolderName",
-        NeoTreeGitIgnored          = "NeoTreeGitIgnoredFolderName",
-        NeoTreeGitRenamed          = "NeoTreeGitRenamedFolderName",
-        NeoTreeGitStaged           = "NeoTreeGitAddedFolderName",
-      }
 
       local detail_components = {
         file_size = true,
@@ -407,8 +387,8 @@ return {
         end
       end
       opts.window.mappings["<S-CR>"]    = "open_vsplit"
-      opts.window.mappings["{"]         = "prev_source"
-      opts.window.mappings["}"]         = "next_source"
+      opts.window.mappings["["]         = "prev_source"
+      opts.window.mappings["]"]         = "next_source"
       opts.window.mappings["<"]         = false
       opts.window.mappings[">"]         = false
       opts.window.mappings["I"] = function(state)
@@ -458,17 +438,8 @@ return {
       opts.filesystem.bind_to_cwd = false
       opts.filesystem.window = opts.filesystem.window or {}
       opts.filesystem.window.mappings = opts.filesystem.window.mappings or {}
-      opts.filesystem.window.mappings["["] = "navigate_up"
-      opts.filesystem.window.mappings["]"] = "set_root"
-
-      opts.components = opts.components or {}
-      opts.components.name = function(config, node, state)
-        local result = require("neo-tree.sources.common.components").name(config, node, state)
-        if node.type == "directory" and result.highlight then
-          result.highlight = folder_hl_map[result.highlight] or result.highlight
-        end
-        return result
-      end
+      opts.filesystem.window.mappings["{"] = "navigate_up"
+      opts.filesystem.window.mappings["}"] = "set_root"
 
       return opts
     end,
@@ -491,45 +462,57 @@ return {
         diagnostics = false,
       })
       opts.highlights = is_light and {
-        fill                   = { bg = "#E2DFDB" },
-        background             = { fg = "#7A7880", bg = "#D5D0CA" },
-        tab                    = { fg = "#7A7880", bg = "#D5D0CA" },
-        tab_selected           = { fg = "#1e1e2e", bg = "#89b4fa", bold = true },
-        tab_separator          = { fg = "#D5D0CA", bg = "#E2DFDB" },
-        tab_separator_selected = { fg = "#89b4fa", bg = "#E2DFDB" },
-        tab_close              = { fg = "#7A7880", bg = "#E2DFDB" },
-        buffer_selected        = { fg = "#1e1e2e", bg = "#89b4fa", bold = true, italic = false },
-        numbers_selected       = { fg = "#1e1e2e", bg = "#89b4fa", bold = true },
-        close_button_selected  = { fg = "#1e1e2e", bg = "#89b4fa" },
-        indicator_selected     = { fg = "#89b4fa", bg = "#89b4fa" },
-        separator              = { fg = "#C8C3BC", bg = "#E2DFDB" },
-        separator_selected     = { fg = "#89b4fa", bg = "#E2DFDB" },
-        separator_visible      = { fg = "#C8C3BC", bg = "#E2DFDB" },
-        duplicate_selected     = { fg = "#1e1e2e", bg = "#89b4fa", bold = true, italic = false },
-        duplicate              = { fg = "#7A7880", bg = "#D5D0CA", italic = false },
-        duplicate_visible      = { fg = "#7A7880", bg = "#D5D0CA", italic = false },
-        modified_selected      = { fg = "#1e1e2e", bg = "#89b4fa", italic = false },
-        modified               = { fg = "#7A7880", bg = "#D5D0CA", italic = false },
-        modified_visible       = { fg = "#7A7880", bg = "#D5D0CA", italic = false },
+        fill                    = { bg = "#D8D4CE" },
+        background              = { fg = "#52505A", bg = "#C8C2B8" },
+        tab                     = { fg = "#52505A", bg = "#C8C2B8" },
+        tab_selected            = { fg = "#ffffff", bg = "#5B9CF6", bold = true },
+        tab_separator           = { fg = "#C8C2B8", bg = "#D8D4CE" },
+        tab_separator_selected  = { fg = "#5B9CF6", bg = "#D8D4CE" },
+        tab_close               = { fg = "#52505A", bg = "#D8D4CE" },
+        buffer_selected         = { fg = "#ffffff", bg = "#5B9CF6", bold = true, italic = false },
+        buffer_visible          = { fg = "#52505A", bg = "#C8C2B8", italic = false },
+        numbers_selected        = { fg = "#ffffff", bg = "#5B9CF6", bold = true },
+        numbers_visible         = { fg = "#52505A", bg = "#C8C2B8" },
+        close_button            = { fg = "#52505A", bg = "#C8C2B8" },
+        close_button_visible    = { fg = "#52505A", bg = "#C8C2B8" },
+        close_button_selected   = { fg = "#ffffff", bg = "#5B9CF6" },
+        indicator_selected      = { fg = "#5B9CF6", bg = "#5B9CF6" },
+        indicator_visible       = { fg = "#C8C2B8", bg = "#C8C2B8" },
+        separator               = { fg = "#B8B2A8", bg = "#D8D4CE" },
+        separator_selected      = { fg = "#5B9CF6", bg = "#D8D4CE" },
+        separator_visible       = { fg = "#B8B2A8", bg = "#D8D4CE" },
+        duplicate_selected      = { fg = "#ffffff", bg = "#5B9CF6", bold = true, italic = false },
+        duplicate               = { fg = "#52505A", bg = "#C8C2B8", italic = false },
+        duplicate_visible       = { fg = "#52505A", bg = "#C8C2B8", italic = false },
+        modified_selected       = { fg = "#ffffff", bg = "#5B9CF6", italic = false },
+        modified                = { fg = "#52505A", bg = "#C8C2B8", italic = false },
+        modified_visible        = { fg = "#52505A", bg = "#C8C2B8", italic = false },
       } or {
-        fill                   = { bg = "#1e1e2e" },
-        background             = { fg = "#6c7086", bg = "#181825" },
-        tab                    = { fg = "#6c7086", bg = "#181825" },
-        tab_selected           = { fg = "#1e1e2e", bg = "#89b4fa", bold = true },
-        tab_separator          = { fg = "#181825", bg = "#1e1e2e" },
-        tab_separator_selected = { fg = "#89b4fa", bg = "#1e1e2e" },
-        tab_close              = { fg = "#6c7086", bg = "#1e1e2e" },
-        buffer_selected        = { fg = "#1e1e2e", bg = "#89b4fa", bold = true, italic = false },
-        numbers_selected       = { fg = "#1e1e2e", bg = "#89b4fa", bold = true },
-        separator              = { fg = "#181825", bg = "#1e1e2e" },
-        separator_selected     = { fg = "#89b4fa", bg = "#1e1e2e" },
-        separator_visible      = { fg = "#181825", bg = "#1e1e2e" },
-        duplicate_selected     = { fg = "#1e1e2e", bg = "#89b4fa", bold = true, italic = false },
-        duplicate              = { fg = "#6c7086", bg = "#181825", italic = false },
-        duplicate_visible      = { fg = "#6c7086", bg = "#181825", italic = false },
-        modified_selected      = { fg = "#1e1e2e", bg = "#89b4fa", italic = false },
-        modified               = { fg = "#6c7086", bg = "#181825", italic = false },
-        modified_visible       = { fg = "#6c7086", bg = "#181825", italic = false },
+        fill                    = { bg = "#1e1e2e" },
+        background              = { fg = "#6c7086", bg = "#181825" },
+        tab                     = { fg = "#6c7086", bg = "#181825" },
+        tab_selected            = { fg = "#1e1e2e", bg = "#89b4fa", bold = true },
+        tab_separator           = { fg = "#181825", bg = "#1e1e2e" },
+        tab_separator_selected  = { fg = "#89b4fa", bg = "#1e1e2e" },
+        tab_close               = { fg = "#6c7086", bg = "#1e1e2e" },
+        buffer_selected         = { fg = "#1e1e2e", bg = "#89b4fa", bold = true, italic = false },
+        buffer_visible          = { fg = "#6c7086", bg = "#181825", italic = false },
+        numbers_selected        = { fg = "#1e1e2e", bg = "#89b4fa", bold = true },
+        numbers_visible         = { fg = "#6c7086", bg = "#181825" },
+        close_button            = { fg = "#6c7086", bg = "#181825" },
+        close_button_visible    = { fg = "#6c7086", bg = "#181825" },
+        close_button_selected   = { fg = "#1e1e2e", bg = "#89b4fa" },
+        indicator_selected      = { fg = "#89b4fa", bg = "#89b4fa" },
+        indicator_visible       = { fg = "#181825", bg = "#181825" },
+        separator               = { fg = "#181825", bg = "#1e1e2e" },
+        separator_selected      = { fg = "#89b4fa", bg = "#1e1e2e" },
+        separator_visible       = { fg = "#181825", bg = "#1e1e2e" },
+        duplicate_selected      = { fg = "#1e1e2e", bg = "#89b4fa", bold = true, italic = false },
+        duplicate               = { fg = "#6c7086", bg = "#181825", italic = false },
+        duplicate_visible       = { fg = "#6c7086", bg = "#181825", italic = false },
+        modified_selected       = { fg = "#1e1e2e", bg = "#89b4fa", italic = false },
+        modified                = { fg = "#6c7086", bg = "#181825", italic = false },
+        modified_visible        = { fg = "#6c7086", bg = "#181825", italic = false },
       }
       return opts
     end,

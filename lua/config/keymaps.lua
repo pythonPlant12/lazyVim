@@ -918,13 +918,24 @@ local function apply_theme_mode(mode)
   vim.notify("No colorscheme available for " .. background .. " mode", vim.log.levels.ERROR, { title = "Theme" })
 end
 
+local function apply_catppuccin(flavour)
+  local bg = (flavour == "latte") and "light" or "dark"
+  vim.o.background = bg
+  require("catppuccin").setup({ flavour = flavour })
+  vim.cmd.colorscheme("catppuccin")
+  vim.g.theme_mode = bg
+end
+
 keymaps.set("n", "<leader>ut", function()
   local items = {
-    { label = "Default Dark Theme", mode = "dark" },
-    { label = "Default Light Theme", mode = "light" },
+    { label = "Default Dark Theme",       action = function() apply_theme_mode("dark") end },
+    { label = "Default Light Theme",      action = function() apply_theme_mode("light") end },
+    { label = "Catppuccin Mocha (dark)",  action = function() apply_catppuccin("mocha") end },
+    { label = "Catppuccin Macchiato",     action = function() apply_catppuccin("macchiato") end },
+    { label = "Catppuccin Frappé",        action = function() apply_catppuccin("frappe") end },
+    { label = "Catppuccin Latte (light)", action = function() apply_catppuccin("latte") end },
   }
 
-  local current = vim.o.background == "light" and 2 or 1
   vim.ui.select(items, {
     prompt = "Select theme",
     kind = "theme",
@@ -935,7 +946,7 @@ keymaps.set("n", "<leader>ut", function()
     if not choice then
       return
     end
-    apply_theme_mode(choice.mode)
+    choice.action()
   end)
 end, { desc = "Select default theme" })
 
