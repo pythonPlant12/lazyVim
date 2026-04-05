@@ -1166,7 +1166,7 @@ return {
         bashls         = " ",
         dockerls       = "󰡨 ",
         yamlls         = "󰘦 ",
-        copilot        = " ",
+        copilot        = " ",
         ["null-ls"]    = "󱏿 ",
       }
 
@@ -1261,7 +1261,7 @@ return {
 
       table.insert(opts.sections.lualine_x, {
         function()
-          local icon = " "
+          local icon = " "
           local ok, status = pcall(require, "copilot.status")
           if not ok then
             return "%#LualineCopilotOff#" .. icon .. "copilot%#LualineLspBase#"
