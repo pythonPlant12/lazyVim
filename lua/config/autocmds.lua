@@ -83,6 +83,7 @@ local function apply_custom_hl()
     snacks_delim = "#7B8491",
     snacks_selected = "#2E6EA8",
     snacks_comment = "#7B8491",
+    snacks_search_bg = "#C8D8EE",
     bl_fill_bg = "#E6E9ED",
     bl_bg = "#DDE1E7",
     bl_fg = "#6B7582",
@@ -137,6 +138,7 @@ local function apply_custom_hl()
     snacks_delim = "#6c7086",
     snacks_selected = "#89b4fa",
     snacks_comment = "#6c7086",
+    snacks_search_bg = "#1e3a5f",
     bl_fill_bg = "#1e1e2e",
     bl_bg = "#181825",
     bl_fg = "#6c7086",
@@ -269,6 +271,7 @@ local function apply_custom_hl()
   hl(0, "SnacksPickerFile",              { fg = c.snacks_file, bold = true })
   hl(0, "SnacksPickerDir",               { fg = c.snacks_dir })
   hl(0, "SnacksPickerMatch",             { fg = c.snacks_match, bold = true })
+  hl(0, "SnacksPickerSearch",            { bg = c.snacks_search_bg })
   hl(0, "SnacksPickerRow",               { fg = c.snacks_row })
   hl(0, "SnacksPickerCol",               { fg = c.snacks_col })
   hl(0, "SnacksPickerDirectory",         { fg = c.snacks_directory })
