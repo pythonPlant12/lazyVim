@@ -406,9 +406,11 @@ return {
           require("neo-tree.sources.filesystem").toggle_directory(state, node)
         end
       end
-      opts.window.mappings["<S-Left>"]  = "navigate_up"
-      opts.window.mappings["<S-Right>"] = "set_root"
       opts.window.mappings["<S-CR>"]    = "open_vsplit"
+      opts.window.mappings["{"]         = "prev_source"
+      opts.window.mappings["}"]         = "next_source"
+      opts.window.mappings["<"]         = false
+      opts.window.mappings[">"]         = false
       opts.window.mappings["I"] = function(state)
         state.__show_all_details = not state.__show_all_details
         local show_all = state.__show_all_details
@@ -454,6 +456,10 @@ return {
       }
       opts.filesystem.follow_current_file = { enabled = true }
       opts.filesystem.bind_to_cwd = false
+      opts.filesystem.window = opts.filesystem.window or {}
+      opts.filesystem.window.mappings = opts.filesystem.window.mappings or {}
+      opts.filesystem.window.mappings["["] = "navigate_up"
+      opts.filesystem.window.mappings["]"] = "set_root"
 
       opts.components = opts.components or {}
       opts.components.name = function(config, node, state)

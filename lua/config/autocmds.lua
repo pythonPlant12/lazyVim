@@ -38,7 +38,7 @@ local function apply_custom_hl()
   local c = is_light and {
     border = "#8F98A8",
     select_bg = "#D9E7F4",
-    ref_bg = "#D6E1F0",
+    ref_bg = "#F2F2F4",
     diag_err = "#B54A5C",
     diag_warn = "#8A6B20",
     diag_info = "#2A6296",
