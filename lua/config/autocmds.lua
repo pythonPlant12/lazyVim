@@ -2,14 +2,23 @@
 -- Default autocmds that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/autocmds.lua
 -- Add any additional autocmds here
 
-vim.api.nvim_create_autocmd("BufReadPost", {
+vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("TreesitterFolds", { clear = true }),
   callback = function(ev)
-    if pcall(vim.treesitter.get_parser, ev.buf) then
-      vim.wo.foldmethod = "expr"
-      vim.wo.foldexpr   = "v:lua.vim.treesitter.foldexpr()"
-      vim.wo.foldlevel  = 99
-    end
+    vim.schedule(function()
+      if not vim.api.nvim_buf_is_valid(ev.buf) then return end
+      local ok, parser = pcall(vim.treesitter.get_parser, ev.buf)
+      if not ok or not parser then return end
+      local has_folds = pcall(function()
+        vim.treesitter.query.get(parser:lang(), "folds")
+      end)
+      if not has_folds then return end
+      local win = vim.fn.bufwinid(ev.buf)
+      if win == -1 then return end
+      vim.wo[win].foldmethod = "expr"
+      vim.wo[win].foldexpr   = "v:lua.vim.treesitter.foldexpr()"
+      vim.wo[win].foldlevel  = 99
+    end)
   end,
 })
 
@@ -378,6 +387,16 @@ vim.api.nvim_create_autocmd("ColorScheme", {
   callback = apply_html_hl,
 })
 apply_html_hl()
+
+vim.api.nvim_create_autocmd("BufEnter", {
+  group = vim.api.nvim_create_augroup("NeoTreeBookmarkToggle", { clear = true }),
+  callback = function(ev)
+    if vim.bo[ev.buf].filetype ~= "neo-tree" then return end
+    vim.keymap.set("n", "<C-b>b", function()
+      vim.notify("Bookmarks cannot be added from neo-tree", vim.log.levels.WARN, { title = "Bookmarks" })
+    end, { buffer = ev.buf, desc = "Bookmark not available in neo-tree" })
+  end,
+})
 
 do
   vim.g.buf_history = vim.g.buf_history or {}

@@ -459,6 +459,48 @@ end
 
 keymaps.set("n", "<C-g>fd", open_file_diff_fullscreen, { desc = "File diff" })
 keymaps.set("n", "<C-g>fD", pick_diff_base_and_open, { desc = "File diff against ref" })
+
+local function pick_line_diff_base_and_preview()
+  local active = current_branch()
+  local branches, err = list_branches(active)
+  if not branches then
+    vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = "Git Diff" })
+    return
+  end
+  if #branches == 0 then
+    vim.notify("No branches found", vim.log.levels.WARN, { title = "Git Diff" })
+    return
+  end
+
+  vim.ui.select(branches, {
+    prompt = "Select branch:",
+    format_item = function(item) return item.label end,
+  }, function(branch_item)
+    if not branch_item then return end
+
+    local commits, commits_err = list_commits(branch_item.ref, 150)
+    if not commits then
+      vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Diff" })
+      return
+    end
+    if #commits == 0 then
+      vim.notify("No commits found for " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Diff" })
+      return
+    end
+
+    vim.ui.select(commits, {
+      prompt = "Select commit from " .. branch_item.ref .. ":",
+      format_item = function(item) return item.label end,
+    }, function(commit_item)
+      if not commit_item then return end
+      local gs = require("gitsigns")
+      gs.change_base(commit_item.ref, false)
+      gs.preview_hunk_inline()
+    end)
+  end)
+end
+
+keymaps.set("n", "<C-g>lD", pick_line_diff_base_and_preview, { desc = "Line diff against ref" })
 local function close_file_diff()
   if not vim.wo.diff then return end
   local cur_win = vim.api.nvim_get_current_win()
@@ -1326,11 +1368,24 @@ vim.keymap.set("n", "<leader>Iw", function()
   require("trouble").toggle("diagnostics")
 end, { desc = "Workspace diagnostics" })
 
+vim.keymap.set("n", "<leader>Ef", function()
+  require("trouble").toggle({ mode = "diagnostics", filter = { buf = 0 } })
+end, { desc = "File errors (LSP)" })
+
+vim.keymap.set("n", "<leader>Ew", function()
+  require("trouble").toggle({ mode = "diagnostics" })
+end, { desc = "Workspace errors (LSP)" })
+
+vim.keymap.set("n", "<leader>Ee", function()
+  require("trouble").toggle({ mode = "diagnostics", filter = { source = "eslint" } })
+end, { desc = "ESLint errors" })
+
 vim.schedule(function()
   require("which-key").add({
     { "<leader>I", group = "Inspect" },
     { "<leader>L", group = "Language" },
     { "<leader>Lp", group = "Python" },
     { "<leader>Ls", group = "Shared" },
+    { "<leader>E",  group = "Errors" },
   })
 end)
