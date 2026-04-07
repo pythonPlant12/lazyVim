@@ -619,7 +619,7 @@ return {
             preview = snacks_file_preview_with_video,
           },
           grep = {
-            hidden = true,
+            hidden = false,
             ignored = true,
             regex = false,
             camel_case = false,
@@ -654,7 +654,7 @@ return {
             end,
           },
           grep_word = {
-            hidden = true,
+            hidden = false,
             ignored = true,
             regex = false,
             camel_case = false,
