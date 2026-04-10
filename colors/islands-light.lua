@@ -11,7 +11,7 @@ local palette = {
   muted = "#6E7380",
   comment = "#6E7380",
   line = "#FBFAF8",
-  line_alt = "#FEFDFC",
+  line_alt = "#F9F8F7",
   blue = "#356FAF",
   cyan = "#2A6678",
   green = "#4F7C61",
@@ -40,7 +40,7 @@ hl(0, "LineNr", { fg = palette.muted })
 hl(0, "SignColumn", { fg = palette.muted, bg = palette.bg })
 hl(0, "VertSplit",    { fg = "#C5C8CE", bg = palette.bg })
 hl(0, "WinSeparator", { fg = "#C5C8CE", bg = palette.bg })
-hl(0, "Pmenu", { fg = palette.fg, bg = palette.line_alt })
+hl(0, "Pmenu", { fg = palette.fg, bg = palette.bg })
 hl(0, "PmenuSel", { fg = palette.fg_bright, bg = palette.selection })
 hl(0, "PmenuSbar", { bg = palette.line })
 hl(0, "PmenuThumb", { bg = palette.border })
@@ -161,3 +161,20 @@ hl(0, "NeoTreeGitConflictFolderName", { fg = "#B85C5C", bold = true })
 hl(0, "NeoTreeGitDeletedFolderName", { fg = "#B85C5C", bold = true })
 hl(0, "NeoTreeGitIgnoredFolderName", { fg = palette.muted, bold = true })
 hl(0, "NeoTreeGitRenamedFolderName", { fg = "#9B87C4", bold = true })
+
+hl(0, "NeotestPassed",       { fg = palette.green })
+hl(0, "NeotestFailed",       { fg = palette.red })
+hl(0, "NeotestRunning",      { fg = palette.gold })
+hl(0, "NeotestSkipped",      { fg = palette.muted })
+hl(0, "NeotestUnknown",      { fg = palette.muted })
+hl(0, "NeotestNamespace",    { fg = palette.magenta })
+hl(0, "NeotestFile",         { fg = palette.cyan })
+hl(0, "NeotestDir",          { fg = palette.cyan })
+hl(0, "NeotestAdapterName",  { fg = palette.red })
+hl(0, "NeotestTarget",       { fg = palette.red })
+hl(0, "NeotestMarked",       { fg = palette.amber, bold = true })
+hl(0, "NeotestWatching",     { fg = palette.gold })
+hl(0, "NeotestIndent",       { fg = palette.border })
+hl(0, "NeotestExpandMarker", { fg = palette.muted })
+hl(0, "NeotestWinSelect",    { fg = palette.blue, bold = true })
+hl(0, "NeotestFocused",      { bold = true, underline = true })

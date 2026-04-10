@@ -14,6 +14,61 @@ local PERSISTENT_EXCLUDES = {
   "**/shelved.patch",
 }
 
+local toggle_actions = {
+  toggle_word = function(picker)
+    local args = picker.opts.args or {}
+    local found = false
+    for i, v in ipairs(args) do
+      if v == "--word-regexp" then
+        table.remove(args, i)
+        found = true
+        break
+      end
+    end
+    if not found then
+      args[#args + 1] = "--word-regexp"
+    end
+    picker.opts.args = args
+    picker.list:set_target()
+    picker:find()
+    vim.notify(found and "Word: off" or "Word: on", vim.log.levels.INFO, { title = "Grep" })
+  end,
+  toggle_case = function(picker)
+    local args = picker.opts.args or {}
+    local found_ic = false
+    for i, v in ipairs(args) do
+      if v == "--ignore-case" then
+        table.remove(args, i)
+        found_ic = true
+        break
+      end
+    end
+    if not found_ic then
+      for i, v in ipairs(args) do
+        if v == "--case-sensitive" then
+          table.remove(args, i)
+          break
+        end
+      end
+      args[#args + 1] = "--ignore-case"
+    else
+      args[#args + 1] = "--case-sensitive"
+    end
+    picker.opts.args = args
+    picker.list:set_target()
+    picker:find()
+    vim.notify(found_ic and "Case: sensitive" or "Case: insensitive", vim.log.levels.INFO, { title = "Grep" })
+  end,
+}
+
+local toggle_keys = {
+  ["<C-h>"]          = { "toggle_hidden", mode = { "i", "n" } },
+  ["<localleader>c"] = { "toggle_case",   mode = { "n" } },
+  ["<localleader>w"] = { "toggle_word",   mode = { "n" } },
+  ["<localleader>r"] = { "toggle_regex",  mode = { "n" } },
+  ["<localleader>R"] = { "toggle_camel_case", mode = { "n" } },
+}
+
 local function get_snacks()
   if _G.Snacks and _G.Snacks.picker then
     return _G.Snacks
@@ -208,6 +263,8 @@ local function run_grep(opts)
   if not snacks then
     return
   end
+  opts.actions = vim.tbl_extend("force", toggle_actions, opts.actions or {})
+  opts.win = vim.tbl_deep_extend("force", { input = { keys = toggle_keys } }, opts.win or {})
   snacks.picker.grep(opts)
 end
 
@@ -288,5 +345,8 @@ function M.cwd_with_filter_mode()
     end)
   end)
 end
+
+M.toggle_case = toggle_actions.toggle_case
+M.toggle_word = toggle_actions.toggle_word
 
 return M

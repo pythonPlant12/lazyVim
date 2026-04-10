@@ -412,6 +412,25 @@ return {
         vim.fn.setreg("+", path)
         vim.notify(path, vim.log.levels.INFO, { title = "Yanked path" })
       end
+      opts.window.mappings["p"] = function(state)
+        local node = state.tree:get_node()
+        if not node then return end
+        local abs = node:get_id()
+        if not abs or abs == "" then return end
+        local rel = vim.fn.fnamemodify(abs, ":~:.")
+        vim.fn.setreg('"', rel)
+        vim.fn.setreg("+", rel)
+        vim.notify(rel, vim.log.levels.INFO, { title = "Yanked relative path" })
+      end
+      opts.window.mappings["P"] = function(state)
+        local node = state.tree:get_node()
+        if not node then return end
+        local abs = node:get_id()
+        if not abs or abs == "" then return end
+        vim.fn.setreg('"', abs)
+        vim.fn.setreg("+", abs)
+        vim.notify(abs, vim.log.levels.INFO, { title = "Yanked absolute path" })
+      end
 
       opts.default_component_configs = opts.default_component_configs or {}
       opts.default_component_configs.git_status = {
@@ -546,6 +565,35 @@ return {
         end,
         desc = "Grep (cwd, path filters)",
       },
+      {
+        "<leader>sE",
+        function()
+          Snacks.picker.diagnostics()
+        end,
+        desc = "Diagnostics (project)",
+      },
+      {
+        "<leader>sf",
+        function()
+          Snacks.picker.grep({ dirs = { vim.fn.expand("%:p") } })
+        end,
+        desc = "Search in current file (snacks)",
+      },
+      {
+        "<leader>sw",
+        function()
+          Snacks.picker.grep_word()
+        end,
+        desc = "Search word under cursor (snacks)",
+        mode = { "n", "x" },
+      },
+      {
+        "<leader>sd",
+        function()
+          Snacks.picker.grep({ cwd = vim.fn.expand("%:p:h") })
+        end,
+        desc = "Search in current directory (snacks)",
+      },
     },
     opts = {
       image = {
@@ -633,19 +681,25 @@ return {
             win = {
               input = {
                 keys = {
-                  ["<c-h>"] = { "toggle_hidden", mode = { "i", "n" } },
-                  ["<c-r>"] = { "toggle_camel_case", mode = { "i", "n" }, nowait = true },
-                  ["<C-R>"] = { "toggle_camel_case", mode = { "i", "n" }, nowait = true },
-                  ["c"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
-                  ["<a-r>"] = false,
+                  ["<c-h>"]          = { "toggle_hidden",    mode = { "i", "n" } },
+                  ["<A-s>"]          = { "toggle_camel_case", mode = { "i", "n" }, nowait = true },
+                  ["<S-Up>"]         = { "history_back",     mode = { "i", "n" } },
+                  ["<S-Down>"]       = { "history_forward",  mode = { "i", "n" } },
+                  ["<localleader>r"] = { "toggle_regex",     mode = { "n" } },
+                  ["<localleader>c"] = { "toggle_case",      mode = { "n" } },
+                  ["<localleader>w"] = { "toggle_word",      mode = { "n" } },
+                  ["<localleader>R"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
                 },
               },
               list = {
                 keys = {
-                  ["<c-h>"] = "toggle_hidden",
-                  ["c"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
-                  ["<c-r>"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
-                  ["<C-R>"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
+                  ["<c-h>"]          = "toggle_hidden",
+                  ["c"]              = { "toggle_camel_case", mode = { "n" }, nowait = true },
+                  ["<A-s>"]          = { "toggle_camel_case", mode = { "n" }, nowait = true },
+                  ["<localleader>r"] = { "toggle_regex",     mode = { "n" } },
+                  ["<localleader>c"] = { "toggle_case",      mode = { "n" } },
+                  ["<localleader>w"] = { "toggle_word",      mode = { "n" } },
+                  ["<localleader>R"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
                 },
               },
             },
@@ -669,19 +723,25 @@ return {
             win = {
               input = {
                 keys = {
-                  ["<c-h>"] = { "toggle_hidden", mode = { "i", "n" } },
-                  ["<c-r>"] = { "toggle_camel_case", mode = { "i", "n" }, nowait = true },
-                  ["<C-R>"] = { "toggle_camel_case", mode = { "i", "n" }, nowait = true },
-                  ["c"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
-                  ["<a-r>"] = false,
+                  ["<c-h>"]          = { "toggle_hidden",    mode = { "i", "n" } },
+                  ["<A-s>"]          = { "toggle_camel_case", mode = { "i", "n" }, nowait = true },
+                  ["<S-Up>"]         = { "history_back",     mode = { "i", "n" } },
+                  ["<S-Down>"]       = { "history_forward",  mode = { "i", "n" } },
+                  ["<localleader>r"] = { "toggle_regex",     mode = { "n" } },
+                  ["<localleader>c"] = { "toggle_case",      mode = { "n" } },
+                  ["<localleader>w"] = { "toggle_word",      mode = { "n" } },
+                  ["<localleader>R"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
                 },
               },
               list = {
                 keys = {
-                  ["<c-h>"] = "toggle_hidden",
-                  ["c"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
-                  ["<c-r>"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
-                  ["<C-R>"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
+                  ["<c-h>"]          = "toggle_hidden",
+                  ["c"]              = { "toggle_camel_case", mode = { "n" }, nowait = true },
+                  ["<A-s>"]          = { "toggle_camel_case", mode = { "n" }, nowait = true },
+                  ["<localleader>r"] = { "toggle_regex",     mode = { "n" } },
+                  ["<localleader>c"] = { "toggle_case",      mode = { "n" } },
+                  ["<localleader>w"] = { "toggle_word",      mode = { "n" } },
+                  ["<localleader>R"] = { "toggle_camel_case", mode = { "n" }, nowait = true },
                 },
               },
             },
@@ -716,6 +776,12 @@ return {
         },
         actions = {
           toggle_camel_case = toggle_grep_camel_case,
+          toggle_case = function(picker)
+            require("config.search_grep").toggle_case(picker)
+          end,
+          toggle_word = function(picker)
+            require("config.search_grep").toggle_word(picker)
+          end,
           confirm = function(picker, item)
             if not item then return end
             picker:close()
@@ -1005,12 +1071,14 @@ return {
       local function setup_git_hl()
         if vim.o.background == "light" then
           vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = "#7A7880", bg = "#D5D0CA", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = "#6B3CC8", bg = "#D5D0CA", bold = true })
           vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = "#7CA686", bg = "#D5D0CA", bold = true })
           vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = "#A8983A", bg = "#D5D0CA", bold = true })
           vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = "#C87A3A", bg = "#D5D0CA", bold = true })
           vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = "#B85C5C", bg = "#D5D0CA", bold = true })
         else
           vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = "#BCBEC4", bg = "#3B3F45", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = "#cba6f7", bg = "#3B3F45", bold = true })
           vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = "#a6e3a1", bg = "#3B3F45", bold = true })
           vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = "#f9e2af", bg = "#3B3F45", bold = true })
           vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = "#fab387", bg = "#3B3F45", bold = true })
@@ -1025,7 +1093,7 @@ return {
           function()
             local branch = vim.b.gitsigns_head or vim.fn.system("git rev-parse --abbrev-ref HEAD 2>/dev/null"):gsub("\n", "")
             if branch == "" or branch:find("fatal") then return "" end
-            local parts = { " " .. branch }
+            local parts = { "%#LualineGitBranch#󰘬 " .. branch }
             local a, b = vim.g._git_ahead or 0, vim.g._git_behind or 0
             local u, m, d, c = vim.g._git_untracked or 0, vim.g._git_modified or 0, vim.g._git_deleted or 0, vim.g._git_conflicted or 0
             local indicators = {}
@@ -1046,8 +1114,21 @@ return {
             local b = vim.fn.system("git rev-parse --abbrev-ref HEAD 2>/dev/null"):gsub("\n", "")
             return b ~= "" and not b:find("fatal")
           end,
-          padding = { left = 1, right = 1 },
+          padding = { left = 1, right = 0 },
           separator = { left = "\u{E0B6}", right = "\u{E0B4}" },
+        },
+        {
+          function() return "|" end,
+          padding = { left = 1, right = 1 },
+          separator = "",
+          color = function()
+            return { fg = vim.o.background == "light" and "#9B9792" or "#6B6F75" }
+          end,
+          cond = function()
+            if vim.b.gitsigns_head and vim.b.gitsigns_head ~= "" then return true end
+            local b = vim.fn.system("git rev-parse --abbrev-ref HEAD 2>/dev/null"):gsub("\n", "")
+            return b ~= "" and not b:find("fatal")
+          end,
         },
       }
 
@@ -1075,6 +1156,7 @@ return {
       for i, comp in ipairs(opts.sections.lualine_c or {}) do
         if i == 1 then goto skip end
         if type(comp) == "table" and comp[1] == "diagnostics" then goto skip end
+        if type(comp) == "table" and comp[1] == "filetype" and comp.icon_only then goto skip end
         table.insert(new_c, comp)
         ::skip::
       end
@@ -1084,6 +1166,7 @@ return {
       -- The component is identified by: table with function at [1] and a cond function.
       -- For Vue/HTML files, Struct kind items (template elements, custom component tags)
       -- are excluded so they don't pollute the statusline breadcrumb.
+      local breadcrumb_symbols = nil
       do
         local ok_t, trouble_api = pcall(require, "trouble")
         if ok_t then
@@ -1104,6 +1187,7 @@ return {
                 format = "{kind_icon}{symbol.name:Normal}",
                 hl_group = "LualineBreadcrumbStatus",
               })
+              breadcrumb_symbols = symbols
               opts.sections.lualine_c[i] = {
                 symbols and symbols.get,
                 cond = function()
@@ -1367,14 +1451,18 @@ return {
           local styled_comp = style_chip(comp, bg)
           if chip_index == 1 then
             styled_comp.padding = { left = 1, right = 0 }
-            local original_fn = styled_comp[1]
-            if type(original_fn) == "function" then
-              styled_comp[1] = function(self)
-                local str = original_fn(self) or ""
-                str = str:gsub(" +%%*", "%%*")
-                str = str:gsub("%s+$", "")
-                return str
-              end
+            local path_fn = LazyVim.lualine.pretty_path({ filename_hl = "", directory_hl = "" })
+            styled_comp[1] = function(self)
+              local icon = require("mini.icons").get("file", vim.fn.expand("%:t"))
+              local path = type(path_fn) == "function" and path_fn(self) or ""
+              if icon and icon ~= "" then return icon .. " " .. path end
+              return path
+            end
+            local existing_color_fn = styled_comp.color
+            styled_comp.color = function()
+              local c = type(existing_color_fn) == "function" and existing_color_fn() or {}
+              c.gui = (c.gui and c.gui .. ",bold" or "bold")
+              return c
             end
           end
           if chip_index > 1 then
@@ -1384,7 +1472,7 @@ return {
             if type(original) == "function" then
               styled_comp[1] = function(self)
                 local str = (original(self) or ""):gsub("^%s+", ""):gsub("%s+$", "")
-                return str:gsub(" %%#", "%%#" .. sep_hl .. "#  %%#")
+                return str:gsub(" %%#", "%%#" .. sep_hl .. "# %%#")
               end
             end
             styled_comp.fmt = function(str)
@@ -1406,6 +1494,20 @@ return {
             end
           end
           table.insert(styled_c, styled_comp)
+          if chip_index == 1 then
+            local sep_bg = chip_bgs[1]
+            local sep_comp = style_chip({ function() return "|" end }, sep_bg)
+            sep_comp.padding = { left = 1, right = 1 }
+            sep_comp.color = function()
+              return { fg = vim.o.background == "light" and "#9B9792" or "#6B6F75", bg = sep_bg }
+            end
+            sep_comp.cond = function()
+              return breadcrumb_symbols ~= nil
+                and vim.b.trouble_lualine ~= false
+                and breadcrumb_symbols.has()
+            end
+            table.insert(styled_c, sep_comp)
+          end
           chip_index = chip_index + 1
         else
           table.insert(styled_c, comp)

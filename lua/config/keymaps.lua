@@ -3,6 +3,8 @@
 -- Add any additional keymaps here
 local keymaps = vim.keymap
 local opts = { noremap = true, silent = true }
+
+vim.keymap.set({ "n", "i", "x", "s" }, "<C-s>", "<Nop>", { noremap = true, silent = true })
 local tab_reuse = require("config.tab_reuse")
 
 -- Increment/decrement
@@ -27,11 +29,49 @@ vim.api.nvim_set_keymap("n", "tq", ":tabclose<CR>", opts)
 keymaps.set("n", "ss", ":split<Return>", opts)
 keymaps.set("n", "sv", ":vsplit<Return>", opts)
 
--- Resize window
-keymaps.set("n", "<C-w><left>", "<C-w><")
-keymaps.set("n", "<C-w><right>", "<C-w>>")
-keymaps.set("n", "<C-w><up>", "<C-w>+")
-keymaps.set("n", "<C-w><up>", "<C-w>-")
+local resize_mode_active = false
+
+local function exit_resize_mode()
+  if not resize_mode_active then return end
+  resize_mode_active = false
+  local resize_keys = { "h", "l", "j", "k", "<Left>", "<Right>", "<Up>", "<Down>", "<Esc>", "q", "=" }
+  for _, k in ipairs(resize_keys) do
+    pcall(vim.keymap.del, "n", k, { buffer = false })
+  end
+  vim.keymap.set("n", "j", "k", { silent = true })
+  vim.keymap.set("n", "k", "j", { silent = true })
+  vim.api.nvim_echo({}, false, {})
+end
+
+local function enter_resize_mode()
+  if resize_mode_active then return end
+  resize_mode_active = true
+  local step = 3
+  local map = vim.keymap.set
+  local o = { nowait = true, silent = true }
+
+  local function resize(cmd)
+    return function()
+      for _ = 1, step do vim.cmd("wincmd " .. cmd) end
+    end
+  end
+
+  map("n", "h",       resize(">"), o)
+  map("n", "l",       resize("<"), o)
+  map("n", "j",       resize("+"), o)
+  map("n", "k",       resize("-"), o)
+  map("n", "<Left>",  resize(">"), o)
+  map("n", "<Right>", resize("<"), o)
+  map("n", "<Up>",    resize("+"), o)
+  map("n", "<Down>",  resize("-"), o)
+  map("n", "<Esc>",   exit_resize_mode, o)
+  map("n", "q",       exit_resize_mode, o)
+  map("n", "=",       function() vim.cmd("wincmd =") end, o)
+
+  vim.api.nvim_echo({ { "-- RESIZE -- (h/l/j/k, <Esc> to exit)", "ModeMsg" } }, false, {})
+end
+
+keymaps.set("n", "<C-w>r", enter_resize_mode, { desc = "Enter resize mode" })
 
 -- Diagnostics
 
@@ -251,6 +291,21 @@ end, { desc = "Toggle maximize window" })
 
 keymaps.set("n", "<C-w>_", "<cmd>vsplit<CR>", { desc = "Split window vertically" })
 keymaps.set("n", "<C-w>-", "<cmd>split<CR>",  { desc = "Split window horizontally" })
+
+keymaps.set("n", "<C-w>=", function()
+  vim.cmd("wincmd =")
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    if vim.bo[buf].filetype == "neo-tree" then
+      local ok, state = pcall(function()
+        return require("neo-tree.sources.manager").get_state("filesystem")
+      end)
+      local width = (ok and state and state.window and state.window.width) or 30
+      vim.api.nvim_win_set_width(win, width)
+      break
+    end
+  end
+end, { desc = "Equalize windows (preserve neo-tree width)" })
 
 local function pick_buffers_smart()
   Snacks.picker.buffers({
@@ -696,138 +751,13 @@ keymaps.set("v", "N", function()
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("N", true, false, true), "n", false)
 end, { desc = "Search selected text backward" })
 
-local function project_root_or_cwd()
-  local ok, root = pcall(function()
-    return LazyVim.root()
-  end)
-  if ok and root and root ~= "" then
-    return root
-  end
-  return vim.fn.getcwd()
-end
 
-local function grep_project(overrides)
-  local opts_ = vim.tbl_deep_extend("force", {
-    cwd = project_root_or_cwd(),
-    regex = false,
-  }, overrides or {})
-  Snacks.picker.grep(opts_)
-end
 
-local function stop_insert_if_needed()
-  if vim.api.nvim_get_mode().mode:sub(1, 1) == "i" then
-    vim.cmd("stopinsert")
-  end
-end
+keymaps.set("n", "<leader>rv", function()
+  return ":IncRename " .. vim.fn.expand("<cword>")
+end, { desc = "Rename variable", expr = true })
 
-local function get_visual_selection_text()
-  local saved = vim.fn.getreg('"')
-  local saved_type = vim.fn.getregtype('"')
-  vim.cmd("normal! y")
-  local text = vim.fn.getreg('"')
-  vim.fn.setreg('"', saved, saved_type)
-  text = vim.trim((text or ""):gsub("\n", " "))
-  if text == "" then
-    return nil
-  end
-  return text
-end
-
-keymaps.set("n", "<C-s>", "<Nop>", opts)
-keymaps.set("i", "<C-s>", "<Nop>", opts)
-keymaps.set("x", "<C-s>", "<Nop>", opts)
-keymaps.set("s", "<C-s>", "<Nop>", opts)
-
-local function search_all()
-  grep_project({
-    hidden = true,
-    ignored = true,
-    args = { "--ignore-case" },
-    camel_case = false,
-  })
-end
-
-local function search_project()
-  grep_project({
-    hidden = false,
-    ignored = false,
-    args = { "--ignore-case" },
-    camel_case = false,
-  })
-end
-
-local function search_project_sensitive()
-  grep_project({
-    hidden = false,
-    ignored = false,
-    args = { "--case-sensitive" },
-    camel_case = true,
-  })
-end
-
-local function search_word_insensitive()
-  local word = vim.fn.expand("<cword>")
-  if not word or word == "" then
-    return
-  end
-  grep_project({
-    search = word,
-    hidden = true,
-    ignored = true,
-    args = { "--word-regexp", "--ignore-case" },
-    camel_case = false,
-  })
-end
-
-keymaps.set("n", "<C-s>a", function()
-  search_all()
-end, { desc = "Search all (include hidden)" })
-keymaps.set("i", "<C-s>a", function()
-  stop_insert_if_needed()
-  search_all()
-end, { desc = "Search all (include hidden)" })
-
-keymaps.set("n", "<C-s>g", function()
-  search_project()
-end, { desc = "Search project" })
-keymaps.set("i", "<C-s>g", function()
-  stop_insert_if_needed()
-  search_project()
-end, { desc = "Search project" })
-
-keymaps.set("n", "<C-s>s", function()
-  search_project_sensitive()
-end, { desc = "Search project (case-sensitive)" })
-keymaps.set("i", "<C-s>s", function()
-  stop_insert_if_needed()
-  search_project_sensitive()
-end, { desc = "Search project (case-sensitive)" })
-
-keymaps.set("n", "<C-s>w", function()
-  search_word_insensitive()
-end, { desc = "Search word in project (insensitive)" })
-keymaps.set("i", "<C-s>w", function()
-  stop_insert_if_needed()
-  search_word_insensitive()
-end, { desc = "Search word in project (insensitive)" })
-
-keymaps.set("x", "<C-s>w", function()
-  local text = get_visual_selection_text()
-  if not text then
-    vim.notify("No visual selection found", vim.log.levels.WARN, { title = "Search" })
-    return
-  end
-  grep_project({
-    search = text,
-    hidden = true,
-    ignored = true,
-    args = { "--case-sensitive" },
-    camel_case = true,
-    regex = false,
-  })
-end, { desc = "Search selection in project (case-sensitive)" })
-
-keymaps.set("n", "<leader>se", function() require("trouble").toggle("workspace_diagnostics") end, { desc = "Workspace errors" })
+keymaps.set("n", "<leader>se", function() Snacks.picker.diagnostics_buffer() end, { desc = "Buffer diagnostics" })
 Snacks.toggle({
   name = "ESLint Auto-fix",
   get = function() return vim.g.eslint_autosave == nil or vim.g.eslint_autosave end,
@@ -942,6 +872,16 @@ keymaps.set("n", "gl", function()
   pcall(vim.cmd, "normal! zv")
 end, { desc = "Go to line" })
 
+local theme_state_file = vim.fn.stdpath("state") .. "/theme"
+
+local function save_theme(value)
+  local f = io.open(theme_state_file, "w")
+  if f then
+    f:write(value)
+    f:close()
+  end
+end
+
 local function apply_theme_mode(mode)
   local background = mode == "light" and "light" or "dark"
   vim.o.background = background
@@ -953,6 +893,7 @@ local function apply_theme_mode(mode)
   for _, scheme in ipairs(schemes) do
     if pcall(vim.cmd.colorscheme, scheme) then
       vim.g.theme_mode = background
+      save_theme(scheme)
       return
     end
   end
@@ -966,6 +907,7 @@ local function apply_catppuccin(flavour)
   require("catppuccin").setup({ flavour = flavour })
   vim.cmd.colorscheme("catppuccin")
   vim.g.theme_mode = bg
+  save_theme("catppuccin:" .. flavour)
 end
 
 keymaps.set("n", "<leader>ut", function()
@@ -1015,6 +957,27 @@ Snacks.toggle({
 vim.keymap.set("n", "<leader>ue", function()
   require("neo-tree.command").execute({ toggle = true, reveal = true, dir = LazyVim.root() })
 end, { desc = "Reveal file in tree" })
+
+vim.keymap.set("n", "<leader>e", function()
+  local cur_win = vim.api.nvim_get_current_win()
+  local neotree_win = nil
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    local ft = vim.api.nvim_get_option_value("filetype", { buf = buf })
+    local cfg = vim.api.nvim_win_get_config(win)
+    if ft == "neo-tree" and cfg.relative == "" then
+      neotree_win = win
+      break
+    end
+  end
+  if neotree_win == nil then
+    require("neo-tree.command").execute({ toggle = true, reveal = true, dir = LazyVim.root() })
+  elseif neotree_win == cur_win then
+    require("neo-tree.command").execute({ action = "close" })
+  else
+    vim.api.nvim_set_current_win(neotree_win)
+  end
+end, { desc = "Toggle Neo-tree" })
 
 -- Language > Python keymaps
 

@@ -2,25 +2,6 @@
 -- Default autocmds that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/autocmds.lua
 -- Add any additional autocmds here
 
-vim.api.nvim_create_autocmd("FileType", {
-  group = vim.api.nvim_create_augroup("TreesitterFolds", { clear = true }),
-  callback = function(ev)
-    vim.schedule(function()
-      if not vim.api.nvim_buf_is_valid(ev.buf) then return end
-      local ok, parser = pcall(vim.treesitter.get_parser, ev.buf)
-      if not ok or not parser then return end
-      local has_folds = pcall(function()
-        vim.treesitter.query.get(parser:lang(), "folds")
-      end)
-      if not has_folds then return end
-      local win = vim.fn.bufwinid(ev.buf)
-      if win == -1 then return end
-      vim.wo[win].foldmethod = "expr"
-      vim.wo[win].foldexpr   = "v:lua.vim.treesitter.foldexpr()"
-      vim.wo[win].foldlevel  = 99
-    end)
-  end,
-})
 
 vim.api.nvim_create_autocmd("BufWritePre", {
   group = vim.api.nvim_create_augroup("EslintAutoFix", { clear = true }),
@@ -106,6 +87,7 @@ local function apply_custom_hl()
     snacks_search_bg = "#C8D8EE",
     indent_fg = "#D8DAE0",
     indent_scope_fg = "#8FA8C8",
+    context_bg = "#f5f5f5",
   } or {
     border = "#585b70",
     select_bg = "#45475a",
@@ -157,6 +139,7 @@ local function apply_custom_hl()
     snacks_search_bg = "#1e3a5f",
     indent_fg = "#2E3138",
     indent_scope_fg = "#5B6B8A",
+    context_bg = "#1e2030",
   }
 
   hl(0, "NormalFloat",               { fg = normal_fg, bg = border_bg })
@@ -305,6 +288,10 @@ local function apply_custom_hl()
 
   hl(0, "SnacksIndent",      { fg = c.indent_fg })
   hl(0, "SnacksIndentScope", { fg = c.indent_scope_fg, bold = false })
+
+  hl(0, "TreesitterContext",           { bg = c.context_bg })
+  hl(0, "TreesitterContextLineNumber", { bg = c.context_bg })
+  hl(0, "TreesitterContextBottom",     { bg = c.context_bg, underline = false })
 end
 
 vim.api.nvim_create_autocmd("ColorScheme", {

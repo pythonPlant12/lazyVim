@@ -12,7 +12,7 @@ return {
     "nvim-treesitter/nvim-treesitter-context",
     event = "VeryLazy",
     opts = {
-      max_lines = 3,
+      max_lines = 6,
       trim_scope = "outer",
     },
     keys = {
