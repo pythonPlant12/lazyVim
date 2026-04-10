@@ -30,8 +30,6 @@ vim.api.nvim_create_autocmd("WinLeave", {
 })
 
 local function apply_custom_hl()
-  local cs = vim.g.colors_name or ""
-  if cs ~= "islands-light" and cs ~= "islands-dark" then return end
   local hl = vim.api.nvim_set_hl
   local normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
   local border_bg = (normal and normal.bg) and string.format("#%06x", normal.bg) or "#191A1C"
@@ -313,8 +311,6 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 apply_grugfar_hl()
 
 local function apply_html_hl()
-  local cs = vim.g.colors_name or ""
-  if cs ~= "islands-light" and cs ~= "islands-dark" then return end
   local hl = vim.api.nvim_set_hl
   local blue, amber, muted, cyan, text, green
   if vim.o.background == "light" then

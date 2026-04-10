@@ -1053,13 +1053,7 @@ return {
       vim.api.nvim_create_autocmd({ "BufEnter", "FocusGained", "BufWritePost" }, { group = grp, callback = refresh_git_all })
       refresh_git_all()
 
-      local function is_islands()
-        local n = vim.g.colors_name or ""
-        return n == "islands-light" or n == "islands-dark"
-      end
-
       local function setup_breadcrumb_hl()
-        if not is_islands() then return end
         local chip_bgs_hl = vim.o.background == "light"
           and { "#D5D0CA", "#D5D0CA", "#D5D0CA" }
           or  { "#3A3D41", "#42464D", "#4A4F57" }
@@ -1075,12 +1069,6 @@ return {
       vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_breadcrumb_hl })
 
       local function setup_git_hl()
-        if not is_islands() then
-          for _, g in ipairs({ "LualineGitBase", "LualineGitBranch", "LualineGitGreen", "LualineGitYellow", "LualineGitPeach", "LualineGitRed" }) do
-            pcall(vim.api.nvim_set_hl, 0, g, {})
-          end
-          return
-        end
         if vim.o.background == "light" then
           vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = "#7A7880", bg = "#D5D0CA", bold = true })
           vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = "#6B3CC8", bg = "#D5D0CA", bold = true })
@@ -1105,7 +1093,6 @@ return {
           function()
             local branch = vim.b.gitsigns_head or vim.fn.system("git rev-parse --abbrev-ref HEAD 2>/dev/null"):gsub("\n", "")
             if branch == "" or branch:find("fatal") then return "" end
-            if not is_islands() then return "󰘬 " .. branch end
             local parts = { "%#LualineGitBranch#󰘬 " .. branch }
             local a, b = vim.g._git_ahead or 0, vim.g._git_behind or 0
             local u, m, d, c = vim.g._git_untracked or 0, vim.g._git_modified or 0, vim.g._git_deleted or 0, vim.g._git_conflicted or 0
@@ -1135,7 +1122,6 @@ return {
           padding = { left = 1, right = 1 },
           separator = "",
           color = function()
-            if not is_islands() then return {} end
             return { fg = vim.o.background == "light" and "#9B9792" or "#6B6F75" }
           end,
           cond = function()
@@ -1147,12 +1133,6 @@ return {
       }
 
       local function setup_diag_hl()
-        if not is_islands() then
-          for _, g in ipairs({ "DiagPillCap", "DiagPillBase", "DiagPillError", "DiagPillWarn", "DiagPillInfo", "DiagPillHint" }) do
-            pcall(vim.api.nvim_set_hl, 0, g, {})
-          end
-          return
-        end
         if vim.o.background == "light" then
           vim.api.nvim_set_hl(0, "DiagPillCap",   { fg = "#D5D0CA", bg = "#E2DFDB" })
           vim.api.nvim_set_hl(0, "DiagPillBase",  { fg = "#7A7880", bg = "#D5D0CA" })
@@ -1245,7 +1225,6 @@ return {
         end,
         separator = { left = "\u{E0B6}", right = "\u{E0B4}" },
         color = function()
-          if not is_islands() then return {} end
           local light = vim.o.background == "light"
           return { fg = light and "#7A7880" or "#7A7E85", bg = light and "#D5D0CA" or "#2B2D30" }
         end,
@@ -1320,14 +1299,6 @@ return {
       }
 
       local function setup_lsp_hl()
-        if not is_islands() then
-          local groups = { "LualineLspBase", "LualineCopilotOn", "LualineCopilotSpinner", "LualineCopilotOff" }
-          for name in pairs(lsp_colors) do
-            groups[#groups + 1] = "LualineLsp_" .. name:gsub("[%-%.]", "_")
-          end
-          for _, g in ipairs(groups) do pcall(vim.api.nvim_set_hl, 0, g, {}) end
-          return
-        end
         local light = vim.o.background == "light"
         local lsp_bg = light and "#D5D0CA" or "#45475a"
         local colors = light and lsp_colors_light or lsp_colors
@@ -1367,7 +1338,6 @@ return {
         end,
         separator = { left = "\u{E0B6}", right = "\u{E0B4}" },
         color = function()
-          if not is_islands() then return {} end
           local light = vim.o.background == "light"
           return { fg = light and "#7A7880" or "#93a1a1", bg = light and "#D5D0CA" or "#45475a" }
         end,
@@ -1375,7 +1345,7 @@ return {
 
       table.insert(opts.sections.lualine_x, {
         function()
-          local icon = " "
+          local icon = " "
           local ok, status = pcall(require, "copilot.status")
           if not ok then
             return "%#LualineCopilotOff#" .. icon .. "copilot%#LualineLspBase#"
@@ -1391,7 +1361,6 @@ return {
         end,
         separator = { left = "", right = "" },
         color = function()
-          if not is_islands() then return {} end
           local light = vim.o.background == "light"
           return { fg = light and "#9BA5B0" or "#6c7086", bg = light and "#C8CCD1" or "#45475a" }
         end,
@@ -1407,7 +1376,6 @@ return {
         end,
         separator = { left = "", right = "" },
         color = function()
-          if not is_islands() then return {} end
           local light = vim.o.background == "light"
           local lsp_bg = light and "#C8CCD1" or "#45475a"
           return (vim.g.autoformat == nil or vim.g.autoformat)
@@ -1425,7 +1393,6 @@ return {
         end,
         separator = { left = "\u{E0B6}", right = "\u{E0B4}" },
         color = function()
-          if not is_islands() then return {} end
           local light = vim.o.background == "light"
           local lsp_bg = light and "#D5D0CA" or "#45475a"
           local eslint_attached = #vim.lsp.get_clients({ name = "eslint", bufnr = 0 }) > 0
@@ -1462,10 +1429,8 @@ return {
           else
             color = existing_color or {}
           end
-          if is_islands() then
-            color.fg = color.fg or (vim.o.background == "light" and "#4C4F69" or "#CED0D6")
-            color.bg = bg
-          end
+          color.fg = color.fg or (vim.o.background == "light" and "#4C4F69" or "#CED0D6")
+          color.bg = bg
           return color
         end
 
@@ -1534,7 +1499,6 @@ return {
             local sep_comp = style_chip({ function() return "|" end }, sep_bg)
             sep_comp.padding = { left = 1, right = 1 }
             sep_comp.color = function()
-              if not is_islands() then return {} end
               return { fg = vim.o.background == "light" and "#9B9792" or "#6B6F75", bg = sep_bg }
             end
             sep_comp.cond = function()
