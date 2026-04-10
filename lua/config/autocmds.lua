@@ -302,6 +302,16 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 })
 apply_custom_hl()
 
+local function apply_grugfar_hl()
+  local search = vim.api.nvim_get_hl(0, { name = "Search", link = false })
+  vim.api.nvim_set_hl(0, "GrugFarResultsMatch", { bg = search.bg, fg = search.fg, bold = search.bold })
+end
+vim.api.nvim_create_autocmd("ColorScheme", {
+  group = vim.api.nvim_create_augroup("GrugFarHl", { clear = true }),
+  callback = apply_grugfar_hl,
+})
+apply_grugfar_hl()
+
 local function apply_html_hl()
   local cs = vim.g.colors_name or ""
   if cs ~= "islands-light" and cs ~= "islands-dark" then return end
