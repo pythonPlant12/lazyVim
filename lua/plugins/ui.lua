@@ -1487,7 +1487,9 @@ return {
                   if j then table.insert(out, str:sub(i, j)); i = j + 1
                   else i = i + 1 end
                 else
-                  table.insert(out, str:sub(i, i)); count = count + 1; i = i + 1
+                  local b = str:byte(i)
+                  local char_len = (b >= 0xF0 and 4) or (b >= 0xE0 and 3) or (b >= 0xC0 and 2) or 1
+                  table.insert(out, str:sub(i, i + char_len - 1)); count = count + 1; i = i + char_len
                 end
               end
               return table.concat(out) .. "…"
