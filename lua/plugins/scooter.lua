@@ -28,6 +28,10 @@ return {
       })
     end,
     keys = function()
+      local function escape_path(p)
+        return p:gsub(" ", "\\ ")
+      end
+
       local function grug_visual(extra_prefills)
         local s = vim.fn.getpos("'<")
         local e = vim.fn.getpos("'>")
@@ -115,26 +119,26 @@ return {
         {
           "<C-s>f",
           function()
-            require("grug-far").open({ prefills = { paths = vim.fn.expand("%") } })
+            require("grug-far").open({ prefills = { paths = escape_path(vim.fn.expand("%")) } })
           end,
           desc = "Search in current file (grug-far)",
         },
         {
           "<C-s>f",
-          function() grug_visual({ paths = vim.fn.expand("%") }) end,
+          function() grug_visual({ paths = escape_path(vim.fn.expand("%")) }) end,
           mode = "v",
           desc = "Search selected text in current file (grug-far)",
         },
         {
           "<C-s>d",
           function()
-            require("grug-far").open({ prefills = { paths = vim.fn.expand("%:h") } })
+            require("grug-far").open({ prefills = { paths = escape_path(vim.fn.expand("%:h")) } })
           end,
           desc = "Search in current directory (grug-far)",
         },
         {
           "<C-s>d",
-          function() grug_visual({ paths = vim.fn.expand("%:h") }) end,
+          function() grug_visual({ paths = escape_path(vim.fn.expand("%:h")) }) end,
           mode = "v",
           desc = "Search selected text in current directory (grug-far)",
         },
