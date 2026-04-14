@@ -5,7 +5,6 @@ local keymaps = vim.keymap
 local opts = { noremap = true, silent = true }
 
 vim.keymap.set({ "n", "i", "x", "s" }, "<C-s>", "<Nop>", { noremap = true, silent = true })
-local tab_reuse = require("config.tab_reuse")
 
 -- Increment/decrement
 keymaps.set("n", "+", "C-a")
@@ -15,8 +14,34 @@ keymaps.set("n", "-", "C-x")
 keymaps.set("n", "<C-a>", "gg<S-v>G")
 
 -- Jumplist
-keymaps.set("n", "<leader>i", "<C-o>", opts)
-keymaps.set("n", "<leader>o", "<C-i>", opts)
+local function smart_jump(motion)
+  local pre_buf = vim.api.nvim_get_current_buf()
+  local pre_win = vim.api.nvim_get_current_win()
+  vim.g._tab_reuse_suppress = true
+  vim.api.nvim_feedkeys(
+    vim.api.nvim_replace_termcodes(motion, true, false, true), "n", false
+  )
+  vim.schedule(function()
+    vim.g._tab_reuse_suppress = false
+    local post_buf = vim.api.nvim_get_current_buf()
+    if post_buf == pre_buf then return end
+    local cur_tab = vim.api.nvim_get_current_tabpage()
+    for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
+      if tab ~= cur_tab then
+        for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
+          if vim.api.nvim_win_get_buf(win) == post_buf then
+            vim.api.nvim_win_set_buf(pre_win, pre_buf)
+            vim.api.nvim_set_current_tabpage(tab)
+            vim.api.nvim_set_current_win(win)
+            return
+          end
+        end
+      end
+    end
+  end)
+end
+keymaps.set("n", "<leader>i", function() smart_jump("<C-o>") end, opts)
+keymaps.set("n", "<leader>o", function() smart_jump("<C-i>") end, opts)
 
 keymaps.set("n", "zc", "za", opts)
 
@@ -240,37 +265,20 @@ end
 
 local function goto_alt_buf()
   local cur = vim.api.nvim_get_current_buf()
-  local alt = vim.fn.bufnr("#")
 
   local function usable(bufnr)
-    if not bufnr or bufnr <= 0 or bufnr == cur then
-      return false
-    end
-    if not vim.api.nvim_buf_is_valid(bufnr) then
-      return false
-    end
-    if vim.fn.buflisted(bufnr) ~= 1 then
-      return false
-    end
-    if vim.bo[bufnr].buftype ~= "" then
-      return false
-    end
-    if vim.api.nvim_buf_get_name(bufnr) == "" then
-      return false
-    end
+    if not bufnr or bufnr <= 0 or bufnr == cur then return false end
+    if not vim.api.nvim_buf_is_valid(bufnr) then return false end
+    if vim.fn.buflisted(bufnr) ~= 1 then return false end
+    if vim.bo[bufnr].buftype ~= "" then return false end
+    if vim.api.nvim_buf_get_name(bufnr) == "" then return false end
     return true
-  end
-
-  if usable(alt) then
-    smart_buf_goto(alt)
-    return
   end
 
   local h = vim.g.buf_history or {}
   for i = #h, 1, -1 do
-    local bufnr = h[i]
-    if usable(bufnr) then
-      smart_buf_goto(bufnr)
+    if usable(h[i]) then
+      smart_buf_goto(h[i])
       return
     end
   end

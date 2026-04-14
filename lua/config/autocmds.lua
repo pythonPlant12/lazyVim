@@ -405,7 +405,7 @@ do
       local ok, ft = pcall(function()
         return vim.bo[vim.api.nvim_win_get_buf(win)].filetype or ""
       end)
-      if ok and ft:find("^snacks_picker") then return true end
+      if ok and (ft:find("^snacks_picker") or ft == "grug-far") then return true end
     end
     return false
   end
@@ -422,6 +422,7 @@ do
     group = vim.api.nvim_create_augroup("TabReuseOnBufEnter", { clear = true }),
     callback = function(ev)
       if guard then return end
+      if vim.g._tab_reuse_suppress then return end
       if vim.bo[ev.buf].buftype ~= "" then return end
       if vim.api.nvim_buf_get_name(ev.buf) == "" then return end
       if is_picker_open() then return end
