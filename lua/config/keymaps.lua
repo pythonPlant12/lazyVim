@@ -890,6 +890,65 @@ local function save_theme(value)
   end
 end
 
+local lazygit_cfg_dir = vim.fn.expand("~/Library/Application Support/lazygit")
+local function update_lazygit_theme(kind)
+  local src
+  if kind == "dark" or kind == "light" then
+    src = lazygit_cfg_dir .. "/config-" .. kind .. ".yml"
+  end
+  local dst = lazygit_cfg_dir .. "/config.yml"
+  if src then
+    local rf = io.open(src, "r")
+    if rf then
+      local content = rf:read("*a")
+      rf:close()
+      local wf = io.open(dst, "w")
+      if wf then
+        wf:write(content)
+        wf:close()
+      end
+      return
+    end
+  end
+  local wf = io.open(dst, "w")
+  if wf then
+    wf:write([[
+gui:
+  theme:
+    activeBorderColor:
+      - default
+      - bold
+    inactiveBorderColor:
+      - default
+    selectedLineBgColor:
+      - default
+    inactiveViewSelectedLineBgColor:
+      - default
+    selectedRangeBgColor:
+      - default
+    unstagedChangesColor:
+      - default
+    cherryPickedCommitBgColor:
+      - default
+    cherryPickedCommitFgColor:
+      - default
+    defaultFgColor:
+      - default
+keybinding:
+  universal:
+    prevItem: j
+    nextItem: k
+    prevItem-alt: <up>
+    nextItem-alt: <down>
+git:
+  paging:
+    colorArg: always
+    pager: "delta --color-only --syntax-theme=none --paging=never --hunk-header-decoration-style=none"
+]])
+    wf:close()
+  end
+end
+
 local function apply_theme_mode(mode)
   local background = mode == "light" and "light" or "dark"
   vim.o.background = background
@@ -899,9 +958,11 @@ local function apply_theme_mode(mode)
     or { "islands-light", "solarized-osaka", "morning", "habamax" }
 
   for _, scheme in ipairs(schemes) do
+    vim.g._lualine_theme_hint = scheme:find("^islands") and ("islands-" .. background) or "auto"
     if pcall(vim.cmd.colorscheme, scheme) then
       vim.g.theme_mode = background
       save_theme(scheme)
+      update_lazygit_theme(background)
       return
     end
   end
@@ -913,19 +974,48 @@ local function apply_catppuccin(flavour)
   local bg = (flavour == "latte") and "light" or "dark"
   vim.o.background = bg
   require("catppuccin").setup({ flavour = flavour })
+  vim.g._lualine_theme_hint = "auto"
   vim.cmd.colorscheme("catppuccin")
   vim.g.theme_mode = bg
   save_theme("catppuccin:" .. flavour)
+  update_lazygit_theme(bg)
+end
+
+local function apply_rose_pine(variant)
+  local cs = variant == "main" and "rose-pine" or ("rose-pine-" .. variant)
+  local bg = variant == "dawn" and "light" or "dark"
+  vim.o.background = bg
+  vim.g._lualine_theme_hint = "auto"
+  vim.cmd.colorscheme(cs)
+  vim.g.theme_mode = bg
+  save_theme(cs)
+  update_lazygit_theme(nil)
+end
+
+local function apply_islands_rose_pine(variant)
+  local cs = "islands-rose-pine-" .. variant
+  local bg = variant == "light" and "light" or "dark"
+  vim.o.background = bg
+  vim.g._lualine_theme_hint = "islands-" .. variant
+  vim.cmd.colorscheme(cs)
+  vim.g.theme_mode = bg
+  save_theme(cs)
+  update_lazygit_theme(bg)
 end
 
 keymaps.set("n", "<leader>ut", function()
   local items = {
-    { label = "Default Dark Theme",       action = function() apply_theme_mode("dark") end },
-    { label = "Default Light Theme",      action = function() apply_theme_mode("light") end },
-    { label = "Catppuccin Mocha (dark)",  action = function() apply_catppuccin("mocha") end },
-    { label = "Catppuccin Macchiato",     action = function() apply_catppuccin("macchiato") end },
-    { label = "Catppuccin Frappé",        action = function() apply_catppuccin("frappe") end },
-    { label = "Catppuccin Latte (light)", action = function() apply_catppuccin("latte") end },
+    { label = "Default Dark Theme",        action = function() apply_theme_mode("dark") end },
+    { label = "Default Light Theme",       action = function() apply_theme_mode("light") end },
+    { label = "Catppuccin Mocha (dark)",   action = function() apply_catppuccin("mocha") end },
+    { label = "Catppuccin Macchiato",      action = function() apply_catppuccin("macchiato") end },
+    { label = "Catppuccin Frappé",         action = function() apply_catppuccin("frappe") end },
+    { label = "Catppuccin Latte (light)",  action = function() apply_catppuccin("latte") end },
+    { label = "Rose Pine (dark)",              action = function() apply_rose_pine("main") end },
+    { label = "Rose Pine Moon (dark)",         action = function() apply_rose_pine("moon") end },
+    { label = "Rose Pine Dawn (light)",        action = function() apply_rose_pine("dawn") end },
+    { label = "Islands × Rose Pine (dark)",   action = function() apply_islands_rose_pine("dark") end },
+    { label = "Islands × Rose Pine (light)",  action = function() apply_islands_rose_pine("light") end },
   }
 
   vim.ui.select(items, {

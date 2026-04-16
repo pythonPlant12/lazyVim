@@ -22,6 +22,13 @@ if not cs then
   cs = appearance == "Dark" and "islands-dark" or "islands-light"
 end
 
+do
+  local light_schemes = { ["islands-light"] = true, ["islands-rose-pine-light"] = true, ["rose-pine-dawn"] = true }
+  local is_light = light_schemes[cs] or (cs == "catppuccin" and catppuccin_flavour == "latte")
+  vim.o.background = is_light and "light" or "dark"
+  vim.g._lualine_theme_hint = cs:find("^islands") and ("islands-" .. (is_light and "light" or "dark")) or "auto"
+end
+
 return {
   {
     "LazyVim/LazyVim",
@@ -48,6 +55,19 @@ return {
     lazy = true,
     opts = {
       flavour = catppuccin_flavour,
+      no_bold = true,
+      no_italic = true,
+    },
+  },
+  {
+    "rose-pine/neovim",
+    name = "rose-pine",
+    lazy = true,
+    opts = {
+      styles = {
+        italic = false,
+        bold = false,
+      },
     },
   },
 }

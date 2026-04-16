@@ -957,16 +957,15 @@ return {
     "nvim-lualine/lualine.nvim",
     event = "VeryLazy",
     opts = function(_, opts)
-      local _appearance = vim.fn.system("defaults read -g AppleInterfaceStyle 2>/dev/null"):gsub("%s+", "")
-      local is_light = _appearance ~= "Dark"
-      local mode_theme = is_light and {
+      local lualine_light = {
         normal   = { a = { fg = "#F0EDE8", bg = "#5A8FD4", gui = "bold" }, b = { fg = "#4C4F69", bg = "#D5D0CA", gui = "bold" }, c = { fg = "#4C4F69", bg = "#E2DFDB" } },
         insert   = { a = { fg = "#F0EDE8", bg = "#7CA686", gui = "bold" }, b = { fg = "#4C4F69", bg = "#D5D0CA", gui = "bold" } },
         visual   = { a = { fg = "#F0EDE8", bg = "#9B87C4", gui = "bold" }, b = { fg = "#4C4F69", bg = "#D5D0CA", gui = "bold" } },
         replace  = { a = { fg = "#F0EDE8", bg = "#B85C5C", gui = "bold" }, b = { fg = "#4C4F69", bg = "#D5D0CA", gui = "bold" } },
         command  = { a = { fg = "#F0EDE8", bg = "#C87A3A", gui = "bold" }, b = { fg = "#4C4F69", bg = "#D5D0CA", gui = "bold" } },
         inactive = { a = { fg = "#7A7880", bg = "#E2DFDB" }, b = { fg = "#7A7880", bg = "#E2DFDB" }, c = { fg = "#7A7880", bg = "#E2DFDB" } },
-      } or {
+      }
+      local lualine_dark = {
         normal   = { a = { fg = "#191A1C", bg = "#89b4fa", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#3B3F45", gui = "bold" }, c = { fg = "#BCBEC4", bg = "#2B2D30" } },
         insert   = { a = { fg = "#191A1C", bg = "#a6e3a1", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#3B3F45", gui = "bold" } },
         visual   = { a = { fg = "#191A1C", bg = "#B189F5", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#3B3F45", gui = "bold" } },
@@ -974,6 +973,8 @@ return {
         command  = { a = { fg = "#191A1C", bg = "#D5B778", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#3B3F45", gui = "bold" } },
         inactive = { a = { fg = "#6F737A", bg = "#191A1C" }, b = { fg = "#6F737A", bg = "#191A1C" }, c = { fg = "#6F737A", bg = "#191A1C" } },
       }
+      local _hint = vim.g._lualine_theme_hint or ""
+      local mode_theme = _hint == "islands-light" and lualine_light or _hint == "islands-dark" and lualine_dark or (vim.o.background == "light" and lualine_light or lualine_dark)
       opts.options = vim.tbl_extend("force", opts.options or {}, {
         theme = mode_theme,
         section_separators = { left = "", right = "" },
@@ -1087,6 +1088,25 @@ return {
       end
       setup_git_hl()
       vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_git_hl })
+
+      local function setup_lualine_theme_hl()
+        local hint = vim.g._lualine_theme_hint or ""
+        local theme
+        if hint == "islands-light" then
+          theme = lualine_light
+        elseif hint == "islands-dark" then
+          theme = lualine_dark
+        else
+          theme = "auto"
+        end
+        local ok, lualine = pcall(require, "lualine")
+        if not ok then return end
+        local cfg = lualine.get_config()
+        cfg.options = cfg.options or {}
+        cfg.options.theme = theme
+        lualine.setup(cfg)
+      end
+      vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_lualine_theme_hl })
 
       opts.sections.lualine_b = {
         {

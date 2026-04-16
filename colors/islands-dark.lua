@@ -2,6 +2,7 @@
 if vim.fn.has("termguicolors") == 1 then
   vim.o.termguicolors = true
 end
+vim.o.background = "dark"
 
 local palette = {
   bg = "#191A1C",

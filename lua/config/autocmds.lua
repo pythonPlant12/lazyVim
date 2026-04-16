@@ -29,6 +29,11 @@ vim.api.nvim_create_autocmd("WinLeave", {
   end,
 })
 
+local function is_islands_or_catppuccin()
+  local cs = vim.g.colors_name or ""
+  return cs:find("^islands") ~= nil or cs:find("^catppuccin") ~= nil
+end
+
 local function apply_custom_hl()
   local hl = vim.api.nvim_set_hl
   local normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
@@ -187,6 +192,34 @@ local function apply_custom_hl()
    hl(0, "NeoTreeGitConflict",  { fg = c.neotree_red,   bold = true })
   hl(0, "NeoTreeCursorLine",   { fg = c.neotree_cursor_fg, bg = c.neotree_cursor_bg, bold = true })
 
+  local picker_colors = {
+    line_fg = c.snacks_line_fg, line_bg = c.snacks_line_bg,
+    file = c.snacks_file, dir = c.snacks_dir, match = c.snacks_match,
+    search_bg = c.snacks_search_bg, row = c.snacks_row, col = c.snacks_col,
+    directory = c.snacks_directory, prompt = c.snacks_prompt,
+    delim = c.snacks_delim, selected = c.snacks_selected, comment = c.snacks_comment,
+    green = c.green, yellow = c.yellow, rose = c.rose, cyan = c.cyan,
+  }
+  vim.defer_fn(function()
+    hl(0, "SnacksPickerListCursorLine",     { fg = picker_colors.line_fg,    bg = picker_colors.line_bg })
+    hl(0, "SnacksPickerFile",               { fg = picker_colors.file,       bold = true })
+    hl(0, "SnacksPickerDir",                { fg = picker_colors.dir })
+    hl(0, "SnacksPickerMatch",              { fg = picker_colors.match,      bold = true })
+    hl(0, "SnacksPickerSearch",             { bg = picker_colors.search_bg })
+    hl(0, "SnacksPickerRow",                { fg = picker_colors.row })
+    hl(0, "SnacksPickerCol",                { fg = picker_colors.col })
+    hl(0, "SnacksPickerDirectory",          { fg = picker_colors.directory })
+    hl(0, "SnacksPickerPrompt",             { fg = picker_colors.prompt })
+    hl(0, "SnacksPickerDelim",              { fg = picker_colors.delim })
+    hl(0, "SnacksPickerSelected",           { fg = picker_colors.selected })
+    hl(0, "SnacksPickerComment",            { fg = picker_colors.comment })
+    hl(0, "SnacksPickerGitStatusAdded",     { fg = picker_colors.green })
+    hl(0, "SnacksPickerGitStatusModified",  { fg = picker_colors.yellow })
+    hl(0, "SnacksPickerGitStatusDeleted",   { fg = picker_colors.rose })
+    hl(0, "SnacksPickerGitStatusUntracked", { fg = picker_colors.cyan })
+  end, 20)
+
+  if is_islands_or_catppuccin() then
   hl(0, "@variable.parameter",                { fg = c.param })
   hl(0, "@variable.parameter.builtin",        { fg = c.param })
   hl(0, "@lsp.type.parameter",                { fg = c.param })
@@ -262,23 +295,6 @@ local function apply_custom_hl()
   hl(0, "TroubleIconPackage",       { fg = c.cyan })
   hl(0, "TroubleIconString",        { fg = c.green })
 
-  hl(0, "SnacksPickerListCursorLine",    { fg = c.snacks_line_fg, bg = c.snacks_line_bg })
-  hl(0, "SnacksPickerFile",              { fg = c.snacks_file, bold = true })
-  hl(0, "SnacksPickerDir",               { fg = c.snacks_dir })
-  hl(0, "SnacksPickerMatch",             { fg = c.snacks_match, bold = true })
-  hl(0, "SnacksPickerSearch",            { bg = c.snacks_search_bg })
-  hl(0, "SnacksPickerRow",               { fg = c.snacks_row })
-  hl(0, "SnacksPickerCol",               { fg = c.snacks_col })
-  hl(0, "SnacksPickerDirectory",         { fg = c.snacks_directory })
-  hl(0, "SnacksPickerPrompt",            { fg = c.snacks_prompt })
-  hl(0, "SnacksPickerDelim",             { fg = c.snacks_delim })
-  hl(0, "SnacksPickerSelected",          { fg = c.snacks_selected })
-  hl(0, "SnacksPickerComment",           { fg = c.snacks_comment })
-  hl(0, "SnacksPickerGitStatusAdded",    { fg = c.green })
-   hl(0, "SnacksPickerGitStatusModified", { fg = c.yellow })
-  hl(0, "SnacksPickerGitStatusDeleted",  { fg = c.rose })
-  hl(0, "SnacksPickerGitStatusUntracked",{ fg = c.cyan })
-
   hl(0, "RainbowDelimiterBlueMuted",   { fg = "#7a98bd" })
   hl(0, "RainbowDelimiterGoldMuted",   { fg = "#b29a72" })
   hl(0, "RainbowDelimiterCyanMuted",   { fg = "#6fa0a7" })
@@ -288,6 +304,7 @@ local function apply_custom_hl()
 
   hl(0, "SnacksIndent",      { fg = c.indent_fg })
   hl(0, "SnacksIndentScope", { fg = c.indent_scope_fg, bold = false })
+  end
 
   hl(0, "TreesitterContext",           { bg = c.context_bg })
   hl(0, "TreesitterContextLineNumber", { bg = c.context_bg })
@@ -311,6 +328,7 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 apply_grugfar_hl()
 
 local function apply_html_hl()
+  if not is_islands_or_catppuccin() then return end
   local hl = vim.api.nvim_set_hl
   local blue, amber, muted, cyan, text, green
   if vim.o.background == "light" then
@@ -462,3 +480,21 @@ do
     end,
   })
 end
+
+vim.api.nvim_create_autocmd("ColorScheme", {
+  group = vim.api.nvim_create_augroup("CursorTheme", { clear = true }),
+  callback = function()
+    local normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
+    local cursor_color
+    if normal and normal.fg then
+      cursor_color = string.format("#%06x", normal.fg)
+    elseif vim.o.background == "light" then
+      cursor_color = "#1E2030"
+    else
+      cursor_color = "#CDD6F4"
+    end
+    vim.api.nvim_set_hl(0, "Cursor",     { reverse = true })
+    vim.api.nvim_set_hl(0, "TermCursor", { reverse = true })
+    io.write(("\027]12;%s\007"):format(cursor_color))
+  end,
+})
