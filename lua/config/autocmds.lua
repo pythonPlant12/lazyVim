@@ -403,14 +403,6 @@ local function apply_html_hl()
 end
 
 vim.api.nvim_create_autocmd("FileType", {
-  group = vim.api.nvim_create_augroup("HtmlDjangoTreesitter", { clear = true }),
-  pattern = "htmldjango",
-  callback = function(ev)
-    pcall(vim.treesitter.start, ev.buf, "html")
-  end,
-})
-
-vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("HtmlTsColors", { clear = true }),
   pattern = { "html", "vue", "jinja2", "htmldjango" },
   callback = function()
