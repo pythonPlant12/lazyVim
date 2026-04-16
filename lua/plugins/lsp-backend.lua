@@ -40,6 +40,7 @@ return {
         "ruff",
         "pyright",
         "basedpyright",
+        "jinja-lsp",
       })
     end,
   },
@@ -78,7 +79,20 @@ return {
         end,
       })
 
+      opts.servers.jinja_lsp = vim.tbl_deep_extend("force", opts.servers.jinja_lsp or {}, {
+        filetypes = { "html", "jinja", "jinja2" },
+        root_dir = function(bufnr, on_dir)
+          on_dir(resolver.python_root(bufnr))
+        end,
+      })
+
       return opts
+    end,
+  },
+  {
+    "nvim-treesitter/nvim-treesitter",
+    opts = function(_, opts)
+      vim.list_extend(opts.ensure_installed, { "jinja2" })
     end,
   },
 }
