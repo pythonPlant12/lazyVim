@@ -2,6 +2,19 @@
 -- Default autocmds that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/autocmds.lua
 -- Add any additional autocmds here
 
+vim.filetype.add({
+  extension = {
+    html = function(path, bufnr)
+      local lines = vim.filetype.getlines(bufnr, 1, 50)
+      for _, line in ipairs(lines) do
+        if line:match("{%%") or line:match("{{") then
+          return "jinja2"
+        end
+      end
+    end,
+  },
+})
+
 
 vim.api.nvim_create_autocmd("BufWritePre", {
   group = vim.api.nvim_create_augroup("EslintAutoFix", { clear = true }),
@@ -391,7 +404,7 @@ end
 
 vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("HtmlTsColors", { clear = true }),
-  pattern = { "html", "vue" },
+  pattern = { "html", "vue", "jinja2" },
   callback = function()
     vim.schedule(apply_html_hl)
   end,
