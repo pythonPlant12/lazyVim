@@ -4,7 +4,7 @@ end
 vim.o.background = "dark"
 
 local ui = {
-  bg = "#191A1C",
+  bg = "#212120",
   fg = "#BCBEC4",
   fg_bright = "#CED0D6",
   muted = "#6F737A",
