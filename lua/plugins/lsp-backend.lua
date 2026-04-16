@@ -80,7 +80,7 @@ return {
       })
 
       opts.servers.jinja_lsp = vim.tbl_deep_extend("force", opts.servers.jinja_lsp or {}, {
-        filetypes = { "html", "jinja", "jinja2" },
+        filetypes = { "html", "jinja", "jinja2", "htmldjango" },
         root_dir = function(bufnr, on_dir)
           on_dir(resolver.python_root(bufnr))
         end,

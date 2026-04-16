@@ -8,7 +8,7 @@ vim.filetype.add({
       local lines = vim.filetype.getlines(bufnr, 1, 50)
       for _, line in ipairs(lines) do
         if line:match("{%%") or line:match("{{") then
-          return "jinja2"
+          return "htmldjango"
         end
       end
     end,
@@ -404,7 +404,7 @@ end
 
 vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("HtmlTsColors", { clear = true }),
-  pattern = { "html", "vue", "jinja2" },
+  pattern = { "html", "vue", "jinja2", "htmldjango" },
   callback = function()
     vim.schedule(apply_html_hl)
   end,
