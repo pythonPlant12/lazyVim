@@ -147,6 +147,50 @@ local function apply_custom_hl()
     context_bg = "#1e2030",
   }
 
+  local kind_hl_colors = {
+    Text = c.text,
+    Method = c.blue,
+    Function = c.blue,
+    Constructor = c.pink,
+    Field = c.purple,
+    Variable = c.purple,
+    Class = c.yellow,
+    Interface = c.yellow,
+    Module = c.cyan,
+    Property = c.purple,
+    Unit = c.cyan,
+    Value = c.peach,
+    Enum = c.yellow,
+    Keyword = c.rose,
+    Snippet = c.rose,
+    Color = c.pink,
+    File = c.text,
+    Reference = c.rose,
+    Folder = c.yellow,
+    EnumMember = c.peach,
+    Constant = c.rose,
+    Struct = c.yellow,
+    Event = c.text,
+    Operator = c.text,
+    TypeParameter = c.cyan,
+    Boolean = c.peach,
+    Array = c.text,
+    Object = c.rose,
+    Package = c.cyan,
+    String = c.green,
+    Number = c.peach,
+    Namespace = c.cyan,
+    Null = c.peach,
+    Key = c.rose,
+    Unknown = c.text,
+  }
+
+  hl(0, "BlinkCmpKind", { fg = c.text })
+  for kind, fg in pairs(kind_hl_colors) do
+    hl(0, "BlinkCmpKind" .. kind, { fg = fg })
+    hl(0, "TroubleIcon" .. kind, { fg = fg })
+  end
+
   hl(0, "NormalFloat",               { fg = normal_fg, bg = border_bg })
   hl(0, "FloatBorder",               { fg = c.border, bg = border_bg })
   hl(0, "PmenuBorder",               { fg = c.border, bg = border_bg })
@@ -233,67 +277,6 @@ local function apply_custom_hl()
   hl(0, "@constructor",                { fg = c.ctor })
   hl(0, "@lsp.type.class",             { fg = c.ctor })
   hl(0, "@lsp.typemod.class.callable", { fg = c.ctor })
-
-  hl(0, "BlinkCmpKindMethod",        { fg = c.blue })
-  hl(0, "BlinkCmpKindFunction",      { fg = c.blue })
-  hl(0, "BlinkCmpKindConstructor",   { fg = c.pink })
-  hl(0, "BlinkCmpKindColor",         { fg = c.pink })
-  hl(0, "BlinkCmpKindSnippet",       { fg = c.rose })
-  hl(0, "BlinkCmpKindClass",         { fg = c.yellow })
-  hl(0, "BlinkCmpKindEnum",          { fg = c.yellow })
-  hl(0, "BlinkCmpKindStruct",        { fg = c.yellow })
-  hl(0, "BlinkCmpKindFolder",        { fg = c.yellow })
-  hl(0, "BlinkCmpKindField",         { fg = c.purple })
-  hl(0, "BlinkCmpKindInterface",     { fg = c.yellow })
-  hl(0, "BlinkCmpKindModule",        { fg = c.cyan })
-  hl(0, "BlinkCmpKindProperty",      { fg = c.purple })
-  hl(0, "BlinkCmpKindVariable",      { fg = c.purple })
-  hl(0, "BlinkCmpKindUnit",          { fg = c.cyan })
-  hl(0, "BlinkCmpKindTypeParameter", { fg = c.cyan })
-  hl(0, "BlinkCmpKindValue",         { fg = c.peach })
-  hl(0, "BlinkCmpKindEnumMember",    { fg = c.peach })
-  hl(0, "BlinkCmpKindKeyword",       { fg = c.rose })
-  hl(0, "BlinkCmpKindConstant",      { fg = c.rose })
-  hl(0, "BlinkCmpKindReference",     { fg = c.rose })
-  hl(0, "BlinkCmpKindFile",          { fg = c.text })
-  hl(0, "BlinkCmpKindEvent",         { fg = c.text })
-  hl(0, "BlinkCmpKindText",          { fg = c.text })
-  hl(0, "BlinkCmpKindOperator",      { fg = c.text })
-
-  hl(0, "TroubleIconMethod",        { fg = c.blue })
-  hl(0, "TroubleIconFunction",      { fg = c.blue })
-  hl(0, "TroubleIconConstructor",   { fg = c.pink })
-  hl(0, "TroubleIconClass",         { fg = c.yellow })
-  hl(0, "TroubleIconEnum",          { fg = c.yellow })
-  hl(0, "TroubleIconStruct",        { fg = c.yellow })
-  hl(0, "TroubleIconFolder",        { fg = c.yellow })
-  hl(0, "TroubleIconField",         { fg = c.purple })
-  hl(0, "TroubleIconInterface",     { fg = c.yellow })
-  hl(0, "TroubleIconModule",        { fg = c.cyan })
-  hl(0, "TroubleIconProperty",      { fg = c.purple })
-  hl(0, "TroubleIconVariable",      { fg = c.purple })
-  hl(0, "TroubleIconUnit",          { fg = c.cyan })
-  hl(0, "TroubleIconTypeParameter", { fg = c.cyan })
-  hl(0, "TroubleIconValue",         { fg = c.peach })
-  hl(0, "TroubleIconEnumMember",    { fg = c.peach })
-  hl(0, "TroubleIconKeyword",       { fg = c.rose })
-  hl(0, "TroubleIconConstant",      { fg = c.rose })
-  hl(0, "TroubleIconReference",     { fg = c.rose })
-  hl(0, "TroubleIconFile",          { fg = c.text })
-  hl(0, "TroubleIconEvent",         { fg = c.text })
-  hl(0, "TroubleIconText",          { fg = c.text })
-  hl(0, "TroubleIconOperator",      { fg = c.text })
-  hl(0, "TroubleIconSnippet",       { fg = c.rose })
-  hl(0, "TroubleIconColor",         { fg = c.pink })
-  hl(0, "TroubleIconArray",         { fg = c.text })
-  hl(0, "TroubleIconBoolean",       { fg = c.peach })
-  hl(0, "TroubleIconKey",           { fg = c.rose })
-  hl(0, "TroubleIconNamespace",     { fg = c.cyan })
-  hl(0, "TroubleIconNull",          { fg = c.peach })
-  hl(0, "TroubleIconNumber",        { fg = c.peach })
-  hl(0, "TroubleIconObject",        { fg = c.rose })
-  hl(0, "TroubleIconPackage",       { fg = c.cyan })
-  hl(0, "TroubleIconString",        { fg = c.green })
 
   hl(0, "RainbowDelimiterBlueMuted",   { fg = "#7a98bd" })
   hl(0, "RainbowDelimiterGoldMuted",   { fg = "#b29a72" })
