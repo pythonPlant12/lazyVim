@@ -2,6 +2,7 @@ return {
   {
     "MagicDuck/grug-far.nvim",
     opts = {
+      windowCreationCommand = "botright vsplit",
       keymaps = {
         syncNext    = { n = "<S-CR>", i = "<S-CR>" },
         historyOpen = { n = "<localleader>h" },
@@ -16,6 +17,9 @@ return {
       vim.api.nvim_create_autocmd("FileType", {
         pattern = "grug-far",
         callback = function(ev)
+          local width = math.max(40, math.floor(vim.o.columns * 0.25))
+          pcall(vim.api.nvim_win_set_width, vim.fn.bufwinid(ev.buf), width)
+
           local map = function(lhs, fn, desc)
             vim.keymap.set({ "n", "i" }, lhs, fn, { buffer = ev.buf, silent = true, desc = desc })
           end
