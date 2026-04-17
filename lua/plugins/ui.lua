@@ -448,6 +448,7 @@ return {
       }
 
       opts.filesystem = opts.filesystem or {}
+      opts.filesystem.commands = opts.filesystem.commands or {}
       opts.filesystem.filtered_items = {
         visible = true,
         hide_dotfiles = false,
@@ -457,8 +458,26 @@ return {
       opts.filesystem.bind_to_cwd = false
       opts.filesystem.window = opts.filesystem.window or {}
       opts.filesystem.window.mappings = opts.filesystem.window.mappings or {}
+      opts.filesystem.commands.grug_far_search_node = function(state)
+        local node = state.tree:get_node()
+        if not node or node.type == "message" then
+          return
+        end
+
+        local path = node:get_id()
+        if not path or path == "" then
+          return
+        end
+
+        require("grug-far").open({
+          prefills = {
+            paths = path:gsub(" ", "\\ "),
+          },
+        })
+      end
       opts.filesystem.window.mappings["{"] = "navigate_up"
       opts.filesystem.window.mappings["}"] = "set_root"
+      opts.filesystem.window.mappings["<C-s>d"] = "grug_far_search_node"
 
       return opts
     end,
