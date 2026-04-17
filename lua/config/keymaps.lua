@@ -404,7 +404,9 @@ local function open_file_diff_fullscreen(base)
       if vim.wo[win].diff then
         local buf = vim.api.nvim_win_get_buf(win)
         vim.b[buf].git_file_diff_mode = true
-        vim.keymap.set("n", "q", close_file_diff, {
+        vim.keymap.set("n", "q", function()
+          close_file_diff()
+        end, {
           buffer = buf,
           silent = true,
           desc = "Close file diff",
