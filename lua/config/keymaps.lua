@@ -394,10 +394,23 @@ keymaps.set("n", "<C-g>d",  function() Snacks.picker.git_diff() end, { desc = "G
 keymaps.set("n", "<C-g>ld", function() require("gitsigns").preview_hunk_inline() end, { desc = "Line diff" })
 keymaps.set("n", "<C-g>lh", function() Snacks.picker.git_log_line() end, { desc = "Line history" })
 keymaps.set("n", "<C-g>lr", function() require("gitsigns").reset_hunk() end, { desc = "Revert line/hunk to HEAD" })
+local close_file_diff
 local function open_file_diff_fullscreen(base)
   require("gitsigns").diffthis(base)
   if vim.wo.diff then
     vim.cmd("wincmd =")
+
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+      if vim.wo[win].diff then
+        local buf = vim.api.nvim_win_get_buf(win)
+        vim.b[buf].git_file_diff_mode = true
+        vim.keymap.set("n", "q", close_file_diff, {
+          buffer = buf,
+          silent = true,
+          desc = "Close file diff",
+        })
+      end
+    end
   end
 end
 
@@ -564,25 +577,24 @@ local function pick_line_diff_base_and_preview()
 end
 
 keymaps.set("n", "<C-g>lD", pick_line_diff_base_and_preview, { desc = "Line diff against ref" })
-local function close_file_diff()
+close_file_diff = function()
   if not vim.wo.diff then return end
   local cur_win = vim.api.nvim_get_current_win()
   for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
     if w ~= cur_win and vim.wo[w].diff then
+      local buf = vim.api.nvim_win_get_buf(w)
+      pcall(vim.keymap.del, "n", "q", { buffer = buf })
+      vim.b[buf].git_file_diff_mode = nil
       pcall(vim.api.nvim_win_close, w, false)
     end
   end
+  local cur_buf = vim.api.nvim_win_get_buf(cur_win)
+  pcall(vim.keymap.del, "n", "q", { buffer = cur_buf })
+  vim.b[cur_buf].git_file_diff_mode = nil
   vim.cmd("diffoff!")
 end
 
 keymaps.set("n", "<C-g>fq", close_file_diff, { desc = "Close file diff" })
-keymaps.set("n", "q", function()
-  if vim.wo.diff then
-    close_file_diff()
-  else
-    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("q", true, false, true), "n", false)
-  end
-end, { desc = "Close file diff (in diff mode) / record macro" })
 keymaps.set("n", "<C-g>fh", function() Snacks.picker.git_log_file() end, { desc = "File history" })
 keymaps.set("n", "<C-g>fr", function() require("gitsigns").reset_buffer() end, { desc = "Revert file to HEAD" })
 
