@@ -2,19 +2,6 @@
 -- Default autocmds that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/autocmds.lua
 -- Add any additional autocmds here
 
-vim.filetype.add({
-  extension = {
-    html = function(path, bufnr)
-      local lines = vim.api.nvim_buf_get_lines(bufnr, 0, 50, false)
-      for _, line in ipairs(lines) do
-        if line:match("{%%") or line:match("{{") then
-          return "htmldjango"
-        end
-      end
-    end,
-  },
-})
-
 
 vim.api.nvim_create_autocmd("BufWritePre", {
   group = vim.api.nvim_create_augroup("EslintAutoFix", { clear = true }),
@@ -378,8 +365,15 @@ local function apply_html_hl()
   hl(0, "@tag.builtin.html",        { fg = blue })
   hl(0, "@tag.attribute.html",      { fg = amber })
   hl(0, "@tag.delimiter.html",      { fg = muted })
+  hl(0, "@tag.htmldjango",          { fg = blue })
+  hl(0, "@tag.builtin.htmldjango",  { fg = blue })
+  hl(0, "@tag.attribute.htmldjango", { fg = amber })
+  hl(0, "@tag.delimiter.htmldjango", { fg = muted })
   hl(0, "@punctuation.bracket.html", { fg = muted })
   hl(0, "@string.special.url.html", { fg = cyan, underline = true })
+  hl(0, "@string.htmldjango",       { fg = green })
+  hl(0, "@keyword.directive.jinja", { fg = blue })
+  hl(0, "@keyword.directive.htmldjango", { fg = blue })
   hl(0, "@tag.vue",                 { fg = blue })
   hl(0, "@tag.builtin.vue",         { fg = blue })
   hl(0, "@tag.attribute.vue",       { fg = amber })
@@ -400,11 +394,29 @@ local function apply_html_hl()
   hl(0, "@string",                  { fg = green })
   hl(0, "@string.html",             { fg = green })
   hl(0, "@string.vue",              { fg = green })
+
+  hl(0, "jinjaTagBlock",            { fg = blue })
+  hl(0, "jinjaVarBlock",            { fg = blue })
+  hl(0, "jinjaStatement",           { fg = amber })
+  hl(0, "jinjaVariable",            { fg = text })
+  hl(0, "jinjaFilter",              { fg = cyan })
+  hl(0, "jinjaString",              { fg = green })
+  hl(0, "jinjaNumber",              { fg = amber })
+  hl(0, "jinjaOperator",            { fg = muted })
+  hl(0, "jinjaComment",             { fg = muted, italic = true })
+
+  hl(0, "djangoTagBlock",           { fg = blue })
+  hl(0, "djangoVarBlock",           { fg = blue })
+  hl(0, "djangoStatement",          { fg = amber })
+  hl(0, "djangoFilter",             { fg = cyan })
+  hl(0, "djangoArgument",           { fg = green })
+  hl(0, "djangoComment",            { fg = muted, italic = true })
+  hl(0, "djangoComBlock",           { fg = muted, italic = true })
 end
 
 vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("HtmlTsColors", { clear = true }),
-  pattern = { "html", "vue", "jinja2", "htmldjango" },
+  pattern = { "html", "vue", "jinja", "jinja2", "htmldjango" },
   callback = function()
     vim.schedule(apply_html_hl)
   end,

@@ -92,7 +92,7 @@ return {
   {
     "nvim-treesitter/nvim-treesitter",
     opts = function(_, opts)
-      vim.list_extend(opts.ensure_installed, { "jinja2" })
+      vim.list_extend(opts.ensure_installed, { "htmldjango", "jinja" })
     end,
   },
 }
