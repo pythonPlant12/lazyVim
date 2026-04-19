@@ -68,14 +68,18 @@ local function apply_item_pos(item)
     return
   end
 
-  local line_count = vim.api.nvim_buf_line_count(0)
-  local row = math.max(1, math.min(pos[1], line_count))
-  local col = math.max(0, pos[2] or 0)
-  local ok = pcall(vim.cmd, ("keepjumps call cursor(%d, %d)"):format(row, col + 1))
-  if not ok then
-    pcall(vim.api.nvim_win_set_cursor, 0, { row, col })
-  end
-  pcall(vim.cmd, "normal! zv")
+  -- Wait for buffer to be loaded before applying position
+  vim.schedule(function()
+    local line_count = vim.api.nvim_buf_line_count(0)
+    local row = math.max(1, math.min(pos[1], line_count))
+    local col = math.max(0, pos[2] or 0)
+    local ok = pcall(vim.cmd, ("keepjumps call cursor(%d, %d)"):format(row, col + 1))
+    if not ok then
+      pcall(vim.api.nvim_win_set_cursor, 0, { row, col })
+    end
+    pcall(vim.cmd, "normal! zv")
+    pcall(vim.cmd, "normal! zz")  -- Center cursor on screen
+  end)
 end
 
 local function confirm_lsp_location(picker, item)
@@ -110,15 +114,18 @@ local function confirm_lsp_location(picker, item)
     return
   end
 
+  -- Try to jump to existing window with the file
   if tab_reuse.jump_to_path(path, { prefer_other_tabs = true }) then
     apply_item_pos(item)
     return
   end
 
+  -- File not open in any tab, open it in current window
   local escaped = vim.fn.fnameescape(path)
-  local ok = pcall(vim.cmd, "drop " .. escaped)
+  local ok, err = pcall(vim.cmd, "edit " .. escaped)
   if not ok then
-    vim.cmd("edit " .. escaped)
+    vim.notify("Failed to open file: " .. (err or "unknown error"), vim.log.levels.ERROR)
+    return
   end
   apply_item_pos(item)
 end

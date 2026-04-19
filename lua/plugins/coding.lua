@@ -29,7 +29,7 @@ return {
       opts.sources = opts.sources or {}
       opts.sources.transform_items = function(_, items)
         for _, item in ipairs(items) do
-          item.kind_icon = nil
+          -- Icons are now shown and will use BlinkCmpKind* highlights
           if item.kind == 4 then
             item.kind = 7
           end
