@@ -626,9 +626,9 @@ return {
         config = {
           os = {
             editPreset = "",
-            edit = [=[ [ -z "$NVIM" ] && (nvim -- {{filename}}) || (nvim --server "$NVIM" --remote-send "<C-\\><C-N><Cmd>lua require('config.lazygit_edit').open([[{{filename}}]])<CR>") ]=],
-            editAtLine = [=[ [ -z "$NVIM" ] && (nvim +{{line}} -- {{filename}}) || (nvim --server "$NVIM" --remote-send "<C-\\><C-N><Cmd>lua require('config.lazygit_edit').open([[{{filename}}]], {{line}})<CR>") ]=],
-            editAtLineAndWait = [=[ [ -z "$NVIM" ] && (nvim +{{line}} -- {{filename}}) || (nvim --server "$NVIM" --remote-send "<C-\\><C-N><Cmd>lua require('config.lazygit_edit').open([[{{filename}}]], {{line}})<CR>") ]=],
+            edit = ("sh %s \"{{filename}}\""):format(vim.fn.shellescape(vim.fn.stdpath("config") .. "/scripts/lazygit-edit")),
+            editAtLine = ("sh %s \"{{filename}}\" \"{{line}}\""):format(vim.fn.shellescape(vim.fn.stdpath("config") .. "/scripts/lazygit-edit")),
+            editAtLineAndWait = ("sh %s \"{{filename}}\" \"{{line}}\""):format(vim.fn.shellescape(vim.fn.stdpath("config") .. "/scripts/lazygit-edit")),
             editInTerminal = false,
           },
         },

@@ -1,0 +1,30 @@
+#!/bin/sh
+
+path="$1"
+line="$2"
+
+if [ -z "$path" ]; then
+  exit 1
+fi
+
+if [ -z "$NVIM" ]; then
+  if [ -n "$line" ]; then
+    exec nvim +"$line" -- "$path"
+  fi
+  exec nvim -- "$path"
+fi
+
+expr=$(python3 - "$path" "$line" <<'PY'
+import json
+import sys
+
+lua = "require('config.lazygit_edit').open(_A[1], _A[2])"
+path = sys.argv[1]
+line = sys.argv[2] if len(sys.argv) > 2 else ""
+arg2 = "v:null" if line == "" else str(int(line))
+
+print(f"luaeval({json.dumps(lua)}, [{json.dumps(path)}, {arg2}])")
+PY
+) || exit 1
+
+exec nvim --server "$NVIM" --remote-expr "$expr" >/dev/null
