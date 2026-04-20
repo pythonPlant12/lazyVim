@@ -1056,22 +1056,76 @@ end, { desc = "Select default theme" })
 Snacks.toggle({
   name = "Inline Diagnostics",
   get = function()
-    return vim.diagnostic.config().virtual_text ~= false
+    if vim.g.inline_diagnostics_enabled == nil then
+      vim.g.inline_diagnostics_enabled = vim.diagnostic.config().virtual_text ~= false
+    end
+    return vim.g.inline_diagnostics_enabled
   end,
   set = function(enabled)
+    vim.g.inline_diagnostics_enabled = enabled
     vim.diagnostic.config({ virtual_text = enabled })
   end,
 }):map("<leader>ui")
 
+local function apply_inlay_hints(enabled, bufnr)
+  if not vim.lsp.inlay_hint then
+    return
+  end
+
+  local function apply(buf)
+    if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
+      return
+    end
+    if #vim.lsp.get_clients({ bufnr = buf }) == 0 then
+      return
+    end
+    vim.lsp.inlay_hint.enable(enabled, { bufnr = buf })
+  end
+
+  if bufnr then
+    apply(bufnr)
+    return
+  end
+
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    apply(buf)
+  end
+end
+
+vim.g.inlay_hints_enabled = vim.g.inlay_hints_enabled
+if vim.g.inlay_hints_enabled == nil then
+  vim.g.inlay_hints_enabled = true
+end
+
+vim.api.nvim_create_autocmd("LspAttach", {
+  group = vim.api.nvim_create_augroup("PersistentInlayHints", { clear = true }),
+  callback = function(ev)
+    apply_inlay_hints(vim.g.inlay_hints_enabled, ev.buf)
+  end,
+})
+
 Snacks.toggle({
   name = "Inlay Hints",
   get = function()
-    return vim.lsp.inlay_hint.is_enabled({ bufnr = 0 })
+    return vim.g.inlay_hints_enabled
   end,
   set = function(enabled)
-    vim.lsp.inlay_hint.enable(enabled, { bufnr = 0 })
+    vim.g.inlay_hints_enabled = enabled
+    apply_inlay_hints(enabled)
   end,
 }):map("<leader>up")
+
+Snacks.toggle({
+  id = "persistent_inlay_hints_alias",
+  name = "Inlay Hints",
+  get = function()
+    return vim.g.inlay_hints_enabled
+  end,
+  set = function(enabled)
+    vim.g.inlay_hints_enabled = enabled
+    apply_inlay_hints(enabled)
+  end,
+}):map("<leader>uh")
 
 vim.keymap.set("n", "<leader>ue", function()
   require("neo-tree.command").execute({ toggle = true, reveal = true, dir = LazyVim.root() })
