@@ -3,6 +3,7 @@
 -- Add any additional keymaps here
 local keymaps = vim.keymap
 local opts = { noremap = true, silent = true }
+local lazygit_edit = require("config.lazygit_edit")
 
 vim.keymap.set({ "n", "i", "x", "s" }, "<C-s>", "<Nop>", { noremap = true, silent = true })
 
@@ -386,7 +387,13 @@ keymaps.set("n", "<C-w>j", "<C-w>k", opts)
 keymaps.set("n", "<C-w>k", "<C-w>j", opts)
 
 -- Git (<C-g>)
-keymaps.set("n", "<C-g>g",  function() Snacks.lazygit({ cwd = LazyVim.root.git() }) end, { desc = "Lazygit" })
+keymaps.set("n", "<C-g>g", function()
+  if lazygit_edit.jump_to_lazygit() then
+    return
+  end
+
+  Snacks.lazygit({ cwd = LazyVim.root.git() })
+end, { desc = "Lazygit" })
 keymaps.set("n", "<C-g>l",  "<Nop>", opts)
 keymaps.set("n", "<C-g>h",  function() Snacks.picker.git_log({ cwd = LazyVim.root.git() }) end, { desc = "Git history" })
 keymaps.set("n", "<C-g>s",  function() Snacks.picker.git_status() end, { desc = "Git status" })
