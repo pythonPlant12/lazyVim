@@ -1,30 +1,54 @@
-#!/bin/sh
+#!/usr/bin/env python3
 
-path="$1"
-line="$2"
-
-if [ -z "$path" ]; then
-  exit 1
-fi
-
-if [ -z "$NVIM" ]; then
-  if [ -n "$line" ]; then
-    exec nvim +"$line" -- "$path"
-  fi
-  exec nvim -- "$path"
-fi
-
-expr=$(python3 - "$path" "$line" <<'PY'
 import json
+import os
+import subprocess
 import sys
 
-lua = "require('config.lazygit_edit').open(_A[1], _A[2])"
-path = sys.argv[1]
-line = sys.argv[2] if len(sys.argv) > 2 else ""
-arg2 = "v:null" if line == "" else str(int(line))
 
-print(f"luaeval({json.dumps(lua)}, [{json.dumps(path)}, {arg2}])")
-PY
-) || exit 1
+def parse_args(args: list[str]) -> tuple[str, int | None]:
+    if not args:
+        raise SystemExit(1)
 
-exec nvim --server "$NVIM" --remote-expr "$expr" >/dev/null
+    line: int | None = None
+
+    if len(args) > 1 and args[0].isdigit():
+        line = int(args[0])
+        args = args[1:]
+
+    if len(args) > 1 and args[-1].isdigit():
+        line = int(args[-1])
+        args = args[:-1]
+
+    path = " ".join(args).strip()
+    if not path:
+        raise SystemExit(1)
+
+    if not os.path.isabs(path):
+        path = os.path.abspath(path)
+
+    return path, line
+
+
+def main() -> int:
+    path, line = parse_args(sys.argv[1:])
+
+    if not os.environ.get("NVIM"):
+        cmd = ["nvim"]
+        if line is not None:
+            cmd.append(f"+{line}")
+        cmd.extend(["--", path])
+        os.execvp(cmd[0], cmd)
+
+    lua = "require('config.lazygit_edit').open(_A[1], _A[2])"
+    arg2 = "v:null" if line is None else str(line)
+    expr = f"luaeval({json.dumps(lua)}, [{json.dumps(path)}, {arg2}])"
+    result = subprocess.run(
+        ["nvim", "--server", os.environ["NVIM"], "--remote-expr", expr],
+        stdout=subprocess.DEVNULL,
+    )
+    return result.returncode
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

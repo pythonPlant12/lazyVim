@@ -626,9 +626,9 @@ return {
         config = {
           os = {
             editPreset = "",
-            edit = ("sh %s \"{{filename}}\""):format(vim.fn.shellescape(vim.fn.stdpath("config") .. "/scripts/lazygit-edit")),
-            editAtLine = ("sh %s \"{{filename}}\" \"{{line}}\""):format(vim.fn.shellescape(vim.fn.stdpath("config") .. "/scripts/lazygit-edit")),
-            editAtLineAndWait = ("sh %s \"{{filename}}\" \"{{line}}\""):format(vim.fn.shellescape(vim.fn.stdpath("config") .. "/scripts/lazygit-edit")),
+            edit = ("python3 %s \"{{filename}}\""):format(vim.fn.shellescape(vim.fn.stdpath("config") .. "/scripts/lazygit-edit")),
+            editAtLine = ("python3 %s \"{{filename}}\" \"{{line}}\""):format(vim.fn.shellescape(vim.fn.stdpath("config") .. "/scripts/lazygit-edit")),
+            editAtLineAndWait = ("python3 %s \"{{filename}}\" \"{{line}}\""):format(vim.fn.shellescape(vim.fn.stdpath("config") .. "/scripts/lazygit-edit")),
             editInTerminal = false,
           },
         },
