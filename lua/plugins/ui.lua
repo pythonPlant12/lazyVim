@@ -622,6 +622,17 @@ return {
       },
     },
     opts = {
+      lazygit = {
+        config = {
+          os = {
+            editPreset = "",
+            edit = [[ [ -z "$NVIM" ] && (nvim -- {{filename}}) || (nvim --server "$NVIM" --remote-tab {{filename}}) ]],
+            editAtLine = [[ [ -z "$NVIM" ] && (nvim +{{line}} -- {{filename}}) || (nvim --server "$NVIM" --remote-tab +{{line}} {{filename}}) ]],
+            editAtLineAndWait = [[ [ -z "$NVIM" ] && (nvim +{{line}} -- {{filename}}) || (nvim --server "$NVIM" --remote-tab +{{line}} {{filename}}) ]],
+            editInTerminal = false,
+          },
+        },
+      },
       image = {
         enabled = true,
         formats = {

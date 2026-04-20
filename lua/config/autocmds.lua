@@ -421,6 +421,49 @@ vim.api.nvim_create_autocmd("BufEnter", {
   end,
 })
 
+vim.api.nvim_create_autocmd("BufEnter", {
+  group = vim.api.nvim_create_augroup("LazyGitTerminalTabNav", { clear = true }),
+  callback = function(ev)
+    if vim.bo[ev.buf].filetype ~= "snacks_terminal" then
+      return
+    end
+
+    local meta = vim.b[ev.buf].snacks_terminal
+    if type(meta) ~= "table" then
+      return
+    end
+
+    local cmd = meta.cmd
+    local is_lazygit = (type(cmd) == "table" and cmd[1] == "lazygit")
+      or (type(cmd) == "string" and cmd:find("lazygit", 1, true) ~= nil)
+
+    if not is_lazygit then
+      return
+    end
+
+    vim.keymap.set("t", "<C-j>", [[<C-\><C-n>:tabprev<CR>]], {
+      buffer = ev.buf,
+      silent = true,
+      desc = "Previous tab from LazyGit",
+    })
+    vim.keymap.set("t", "<C-k>", [[<C-\><C-n>:tabnext<CR>]], {
+      buffer = ev.buf,
+      silent = true,
+      desc = "Next tab from LazyGit",
+    })
+    vim.keymap.set("n", "<C-j>", ":tabprev<CR>", {
+      buffer = ev.buf,
+      silent = true,
+      desc = "Previous tab from LazyGit",
+    })
+    vim.keymap.set("n", "<C-k>", ":tabnext<CR>", {
+      buffer = ev.buf,
+      silent = true,
+      desc = "Next tab from LazyGit",
+    })
+  end,
+})
+
 do
   vim.g.buf_history = vim.g.buf_history or {}
 
