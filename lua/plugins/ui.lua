@@ -1,4 +1,5 @@
 local tab_reuse = require("config.tab_reuse")
+local grug_far_reuse = require("config.grug_far_reuse")
 
 local function remove_gl_key(_, keys)
   return vim.tbl_filter(function(k)
@@ -476,9 +477,10 @@ return {
           return
         end
 
-        require("grug-far").open({
+        grug_far_reuse.open_for_buffer(vim.api.nvim_get_current_buf(), {
           prefills = {
             paths = path:gsub(" ", "\\ "),
+            flags = "--fixed-strings",
           },
         })
       end

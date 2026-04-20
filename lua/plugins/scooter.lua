@@ -32,8 +32,14 @@ return {
       })
     end,
     keys = function()
+      local grug_far_reuse = require("config.grug_far_reuse")
+
       local function escape_path(p)
         return p:gsub(" ", "\\ ")
+      end
+
+      local function open_grug(opts)
+        return grug_far_reuse.open_for_buffer(vim.api.nvim_get_current_buf(), opts)
       end
 
       local function grug_visual(extra_prefills)
@@ -50,6 +56,9 @@ return {
         end
 
         local prefills = vim.tbl_extend("force", {}, extra_prefills or {})
+        prefills.search = require("grug-far").get_current_visual_selection(true)
+        prefills.flags = prefills.flags or "--fixed-strings"
+        prefills.paths = prefills.paths or ""
         if is_word then
           local flags = prefills.flags or "--fixed-strings"
           if not flags:find("--word%-regexp") then
@@ -57,15 +66,13 @@ return {
           end
         end
 
-        require("grug-far").with_visual_selection(
-          next(prefills) ~= nil and { prefills = prefills } or nil
-        )
+        open_grug(next(prefills) ~= nil and { prefills = prefills } or nil)
       end
 
       return {
         {
           "<leader>sr",
-          function() require("grug-far").open() end,
+          function() open_grug() end,
           desc = "Search and Replace (grug-far)",
         },
         {
@@ -76,7 +83,7 @@ return {
         },
         {
           "<leader>srw",
-          function() require("grug-far").open() end,
+          function() open_grug() end,
           desc = "Search and Replace in Workspace (grug-far)",
         },
         {
@@ -87,7 +94,7 @@ return {
         },
         {
           "<C-s>g",
-          function() require("grug-far").open() end,
+          function() open_grug() end,
           desc = "Search and Replace (grug-far)",
         },
         {
@@ -98,7 +105,7 @@ return {
         },
         {
           "<C-s>r",
-          function() require("grug-far").open() end,
+          function() open_grug() end,
           desc = "Search and Replace (grug-far)",
         },
         {
@@ -110,7 +117,7 @@ return {
         {
           "<C-s>s",
           function()
-            require("grug-far").open({ prefills = { search = vim.fn.expand("<cword>") } })
+            open_grug({ prefills = { search = vim.fn.expand("<cword>"), flags = "--fixed-strings", paths = "" } })
           end,
           desc = "Search and Replace word under cursor (grug-far)",
         },
@@ -123,7 +130,7 @@ return {
         {
           "<C-s>f",
           function()
-            require("grug-far").open({ prefills = { paths = escape_path(vim.fn.expand("%")) } })
+            open_grug({ prefills = { paths = escape_path(vim.fn.expand("%")), flags = "--fixed-strings" } })
           end,
           desc = "Search in current file (grug-far)",
         },
@@ -136,7 +143,7 @@ return {
         {
           "<C-s>d",
           function()
-            require("grug-far").open({ prefills = { paths = escape_path(vim.fn.expand("%:h")) } })
+            open_grug({ prefills = { paths = escape_path(vim.fn.expand("%:h")), flags = "--fixed-strings" } })
           end,
           desc = "Search in current directory (grug-far)",
         },
@@ -149,10 +156,11 @@ return {
         {
           "<C-s>w",
           function()
-            require("grug-far").open({
+            open_grug({
               prefills = {
                 search = vim.fn.expand("<cword>"),
                 flags  = "--fixed-strings --word-regexp",
+                paths = "",
               },
             })
           end,
@@ -161,9 +169,7 @@ return {
         {
           "<C-s>w",
           function()
-            require("grug-far").with_visual_selection({
-              prefills = { flags = "--fixed-strings --word-regexp" },
-            })
+            grug_visual({ flags = "--fixed-strings --word-regexp", paths = "" })
           end,
           mode = "v",
           desc = "Search whole word (selected text) (grug-far)",
