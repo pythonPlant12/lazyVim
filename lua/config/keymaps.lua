@@ -224,8 +224,8 @@ local function move_buf_to_win(dir)
   vim.api.nvim_set_current_win(target_win)
 end
 
-keymaps.set("n", "<C-h>", function() move_buf_to_win("h") end, { desc = "Move buffer to left window" })
-keymaps.set("n", "<C-l>", function() move_buf_to_win("l") end, { desc = "Move buffer to right window" })
+keymaps.set("n", "<C-h>", function() smart_jump("<C-o>") end, { desc = "Jump back" })
+keymaps.set("n", "<C-l>", function() smart_jump("<C-i>") end, { desc = "Jump forward" })
 
 -- Smart buffer goto: if the buffer is already visible in another tab, jump there
 local function smart_buf_goto(bufnr)
