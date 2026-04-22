@@ -69,6 +69,8 @@ vim.filetype.add({
       if buffer_has_template_markers(bufnr) then
         return "htmldjango"
       end
+
+      return "html"
     end,
   },
   pattern = {
