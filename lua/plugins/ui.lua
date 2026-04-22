@@ -498,7 +498,7 @@ return {
         grug_far_reuse.open_for_buffer(vim.api.nvim_get_current_buf(), {
           prefills = {
             paths = path:gsub(" ", "\\ "),
-            flags = "--fixed-strings",
+            flags = "--fixed-strings --ignore-case",
           },
         })
       end
