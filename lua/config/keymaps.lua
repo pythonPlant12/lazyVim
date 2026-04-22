@@ -4,6 +4,7 @@
 local keymaps = vim.keymap
 local opts = { noremap = true, silent = true }
 local lazygit_edit = require("config.lazygit_edit")
+local tab_jump = require("config.tab_jump")
 
 vim.keymap.set({ "n", "i", "x", "s" }, "<C-s>", "<Nop>", { noremap = true, silent = true })
 
@@ -16,12 +17,11 @@ keymaps.set("n", "<C-a>", "gg<S-v>G")
 
 -- Jumplist
 local function smart_jump(motion)
-  vim.api.nvim_feedkeys(
-    vim.api.nvim_replace_termcodes(motion, true, false, true), "n", false
-  )
+  tab_jump.jump(motion)
 end
 keymaps.set("n", "<leader>i", function() smart_jump("<C-o>") end, opts)
 keymaps.set("n", "<leader>o", function() smart_jump("<C-i>") end, opts)
+keymaps.set("n", "<C-o>", function() smart_jump("<C-o>") end, opts)
 
 keymaps.set("n", "zc", "za", opts)
 
@@ -138,6 +138,8 @@ end, { desc = "Show diagnostic message" })
 -- Go to function definition
 keymaps.set("n", "<C-S-CR>", function() Snacks.picker.lsp_definitions() end, { desc = "Go to definition" })
 keymaps.set("n", "<C-CR>", function() Snacks.picker.lsp_definitions() end, { desc = "Go to definition" })
+keymaps.set("n", "gd", function() Snacks.picker.lsp_definitions() end, { desc = "Go to definition" })
+keymaps.set("n", "gr", function() Snacks.picker.lsp_references() end, { desc = "Go to references" })
 
 keymaps.set("n", "<leader>fp", function()
   local root = vim.fn.systemlist("git rev-parse --show-toplevel")[1]
@@ -228,18 +230,7 @@ keymaps.set("n", "<C-l>", function() move_buf_to_win("l") end, { desc = "Move bu
 -- Smart buffer goto: if the buffer is already visible in another tab, jump there
 local function smart_buf_goto(bufnr)
   if not bufnr or bufnr <= 0 then return end
-  local cur_tab = vim.api.nvim_get_current_tabpage()
-  for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
-    if tab ~= cur_tab then
-      for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
-        if vim.api.nvim_win_get_buf(win) == bufnr then
-          vim.api.nvim_set_current_tabpage(tab)
-          vim.api.nvim_set_current_win(win)
-          return
-        end
-      end
-    end
-  end
+  if tab_jump.goto_visible_buf(bufnr) then return end
   vim.api.nvim_set_current_buf(bufnr)
 end
 

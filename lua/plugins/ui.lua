@@ -1,4 +1,5 @@
 local grug_far_reuse = require("config.grug_far_reuse")
+local tab_jump = require("config.tab_jump")
 
 local function remove_gl_key(_, keys)
   return vim.tbl_filter(function(k)
@@ -115,8 +116,7 @@ local function confirm_lsp_location(picker, item)
   end
 
   -- File not open in any tab, open it in current window
-  local escaped = vim.fn.fnameescape(path)
-  local ok, err = pcall(vim.cmd, "edit " .. escaped)
+  local ok, err = tab_jump.edit_or_goto_path(path)
   if not ok then
     vim.notify("Failed to open file: " .. (err or "unknown error"), vim.log.levels.ERROR)
     return
@@ -215,7 +215,27 @@ local function fzf_file_switch_or_edit(selected, opts)
 
   local path_mod = require("fzf-lua.path")
   local entry = path_mod.entry_to_file(selected[1], opts)
-  actions.file_edit(selected, opts)
+  local target = entry.path or entry.bufname
+  if not target then
+    return actions.file_edit(selected, opts)
+  end
+
+  local ok, err = tab_jump.edit_or_goto_path(target)
+  if not ok then
+    vim.notify("Failed to open file: " .. (err or "unknown error"), vim.log.levels.ERROR)
+    return
+  end
+
+  if (entry.line or 0) > 0 or (entry.col or 0) > 0 then
+    local row = math.max(1, entry.line or 1)
+    local col = math.max(1, entry.col or 1)
+    local set_ok = pcall(vim.cmd, ("keepjumps call cursor(%d, %d)"):format(row, col))
+    if not set_ok then
+      pcall(vim.api.nvim_win_set_cursor, 0, { row, col - 1 })
+    end
+    pcall(vim.cmd, "normal! zv")
+    pcall(vim.cmd, "normal! zz")
+  end
 end
 
 return {
@@ -834,8 +854,7 @@ return {
             end
 
             if path then
-              local escaped = vim.fn.fnameescape(path)
-              local ok, err = pcall(vim.cmd, "edit " .. escaped)
+              local ok, err = tab_jump.edit_or_goto_path(path)
               if not ok then
                 vim.notify("Failed to open file: " .. (err or "unknown error"), vim.log.levels.ERROR)
                 return
