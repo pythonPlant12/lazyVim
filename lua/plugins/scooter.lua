@@ -105,25 +105,27 @@ return {
         },
         {
           "<C-s>r",
-          function() open_grug() end,
+          function()
+            open_grug({ prefills = { flags = "--fixed-strings --ignore-case" } })
+          end,
           desc = "Search and Replace (grug-far)",
         },
         {
           "<C-s>r",
-          function() grug_visual() end,
+          function() grug_visual({ flags = "--fixed-strings --ignore-case" }) end,
           mode = "v",
           desc = "Search selected text (grug-far)",
         },
         {
           "<C-s>s",
           function()
-            open_grug({ prefills = { search = vim.fn.expand("<cword>"), flags = "--fixed-strings", paths = "" } })
+            open_grug({ prefills = { search = vim.fn.expand("<cword>"), flags = "--fixed-strings --ignore-case", paths = "" } })
           end,
           desc = "Search and Replace word under cursor (grug-far)",
         },
         {
           "<C-s>s",
-          function() grug_visual() end,
+          function() grug_visual({ flags = "--fixed-strings --ignore-case" }) end,
           mode = "v",
           desc = "Search and Replace selected text (grug-far)",
         },
@@ -143,13 +145,13 @@ return {
         {
           "<C-s>d",
           function()
-            open_grug({ prefills = { paths = escape_path(vim.fn.expand("%:h")), flags = "--fixed-strings" } })
+            open_grug({ prefills = { paths = escape_path(vim.fn.expand("%:h")), flags = "--fixed-strings --ignore-case" } })
           end,
           desc = "Search in current directory (grug-far)",
         },
         {
           "<C-s>d",
-          function() grug_visual({ paths = escape_path(vim.fn.expand("%:h")) }) end,
+          function() grug_visual({ paths = escape_path(vim.fn.expand("%:h")), flags = "--fixed-strings --ignore-case" }) end,
           mode = "v",
           desc = "Search selected text in current directory (grug-far)",
         },
@@ -159,7 +161,7 @@ return {
             open_grug({
               prefills = {
                 search = vim.fn.expand("<cword>"),
-                flags  = "--fixed-strings --word-regexp",
+                flags  = "--fixed-strings --word-regexp --case-sensitive",
                 paths = "",
               },
             })
@@ -169,7 +171,7 @@ return {
         {
           "<C-s>w",
           function()
-            grug_visual({ flags = "--fixed-strings --word-regexp", paths = "" })
+            grug_visual({ flags = "--fixed-strings --word-regexp --case-sensitive", paths = "" })
           end,
           mode = "v",
           desc = "Search whole word (selected text) (grug-far)",
