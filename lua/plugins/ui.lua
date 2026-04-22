@@ -1376,16 +1376,20 @@ return {
           if #clients == 0 then return "" end
           local parts = {}
           local seen = {}
+          local labels = {
+            cssls = "css",
+          }
           for _, c in ipairs(clients) do
-            if c.name == "eslint" or c.name == "copilot" then goto continue end
+            if c.name == "eslint" or c.name == "copilot" or c.name == "emmet_language_server" then goto continue end
             if not seen[c.name] then
               seen[c.name] = true
               local icon = lsp_icons[c.name] or "󰒋 "
               local hl = "LualineLsp_" .. c.name:gsub("[%-%.]", "_")
+              local label = labels[c.name] or c.name
               if lsp_colors[c.name] then
-                parts[#parts + 1] = "%#" .. hl .. "#" .. icon .. c.name .. "%#LualineLspBase#"
+                parts[#parts + 1] = "%#" .. hl .. "#" .. icon .. label .. "%#LualineLspBase#"
               else
-                parts[#parts + 1] = icon .. c.name
+                parts[#parts + 1] = icon .. label
               end
             end
             ::continue::
