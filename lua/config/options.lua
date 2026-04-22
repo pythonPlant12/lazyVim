@@ -5,7 +5,7 @@
 vim.o.smoothscroll = false
 
 vim.o.winborder = "rounded"
-vim.o.switchbuf = "useopen,usetab"
+vim.o.switchbuf = "useopen"
 
 vim.diagnostic.config({ signs = false })
 

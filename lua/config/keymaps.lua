@@ -16,30 +16,9 @@ keymaps.set("n", "<C-a>", "gg<S-v>G")
 
 -- Jumplist
 local function smart_jump(motion)
-  local pre_buf = vim.api.nvim_get_current_buf()
-  local pre_win = vim.api.nvim_get_current_win()
-  vim.g._tab_reuse_suppress = true
   vim.api.nvim_feedkeys(
     vim.api.nvim_replace_termcodes(motion, true, false, true), "n", false
   )
-  vim.schedule(function()
-    vim.g._tab_reuse_suppress = false
-    local post_buf = vim.api.nvim_get_current_buf()
-    if post_buf == pre_buf then return end
-    local cur_tab = vim.api.nvim_get_current_tabpage()
-    for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
-      if tab ~= cur_tab then
-        for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
-          if vim.api.nvim_win_get_buf(win) == post_buf then
-            vim.api.nvim_win_set_buf(pre_win, pre_buf)
-            vim.api.nvim_set_current_tabpage(tab)
-            vim.api.nvim_set_current_win(win)
-            return
-          end
-        end
-      end
-    end
-  end)
 end
 keymaps.set("n", "<leader>i", function() smart_jump("<C-o>") end, opts)
 keymaps.set("n", "<leader>o", function() smart_jump("<C-i>") end, opts)
@@ -1134,7 +1113,7 @@ end, { desc = "Reveal file in tree" })
 vim.keymap.set("n", "<leader>e", function()
   local cur_win = vim.api.nvim_get_current_win()
   local neotree_win = nil
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
     local buf = vim.api.nvim_win_get_buf(win)
     local ft = vim.api.nvim_get_option_value("filetype", { buf = buf })
     local cfg = vim.api.nvim_win_get_config(win)

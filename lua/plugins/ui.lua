@@ -1,4 +1,3 @@
-local tab_reuse = require("config.tab_reuse")
 local grug_far_reuse = require("config.grug_far_reuse")
 
 local function remove_gl_key(_, keys)
@@ -115,12 +114,6 @@ local function confirm_lsp_location(picker, item)
     return
   end
 
-  -- Try to jump to existing window with the file
-  if tab_reuse.jump_to_path(path, { prefer_other_tabs = true }) then
-    apply_item_pos(item)
-    return
-  end
-
   -- File not open in any tab, open it in current window
   local escaped = vim.fn.fnameescape(path)
   local ok, err = pcall(vim.cmd, "edit " .. escaped)
@@ -222,19 +215,6 @@ local function fzf_file_switch_or_edit(selected, opts)
 
   local path_mod = require("fzf-lua.path")
   local entry = path_mod.entry_to_file(selected[1], opts)
-  local target = entry.path or entry.bufname
-  if target and tab_reuse.jump_to_path(target, { prefer_other_tabs = true }) then
-    if (entry.line or 0) > 0 or (entry.col or 0) > 0 then
-      local row = math.max(1, entry.line)
-      local col = math.max(1, entry.col)
-      local ok = pcall(vim.cmd, ("keepjumps call cursor(%d, %d)"):format(row, col))
-      if not ok then
-        pcall(vim.api.nvim_win_set_cursor, 0, { row, col - 1 })
-      end
-    end
-    return
-  end
-
   actions.file_edit(selected, opts)
 end
 
@@ -324,6 +304,15 @@ return {
       {
         "<leader>e",
         function()
+          local manager = require("neo-tree.sources.manager")
+          local state = manager.get_state("filesystem", nil, nil)
+          if state then
+            local cur_tab_wins = vim.api.nvim_tabpage_list_wins(0)
+            if state.winid and not vim.tbl_contains(cur_tab_wins, state.winid) then
+              state.winid = nil
+              state.bufnr = nil
+            end
+          end
           require("neo-tree.command").execute({ toggle = true, reveal = true, dir = LazyVim.root() })
         end,
         desc = "Explorer NeoTree (reveal current file)",
@@ -331,6 +320,15 @@ return {
       {
         "<leader>fe",
         function()
+          local manager = require("neo-tree.sources.manager")
+          local state = manager.get_state("filesystem", nil, nil)
+          if state then
+            local cur_tab_wins = vim.api.nvim_tabpage_list_wins(0)
+            if state.winid and not vim.tbl_contains(cur_tab_wins, state.winid) then
+              state.winid = nil
+              state.bufnr = nil
+            end
+          end
           require("neo-tree.command").execute({ toggle = true, reveal = true, dir = LazyVim.root() })
         end,
         desc = "Explorer NeoTree (reveal current file)",
@@ -574,9 +572,6 @@ return {
             confirm = function(picker, item)
               if not item then return end
               picker:close()
-              if item.buf and tab_reuse.jump_to_buf(item.buf, { prefer_other_tabs = true }) then
-                return
-              end
               if item.buf then
                 vim.api.nvim_set_current_buf(item.buf)
               end
@@ -669,9 +664,6 @@ return {
             confirm = function(picker, item)
               if not item then return end
               picker:close()
-              if item.buf and tab_reuse.jump_to_buf(item.buf, { prefer_other_tabs = true }) then
-                return
-              end
               if item.buf then
                 vim.api.nvim_set_current_buf(item.buf)
               end
@@ -830,16 +822,10 @@ return {
               local thumb = generate_video_thumbnail(path)
               if thumb then
                 local bufnr = vim.fn.bufnr(path)
-                if bufnr ~= -1 and tab_reuse.jump_to_buf(bufnr, { prefer_other_tabs = true }) then
-                  Snacks.image.buf.attach(bufnr, { src = thumb })
-                  return
-                end
-
                 if bufnr == -1 then
                   bufnr = vim.api.nvim_create_buf(true, false)
                   vim.api.nvim_buf_set_name(bufnr, path)
                 end
-
                 vim.bo[bufnr].buflisted = true
                 vim.api.nvim_set_current_buf(bufnr)
                 Snacks.image.buf.attach(bufnr, { src = thumb })
@@ -847,26 +833,18 @@ return {
               end
             end
 
-            if path and tab_reuse.jump_to_path(path, { prefer_other_tabs = true }) then
+            if path then
+              local escaped = vim.fn.fnameescape(path)
+              local ok, err = pcall(vim.cmd, "edit " .. escaped)
+              if not ok then
+                vim.notify("Failed to open file: " .. (err or "unknown error"), vim.log.levels.ERROR)
+                return
+              end
               apply_item_pos(item)
               return
             end
 
             local bufnr = item.buf
-            if not bufnr and path then
-              bufnr = vim.fn.bufnr(path)
-              if bufnr == -1 then
-                vim.cmd("edit " .. vim.fn.fnameescape(path))
-                apply_item_pos(item)
-                return
-              end
-            end
-
-            if bufnr and tab_reuse.jump_to_buf(bufnr, { prefer_other_tabs = true }) then
-              apply_item_pos(item)
-              return
-            end
-
             if not bufnr then return end
             vim.bo[bufnr].buflisted = true
             vim.api.nvim_set_current_buf(bufnr)

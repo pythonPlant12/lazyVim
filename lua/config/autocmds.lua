@@ -467,18 +467,6 @@ vim.api.nvim_create_autocmd("BufEnter", {
 do
   vim.g.buf_history = vim.g.buf_history or {}
 
-  local guard = false
-
-  local function is_picker_open()
-    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(vim.api.nvim_get_current_tabpage())) do
-      local ok, ft = pcall(function()
-        return vim.bo[vim.api.nvim_win_get_buf(win)].filetype or ""
-      end)
-      if ok and (ft:find("^snacks_picker") or ft == "grug-far") then return true end
-    end
-    return false
-  end
-
   local function push_buf_history(bufnr)
     local h = vim.g.buf_history
     if h[#h] == bufnr then return end
@@ -488,46 +476,11 @@ do
   end
 
   vim.api.nvim_create_autocmd("BufEnter", {
-    group = vim.api.nvim_create_augroup("TabReuseOnBufEnter", { clear = true }),
+    group = vim.api.nvim_create_augroup("BufHistory", { clear = true }),
     callback = function(ev)
-      if guard then return end
-      if vim.g._tab_reuse_suppress then return end
       if vim.bo[ev.buf].buftype ~= "" then return end
       if vim.api.nvim_buf_get_name(ev.buf) == "" then return end
-      if is_picker_open() then return end
-
       push_buf_history(ev.buf)
-
-      local cur_tab = vim.api.nvim_get_current_tabpage()
-      local cur_win = vim.api.nvim_get_current_win()
-      local target_tab, target_win
-
-      for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
-        if tab ~= cur_tab then
-          for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
-            if vim.api.nvim_win_get_buf(win) == ev.buf then
-              target_tab, target_win = tab, win
-              break
-            end
-          end
-          if target_tab then break end
-        end
-      end
-
-      if not target_tab then return end
-
-      guard = true
-      vim.schedule(function()
-        local prev = vim.fn.bufnr('#')
-        if prev > 0 and prev ~= ev.buf and vim.api.nvim_buf_is_valid(prev) then
-          vim.api.nvim_win_set_buf(cur_win, prev)
-        else
-          vim.api.nvim_win_call(cur_win, function() vim.cmd("bprevious") end)
-        end
-        vim.api.nvim_set_current_tabpage(target_tab)
-        vim.api.nvim_set_current_win(target_win)
-        guard = false
-      end)
     end,
   })
 end
