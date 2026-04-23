@@ -1370,6 +1370,50 @@ return {
       setup_lsp_hl()
       vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_lsp_hl })
 
+      local function refresh_statusline_colors(full)
+        setup_breadcrumb_hl()
+        setup_git_hl()
+        setup_diag_hl()
+        setup_lsp_hl()
+        if full then
+          setup_lualine_theme_hl()
+        else
+          local ok, lualine = pcall(require, "lualine")
+          if ok then
+            lualine.refresh({ place = { "statusline" } })
+          else
+            vim.cmd("redrawstatus")
+          end
+        end
+      end
+
+      local refresh_group = vim.api.nvim_create_augroup("LualineStatuslineRefresh", { clear = true })
+      vim.api.nvim_create_autocmd("ColorScheme", {
+        group = refresh_group,
+        callback = function()
+          vim.schedule(function()
+            refresh_statusline_colors(true)
+          end)
+        end,
+      })
+      vim.api.nvim_create_autocmd("OptionSet", {
+        group = refresh_group,
+        pattern = "background",
+        callback = function()
+          vim.schedule(function()
+            refresh_statusline_colors(true)
+          end)
+        end,
+      })
+      vim.api.nvim_create_autocmd({ "VimResized", "WinResized", "FocusGained", "TabEnter" }, {
+        group = refresh_group,
+        callback = function()
+          vim.schedule(function()
+            refresh_statusline_colors(false)
+          end)
+        end,
+      })
+
       table.insert(opts.sections.lualine_x, {
         function()
           local clients = vim.lsp.get_clients({ bufnr = 0 })
@@ -1467,7 +1511,13 @@ return {
       opts.sections.lualine_z = {}
       opts.sections.lualine_y = {}
 
-      local function style_chip(component, bg)
+      local function chip_bgs()
+        return vim.o.background == "light"
+          and { "#D5D0CA", "#D5D0CA", "#D5D0CA" }
+          or  { "#3A3D41", "#42464D", "#4A4F57" }
+      end
+
+      local function style_chip(component, bg_fn)
         local comp = component
         if type(comp) == "function" then
           comp = { comp }
@@ -1490,7 +1540,7 @@ return {
             color = existing_color or {}
           end
           color.fg = color.fg or (vim.o.background == "light" and "#4C4F69" or "#CED0D6")
-          color.bg = bg
+          color.bg = bg_fn()
           return color
         end
 
@@ -1498,17 +1548,17 @@ return {
       end
 
       opts.sections.lualine_c = opts.sections.lualine_c or {}
-      local chip_bgs = vim.o.background == "light"
-        and { "#D5D0CA", "#D5D0CA", "#D5D0CA" }
-        or  { "#3A3D41", "#42464D", "#4A4F57" }
       local chip_index = 1
       local styled_c = {}
       for _, comp in ipairs(opts.sections.lualine_c) do
         local head = type(comp) == "table" and comp[1] or comp
         local is_path_like = type(head) == "function" or head == "filename"
         if is_path_like then
-          local bg = chip_bgs[((chip_index - 1) % #chip_bgs) + 1]
-          local styled_comp = style_chip(comp, bg)
+          local bg_fn = function()
+            local bgs = chip_bgs()
+            return bgs[((chip_index - 1) % #bgs) + 1]
+          end
+          local styled_comp = style_chip(comp, bg_fn)
           if chip_index == 1 then
             styled_comp.padding = { left = 1, right = 0 }
             local path_fn = LazyVim.lualine.pretty_path({ filename_hl = "", directory_hl = "" })
@@ -1557,11 +1607,13 @@ return {
           end
           table.insert(styled_c, styled_comp)
           if chip_index == 1 then
-            local sep_bg = chip_bgs[1]
-            local sep_comp = style_chip({ function() return "|" end }, sep_bg)
+            local sep_bg_fn = function()
+              return chip_bgs()[1]
+            end
+            local sep_comp = style_chip({ function() return "|" end }, sep_bg_fn)
             sep_comp.padding = { left = 1, right = 1 }
             sep_comp.color = function()
-              return { fg = vim.o.background == "light" and "#9B9792" or "#6B6F75", bg = sep_bg }
+              return { fg = vim.o.background == "light" and "#9B9792" or "#6B6F75", bg = sep_bg_fn() }
             end
             sep_comp.cond = function()
               return breadcrumb_symbols ~= nil

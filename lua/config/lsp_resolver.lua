@@ -254,7 +254,7 @@ function M.python_exec_from_venv(venv_dir, executable)
 end
 
 function M.python_root_info(bufnr)
-  local fname = vim.api.nvim_buf_get_name(bufnr)
+  local fname = type(bufnr) == "string" and bufnr or vim.api.nvim_buf_get_name(bufnr)
   local file_dir = dir_of(fname)
   local root = M.workspace_root()
 

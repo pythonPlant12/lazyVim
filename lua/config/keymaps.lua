@@ -1132,6 +1132,17 @@ local function get_pyright_client()
   return nil, nil
 end
 
+local function python_type_check_settings_patch(server_name, mode)
+  local root = server_name == "basedpyright" and "basedpyright" or "python"
+  return {
+    [root] = {
+      analysis = {
+        typeCheckingMode = mode,
+      },
+    },
+  }
+end
+
 local function read_config_file(path)
   local f = io.open(path, "r")
   if not f then return nil end
@@ -1342,9 +1353,9 @@ keymaps.set("n", "<leader>Lpt", function()
   }, function(choice)
     if not choice then return end
     vim.g.pyright_type_checking_mode = choice.value
-    client.settings = vim.tbl_deep_extend("force", client.settings or {}, {
-      python = { analysis = { typeCheckingMode = choice.value } },
-    })
+    local patch = python_type_check_settings_patch(name, choice.value)
+    client.settings = vim.tbl_deep_extend("force", client.settings or {}, patch)
+    client.config.settings = vim.tbl_deep_extend("force", client.config.settings or {}, patch)
     client:notify("workspace/didChangeConfiguration", { settings = client.settings })
     vim.notify("typeCheckingMode = " .. choice.value, vim.log.levels.INFO, { title = name })
   end)

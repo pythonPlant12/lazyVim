@@ -31,7 +31,7 @@ local function command_check_lsp()
     "  vtsls  -> " .. frontend_roots.vtsls,
     "  vue_ls -> " .. frontend_roots.vue_ls,
     "  eslint -> " .. frontend_roots.eslint,
-    "  pyright -> " .. py_root .. " [" .. py_source .. "]",
+    "  python-lsp -> " .. py_root .. " [" .. py_source .. "]",
     "  ruff    -> " .. py_root .. " [" .. py_source .. "]",
     "",
     "python executables:",

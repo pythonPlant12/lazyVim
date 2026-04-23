@@ -49,42 +49,65 @@ return {
     opts = function(_, opts)
       opts = opts or {}
       opts.servers = opts.servers or {}
+      opts.setup = opts.setup or {}
 
       opts.servers.pylsp = { enabled = false }
-
-      opts.servers.pyright = vim.tbl_deep_extend("force", opts.servers.pyright or {}, {
-        root_dir = function(bufnr, on_dir)
-          on_dir(resolver.python_root(bufnr))
-        end,
-      })
-      merge_before_init(opts.servers.pyright, apply_python_path_from_venv)
+      opts.servers.pyright = { enabled = false }
 
       opts.servers.basedpyright = vim.tbl_deep_extend("force", opts.servers.basedpyright or {}, {
-        root_dir = function(bufnr, on_dir)
-          on_dir(resolver.python_root(bufnr))
+        root_dir = function(fname)
+          return resolver.python_root(fname)
         end,
+        settings = {
+          basedpyright = {
+            analysis = {
+              autoSearchPaths = true,
+              diagnosticMode = "openFilesOnly",
+              typeCheckingMode = "standard",
+              useLibraryCodeForTypes = true,
+            },
+          },
+        },
       })
       merge_before_init(opts.servers.basedpyright, apply_python_path_from_venv)
 
       opts.servers.ruff = vim.tbl_deep_extend("force", opts.servers.ruff or {}, {
-        root_dir = function(bufnr, on_dir)
-          on_dir(resolver.python_root(bufnr))
+        root_dir = function(fname)
+          return resolver.python_root(fname)
         end,
       })
       merge_before_init(opts.servers.ruff, apply_ruff_cmd_from_venv)
 
       opts.servers.ruff_lsp = vim.tbl_deep_extend("force", opts.servers.ruff_lsp or {}, {
-        root_dir = function(bufnr, on_dir)
-          on_dir(resolver.python_root(bufnr))
+        root_dir = function(fname)
+          return resolver.python_root(fname)
         end,
       })
 
       opts.servers.jinja_lsp = vim.tbl_deep_extend("force", opts.servers.jinja_lsp or {}, {
         filetypes = { "html", "jinja", "jinja2", "htmldjango" },
-        root_dir = function(bufnr, on_dir)
-          on_dir(resolver.python_root(bufnr))
+        root_dir = function(fname)
+          return resolver.python_root(fname)
         end,
       })
+
+      local lspconfig = require("lspconfig")
+      opts.setup.basedpyright = function(_, server_opts)
+        lspconfig.basedpyright.setup(server_opts)
+        return true
+      end
+      opts.setup.ruff = function(_, server_opts)
+        lspconfig.ruff.setup(server_opts)
+        return true
+      end
+      opts.setup.ruff_lsp = function(_, server_opts)
+        lspconfig.ruff_lsp.setup(server_opts)
+        return true
+      end
+      opts.setup.jinja_lsp = function(_, server_opts)
+        lspconfig.jinja_lsp.setup(server_opts)
+        return true
+      end
 
       return opts
     end,

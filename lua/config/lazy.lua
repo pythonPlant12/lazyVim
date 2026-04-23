@@ -8,6 +8,7 @@ end
 vim.opt.rtp:prepend(vim.env.LAZY or lazypath)
 
 vim.g.lazyvim_eslint_auto_format = false
+vim.g.lazyvim_python_lsp = "basedpyright"
 
 require("lazy").setup({
   spec = {
