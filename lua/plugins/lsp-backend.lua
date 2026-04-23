@@ -1,4 +1,5 @@
 local resolver = require("config.lsp_resolver")
+local python_lsp_settings = require("config.python_lsp_settings")
 
 local function merge_before_init(server_opts, hook)
   local previous = server_opts.before_init
@@ -58,16 +59,7 @@ return {
         root_dir = function(fname)
           return resolver.python_root(fname)
         end,
-        settings = {
-          basedpyright = {
-            analysis = {
-              autoSearchPaths = true,
-              diagnosticMode = "openFilesOnly",
-              typeCheckingMode = "standard",
-              useLibraryCodeForTypes = true,
-            },
-          },
-        },
+        settings = python_lsp_settings.server_settings("basedpyright"),
       })
       merge_before_init(opts.servers.basedpyright, apply_python_path_from_venv)
 

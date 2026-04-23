@@ -5,6 +5,7 @@ local keymaps = vim.keymap
 local opts = { noremap = true, silent = true }
 local lazygit_edit = require("config.lazygit_edit")
 local tab_jump = require("config.tab_jump")
+local python_lsp_settings = require("config.python_lsp_settings")
 
 vim.keymap.set({ "n", "i", "x", "s" }, "<C-s>", "<Nop>", { noremap = true, silent = true })
 
@@ -1143,6 +1144,62 @@ local function python_type_check_settings_patch(server_name, mode)
   }
 end
 
+local function with_python_client(fn)
+  if vim.bo.filetype ~= "python" then
+    vim.notify("Not a Python buffer", vim.log.levels.WARN, { title = "Python" })
+    return
+  end
+  local client, name = get_pyright_client()
+  if not client then
+    vim.notify("No pyright/basedpyright attached", vim.log.levels.WARN, { title = "Python" })
+    return
+  end
+  return fn(client, name)
+end
+
+local function apply_python_server_value(client, server_name, path, value)
+  python_lsp_settings.set_value(server_name, path, value)
+  return python_lsp_settings.apply_to_client(client, server_name)
+end
+
+local function toggle_python_server_value(path, label)
+  with_python_client(function(client, name)
+    local current = python_lsp_settings.get_value(name, path)
+    local next_value = not current
+    apply_python_server_value(client, name, path, next_value)
+    vim.notify(label .. " = " .. tostring(next_value), vim.log.levels.INFO, { title = name })
+  end)
+end
+
+local function select_python_server_value(path, values, label)
+  with_python_client(function(client, name)
+    local current = python_lsp_settings.get_value(name, path)
+    local items = {}
+    for _, value in ipairs(values) do
+      local marker = value == current and " \u{25cf}" or ""
+      items[#items + 1] = { label = tostring(value) .. marker, value = value }
+    end
+    vim.ui.select(items, {
+      prompt = label .. " (" .. name .. "):",
+      format_item = function(item) return item.label end,
+    }, function(choice)
+      if not choice then return end
+      apply_python_server_value(client, name, path, choice.value)
+      vim.notify(label .. " = " .. tostring(choice.value), vim.log.levels.INFO, { title = name })
+    end)
+  end)
+end
+
+local function run_basedpyright_command(command, arguments)
+  with_python_client(function(_, name)
+    if name ~= "basedpyright" then
+      vim.notify("Command requires basedpyright", vim.log.levels.WARN, { title = "Python" })
+      return
+    end
+    vim.lsp.buf.execute_command({ command = command, arguments = arguments or {} })
+  end)
+end
+
 local function read_config_file(path)
   local f = io.open(path, "r")
   if not f then return nil end
@@ -1327,39 +1384,87 @@ local function detect_indent()
 end
 
 keymaps.set("n", "<leader>Lpt", function()
-  if vim.bo.filetype ~= "python" then
-    vim.notify("Not a Python buffer", vim.log.levels.WARN, { title = "Python" })
-    return
-  end
-  local client, name = get_pyright_client()
-  if not client then
-    vim.notify("No pyright/basedpyright attached", vim.log.levels.WARN, { title = "Python" })
-    return
-  end
-  local modes = { "off", "basic", "standard", "strict" }
-  if name == "basedpyright" then
-    table.insert(modes, "recommended")
-    table.insert(modes, "all")
-  end
-  local current = vim.g.pyright_type_checking_mode or read_project_type_checking_mode(name)
-  local items = {}
-  for _, m in ipairs(modes) do
-    local marker = m == current and " \u{25cf}" or ""
-    table.insert(items, { label = m .. marker, value = m })
-  end
-  vim.ui.select(items, {
-    prompt = "Type checking mode (" .. name .. "):",
-    format_item = function(item) return item.label end,
-  }, function(choice)
-    if not choice then return end
-    vim.g.pyright_type_checking_mode = choice.value
-    local patch = python_type_check_settings_patch(name, choice.value)
-    client.settings = vim.tbl_deep_extend("force", client.settings or {}, patch)
-    client.config.settings = vim.tbl_deep_extend("force", client.config.settings or {}, patch)
-    client:notify("workspace/didChangeConfiguration", { settings = client.settings })
-    vim.notify("typeCheckingMode = " .. choice.value, vim.log.levels.INFO, { title = name })
+  with_python_client(function(client, name)
+    local modes = { "off", "basic", "standard", "strict" }
+    if name == "basedpyright" then
+      table.insert(modes, "recommended")
+      table.insert(modes, "all")
+    end
+    local persisted = python_lsp_settings.get_value(name, { "analysis", "typeCheckingMode" }, { user_only = true })
+    local current = persisted or read_project_type_checking_mode(name)
+    local items = {}
+    for _, m in ipairs(modes) do
+      local marker = m == current and " \u{25cf}" or ""
+      table.insert(items, { label = m .. marker, value = m })
+    end
+    vim.ui.select(items, {
+      prompt = "Type checking mode (" .. name .. "):",
+      format_item = function(item) return item.label end,
+    }, function(choice)
+      if not choice then return end
+      apply_python_server_value(client, name, { "analysis", "typeCheckingMode" }, choice.value)
+      vim.notify("typeCheckingMode = " .. choice.value, vim.log.levels.INFO, { title = name })
+    end)
   end)
 end, { desc = "Type check level" })
+
+keymaps.set({ "n", "v" }, "<leader>Lpc", function()
+  with_python_client(function()
+    vim.lsp.buf.code_action()
+  end)
+end, { desc = "Python code actions" })
+
+keymaps.set("n", "<leader>Lpi", function()
+  run_basedpyright_command("basedpyright.organizeimports", { vim.uri_from_bufnr(0) })
+end, { desc = "Python organize imports" })
+
+keymaps.set("n", "<leader>Lpr", function()
+  run_basedpyright_command("basedpyright.restartserver")
+end, { desc = "Python restart server" })
+
+keymaps.set("n", "<leader>Lpb", function()
+  run_basedpyright_command("basedpyright.writeBaseline")
+end, { desc = "Python write baseline" })
+
+keymaps.set("n", "<leader>Lpa", function()
+  toggle_python_server_value({ "analysis", "autoImportCompletions" }, "autoImportCompletions")
+end, { desc = "Toggle auto import completions" })
+
+keymaps.set("n", "<leader>Lpf", function()
+  toggle_python_server_value({ "analysis", "autoFormatStrings" }, "autoFormatStrings")
+end, { desc = "Toggle auto format strings" })
+
+keymaps.set("n", "<leader>Lpy", function()
+  toggle_python_server_value({ "analysis", "useTypingExtensions" }, "useTypingExtensions")
+end, { desc = "Toggle typing extensions" })
+
+keymaps.set("n", "<leader>Lpd", function()
+  select_python_server_value({ "analysis", "diagnosticMode" }, { "openFilesOnly", "workspace" }, "diagnosticMode")
+end, { desc = "Diagnostic mode" })
+
+keymaps.set("n", "<leader>Lph", function()
+  toggle_python_server_value({ "disableTaggedHints" }, "disableTaggedHints")
+end, { desc = "Toggle tagged hints" })
+
+keymaps.set("n", "<leader>Lpv", function()
+  toggle_python_server_value({ "analysis", "inlayHints", "variableTypes" }, "inlayHints.variableTypes")
+end, { desc = "Toggle variable type hints" })
+
+keymaps.set("n", "<leader>Lpn", function()
+  toggle_python_server_value({ "analysis", "inlayHints", "callArgumentNames" }, "inlayHints.callArgumentNames")
+end, { desc = "Toggle argument name hints" })
+
+keymaps.set("n", "<leader>Lpm", function()
+  toggle_python_server_value({ "analysis", "inlayHints", "callArgumentNamesMatching" }, "inlayHints.callArgumentNamesMatching")
+end, { desc = "Toggle matching argument hints" })
+
+keymaps.set("n", "<leader>LpR", function()
+  toggle_python_server_value({ "analysis", "inlayHints", "functionReturnTypes" }, "inlayHints.functionReturnTypes")
+end, { desc = "Toggle return type hints" })
+
+keymaps.set("n", "<leader>Lpg", function()
+  toggle_python_server_value({ "analysis", "inlayHints", "genericTypes" }, "inlayHints.genericTypes")
+end, { desc = "Toggle generic type hints" })
 
 keymaps.set("n", "<leader>Lsi", function()
   local ft = vim.bo.filetype
@@ -1448,9 +1553,14 @@ keymaps.set("n", "<leader>LI", function()
     lines[#lines + 1] = "type checking:"
     local client, name = get_pyright_client()
     if client then
-      local mode = vim.g.pyright_type_checking_mode or read_project_type_checking_mode(name)
-      local mode_source = vim.g.pyright_type_checking_mode and "manual override" or "project/default"
+      local persisted_mode = python_lsp_settings.get_value(name, { "analysis", "typeCheckingMode" }, { user_only = true })
+      local mode = persisted_mode or read_project_type_checking_mode(name)
+      local mode_source = persisted_mode and "persistent override" or "project/default"
       lines[#lines + 1] = string.format("  %s: %s (%s)", name, mode, mode_source)
+      lines[#lines + 1] = string.format("  diagnosticMode: %s", python_lsp_settings.get_value(name, { "analysis", "diagnosticMode" }))
+      lines[#lines + 1] = string.format("  autoImportCompletions: %s", tostring(python_lsp_settings.get_value(name, { "analysis", "autoImportCompletions" })))
+      lines[#lines + 1] = string.format("  autoFormatStrings: %s", tostring(python_lsp_settings.get_value(name, { "analysis", "autoFormatStrings" })))
+      lines[#lines + 1] = string.format("  state file: %s", python_lsp_settings.state_file())
     else
       lines[#lines + 1] = "  (no pyright/basedpyright attached)"
     end
