@@ -112,3 +112,45 @@ attached clients:
   tailwindcss -> /Users/nikita/programming/airconsole/projects/airconsole-appengine/packages/store
   vtsls -> /Users/nikita/programming/airconsole/projects/airconsole-appengine/packages/store
 ```
+
+---
+
+# Rust LSP Guide
+
+## Active Rust LSP servers
+
+- `rust-analyzer` (via `rustaceanvim`): type inference, inline diagnostics, code actions
+- `bacon-ls`: continuous background checker — pushes `cargo check`/`clippy` diagnostics without saving
+
+Implementation locations:
+
+- `lua/plugins/lang-rust.lua` (LazyVim rust extra + rustaceanvim overrides)
+- `lua/plugins/lsp-rust.lua` (bacon-ls + rust-analyzer experimental settings)
+
+## How it works
+
+`rust-analyzer` provides real-time diagnostics from its own analysis engine (type mismatches, borrow checker via `experimental.enable = true`). These update as you type.
+
+`bacon` runs `cargo check` continuously in the background as a separate process. `bacon-ls` reads its output and pushes the results into Neovim as LSP diagnostics. This replaces the default `checkOnSave` behavior, so you get compiler errors without needing to save.
+
+`checkOnSave = false` is set in `lang-rust.lua` so `rustaceanvim` does not run a competing `cargo check`.
+
+## Setup (one-time per machine)
+
+Install `bacon` and `bacon-ls` via mason (`:MasonInstall bacon bacon-ls`), or globally:
+
+```sh
+cargo install bacon bacon-ls
+```
+
+Then in each Rust project root, start bacon in a terminal:
+
+```sh
+bacon
+```
+
+bacon writes its output to `.bacon-locations` which `bacon-ls` reads automatically.
+
+## Check command
+
+Use `:CheckLsp` to see attached clients and their roots for the current buffer.

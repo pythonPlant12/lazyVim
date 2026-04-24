@@ -879,6 +879,10 @@ return {
       notifier = {
         style = "compact",
       },
+      statuscolumn = {
+        left = { "sign" },
+        right = { "fold", "git" },
+      },
     },
   },
   {
@@ -1377,6 +1381,12 @@ return {
         setup_lsp_hl()
         if full then
           setup_lualine_theme_hl()
+          setup_breadcrumb_hl()
+          setup_git_hl()
+          setup_diag_hl()
+          setup_lsp_hl()
+          local ok, lualine = pcall(require, "lualine")
+          if ok then lualine.refresh({ place = { "statusline" } }) end
         else
           local ok, lualine = pcall(require, "lualine")
           if ok then
