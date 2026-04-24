@@ -1426,45 +1426,33 @@ keymaps.set("n", "<leader>Lpb", function()
   run_basedpyright_command("basedpyright.writeBaseline")
 end, { desc = "Python write baseline" })
 
-keymaps.set("n", "<leader>Lpa", function()
-  toggle_python_server_value({ "analysis", "autoImportCompletions" }, "autoImportCompletions")
-end, { desc = "Toggle auto import completions" })
+local function python_snacks_toggle(path, name, lhs)
+  Snacks.toggle({
+    name = name,
+    get = function()
+      return python_lsp_settings.get_value("basedpyright", path) == true
+    end,
+    set = function(state)
+      with_python_client(function(client, server_name)
+        apply_python_server_value(client, server_name, path, state)
+      end)
+    end,
+  }):map(lhs)
+end
 
-keymaps.set("n", "<leader>Lpf", function()
-  toggle_python_server_value({ "analysis", "autoFormatStrings" }, "autoFormatStrings")
-end, { desc = "Toggle auto format strings" })
-
-keymaps.set("n", "<leader>Lpy", function()
-  toggle_python_server_value({ "analysis", "useTypingExtensions" }, "useTypingExtensions")
-end, { desc = "Toggle typing extensions" })
+python_snacks_toggle({ "analysis", "autoImportCompletions" },        "Auto import completions",     "<leader>Lpa")
+python_snacks_toggle({ "analysis", "autoFormatStrings" },            "Auto format strings",         "<leader>Lpf")
+python_snacks_toggle({ "analysis", "useTypingExtensions" },          "Typing extensions",           "<leader>Lpy")
+python_snacks_toggle({ "disableTaggedHints" },                       "Tagged hints",                "<leader>Lph")
+python_snacks_toggle({ "analysis", "inlayHints", "variableTypes" },  "Variable type hints",         "<leader>Lpv")
+python_snacks_toggle({ "analysis", "inlayHints", "callArgumentNames" },         "Argument name hints",         "<leader>Lpn")
+python_snacks_toggle({ "analysis", "inlayHints", "callArgumentNamesMatching" }, "Matching argument hints",     "<leader>Lpm")
+python_snacks_toggle({ "analysis", "inlayHints", "functionReturnTypes" },       "Function return type hints",  "<leader>LpR")
+python_snacks_toggle({ "analysis", "inlayHints", "genericTypes" },              "Generic type hints",          "<leader>Lpg")
 
 keymaps.set("n", "<leader>Lpd", function()
   select_python_server_value({ "analysis", "diagnosticMode" }, { "openFilesOnly", "workspace" }, "diagnosticMode")
 end, { desc = "Diagnostic mode" })
-
-keymaps.set("n", "<leader>Lph", function()
-  toggle_python_server_value({ "disableTaggedHints" }, "disableTaggedHints")
-end, { desc = "Toggle tagged hints" })
-
-keymaps.set("n", "<leader>Lpv", function()
-  toggle_python_server_value({ "analysis", "inlayHints", "variableTypes" }, "inlayHints.variableTypes")
-end, { desc = "Toggle variable type hints" })
-
-keymaps.set("n", "<leader>Lpn", function()
-  toggle_python_server_value({ "analysis", "inlayHints", "callArgumentNames" }, "inlayHints.callArgumentNames")
-end, { desc = "Toggle argument name hints" })
-
-keymaps.set("n", "<leader>Lpm", function()
-  toggle_python_server_value({ "analysis", "inlayHints", "callArgumentNamesMatching" }, "inlayHints.callArgumentNamesMatching")
-end, { desc = "Toggle matching argument hints" })
-
-keymaps.set("n", "<leader>LpR", function()
-  toggle_python_server_value({ "analysis", "inlayHints", "functionReturnTypes" }, "inlayHints.functionReturnTypes")
-end, { desc = "Toggle return type hints" })
-
-keymaps.set("n", "<leader>Lpg", function()
-  toggle_python_server_value({ "analysis", "inlayHints", "genericTypes" }, "inlayHints.genericTypes")
-end, { desc = "Toggle generic type hints" })
 
 keymaps.set("n", "<leader>Lsi", function()
   local ft = vim.bo.filetype
@@ -1616,3 +1604,7 @@ vim.schedule(function()
     { "<leader>E",  group = "Errors" },
   })
 end)
+
+keymaps.set("n", "<leader>Lps", function()
+  require("config.stub_generator").add_stub_for_diagnostic()
+end, { desc = "Add stub for diagnostic" })

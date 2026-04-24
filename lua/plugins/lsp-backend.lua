@@ -1,5 +1,35 @@
 local resolver = require("config.lsp_resolver")
 local python_lsp_settings = require("config.python_lsp_settings")
+local stub_generator = require("config.stub_generator")
+stub_generator.setup()
+
+local function apply_stub_paths(_, config)
+  local stub_paths = {}
+  local ms_stubs = vim.fn.stdpath("data") .. "/lazy/python-type-stubs"
+  if vim.fn.isdirectory(ms_stubs) == 1 then
+    table.insert(stub_paths, ms_stubs)
+  end
+  local custom_stubs = vim.fn.stdpath("config") .. "/stubs"
+  if vim.fn.isdirectory(custom_stubs) == 1 then
+    table.insert(stub_paths, custom_stubs)
+  end
+  if #stub_paths == 0 then return end
+  config.settings = config.settings or {}
+  config.settings.basedpyright = config.settings.basedpyright or {}
+  config.settings.basedpyright.analysis = config.settings.basedpyright.analysis or {}
+  -- basedpyright only accepts a single stubPath string; use the first match
+  -- and append custom stubs second so they take precedence via order
+  if not config.settings.basedpyright.analysis.stubPath then
+    config.settings.basedpyright.analysis.stubPath = stub_paths[1]
+  end
+  if #stub_paths > 1 then
+    local extra = config.settings.basedpyright.analysis.extraPaths or {}
+    for i = 2, #stub_paths do
+      table.insert(extra, stub_paths[i])
+    end
+    config.settings.basedpyright.analysis.extraPaths = extra
+  end
+end
 
 local function merge_before_init(server_opts, hook)
   local previous = server_opts.before_init
@@ -62,6 +92,7 @@ return {
         settings = python_lsp_settings.server_settings("basedpyright"),
       })
       merge_before_init(opts.servers.basedpyright, apply_python_path_from_venv)
+      merge_before_init(opts.servers.basedpyright, apply_stub_paths)
 
       opts.servers.ruff = vim.tbl_deep_extend("force", opts.servers.ruff or {}, {
         root_dir = function(fname)
@@ -109,5 +140,10 @@ return {
     opts = function(_, opts)
       vim.list_extend(opts.ensure_installed, { "htmldjango", "jinja" })
     end,
+  },
+  {
+    "microsoft/python-type-stubs",
+    build = false,
+    lazy = true,
   },
 }
