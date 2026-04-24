@@ -69,16 +69,29 @@ try:
     try:
       sig = inspect.signature(sym)
       params = []
+      PK = inspect.Parameter
+      seen_kw_only = False
+      has_var_positional = any(p.kind == PK.VAR_POSITIONAL for p in sig.parameters.values())
       for name, p in sig.parameters.items():
         ann = ''
-        if p.annotation is not inspect.Parameter.empty:
+        if p.annotation is not PK.empty:
           ann = ': ' + getattr(p.annotation, '__name__', str(p.annotation))
         default = ''
-        if p.default is not inspect.Parameter.empty:
+        if p.default is not PK.empty:
           default = ' = ...'
-        params.append(name + ann + default)
+        if p.kind == PK.VAR_POSITIONAL:
+          params.append('*' + name + ann)
+        elif p.kind == PK.VAR_KEYWORD:
+          params.append('**' + name + ann)
+        elif p.kind == PK.KEYWORD_ONLY:
+          if not seen_kw_only and not has_var_positional:
+            params.append('*')
+            seen_kw_only = True
+          params.append(name + ann + default)
+        else:
+          params.append(name + ann + default)
       ret = ''
-      if sig.return_annotation is not inspect.Parameter.empty:
+      if sig.return_annotation is not PK.empty:
         ret = ' -> ' + getattr(sig.return_annotation, '__name__', str(sig.return_annotation))
       print('callable|' + ', '.join(params) + '|' + ret)
     except (ValueError, TypeError):
@@ -122,6 +135,21 @@ local function build_stub_lines(attr, introspect_result)
   end
 end
 
+local function resolve_import_alias(bufnr, alias)
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, 50, false)
+  for _, line in ipairs(lines) do
+    local from_mod = line:match("from%s+([%w%.]+)%s+import%s+" .. alias .. "%s*$")
+      or line:match("from%s+([%w%.]+)%s+import%s+" .. alias .. "%s*,")
+      or line:match("from%s+([%w%.]+)%s+import%s+" .. alias .. "%s+as%s+")
+    if from_mod then return from_mod .. "." .. alias end
+    local aliased_import = line:match("import%s+([%w%.]+)%s+as%s+" .. alias)
+    if aliased_import then return aliased_import end
+    local bare_import = line:match("^import%s+(" .. alias .. ")%s*$")
+    if bare_import then return bare_import end
+  end
+  return nil
+end
+
 local function find_venv_python(root_dir)
   local candidates = {
     root_dir .. "/venv/bin/python",
@@ -156,7 +184,7 @@ function M.add_stub_for_diagnostic()
     local line_text = vim.api.nvim_buf_get_lines(bufnr, line, line + 1, false)[1] or ""
     local inline = line_text:match("([%w%.]+)%." .. attr)
     if inline then
-      module_path = inline
+      module_path = resolve_import_alias(bufnr, inline) or inline
     end
   end
 
