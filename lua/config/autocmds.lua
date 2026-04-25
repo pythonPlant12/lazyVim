@@ -116,6 +116,7 @@ local function apply_custom_hl()
     neotree_red = "#f38ba8",
     neotree_cursor_fg = "#9e6534",
     neotree_cursor_bg = "#313244",
+    neotree_fg = "#D0D2D8",
     param = "#D49BFF",
     vbuiltin = "#C77DBB",
     ctor = "#f9e2af",
@@ -244,8 +245,13 @@ local function apply_custom_hl()
    hl(0, "NeoTreeGitUnstagedCursorLine",  { fg = is_light and "#1e2030" or "#1e2030", bg = c.neotree_cursor_bg, bold = true })
    hl(0, "NeoTreeGitDeletedCursorLine",   { fg = is_light and "#1e2030" or "#1e2030", bg = c.neotree_cursor_bg, bold = true })
    hl(0, "NeoTreeGitConflictCursorLine",  { fg = is_light and "#1e2030" or "#1e2030", bg = c.neotree_cursor_bg, bold = true })
+   
+   if not is_light then
+     hl(0, "NeoTreeFileName",       { fg = c.neotree_fg })
+     hl(0, "NeoTreeDirectoryName",  { fg = c.neotree_fg, bold = true })
+   end
 
-  local picker_colors = {
+   local picker_colors = {
     line_fg = c.snacks_line_fg, line_bg = c.snacks_line_bg,
     file = c.snacks_file, dir = c.snacks_dir, match = c.snacks_match,
     search_bg = c.snacks_search_bg, row = c.snacks_row, col = c.snacks_col,
