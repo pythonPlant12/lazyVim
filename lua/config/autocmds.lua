@@ -111,10 +111,10 @@ local function apply_custom_hl()
     gadd_ln = "#1e3028",
     gdel_ln = "#361515",
     gchg_ln = "#2c2518",
-    neotree_added = "#a6e3a1",
-    neotree_mod = "#e5c07b",
-    neotree_red = "#f38ba8",
-    neotree_cursor_fg = "#9e6534",
+     neotree_added = "#b3eda8",
+    neotree_mod = "#f0d291",
+    neotree_red = "#f9a6bd",
+    neotree_cursor_fg = "#D0D2D8",
     neotree_cursor_bg = "#313244",
     neotree_fg = "#D0D2D8",
     param = "#D49BFF",
@@ -237,14 +237,14 @@ local function apply_custom_hl()
     hl(0, "NeoTreeGitConflict",  { fg = c.neotree_red,   bold = true })
    hl(0, "NeoTreeCursorLine",   { fg = c.neotree_cursor_fg, bg = c.neotree_cursor_bg, bold = true })
    
-   hl(0, "NeoTreeGitAddedCursorLine",     { fg = is_light and "#1e2030" or "#1e2030", bg = c.neotree_cursor_bg, bold = true })
-   hl(0, "NeoTreeGitUntrackedCursorLine", { fg = is_light and "#1e2030" or "#1e2030", bg = c.neotree_cursor_bg, bold = true })
-   hl(0, "NeoTreeGitStagedCursorLine",    { fg = is_light and "#1e2030" or "#1e2030", bg = c.neotree_cursor_bg, bold = true })
-   hl(0, "NeoTreeGitModifiedCursorLine",  { fg = is_light and "#1e2030" or "#1e2030", bg = c.neotree_cursor_bg, bold = true })
-   hl(0, "NeoTreeGitRenamedCursorLine",   { fg = is_light and "#1e2030" or "#1e2030", bg = c.neotree_cursor_bg, bold = true })
-   hl(0, "NeoTreeGitUnstagedCursorLine",  { fg = is_light and "#1e2030" or "#1e2030", bg = c.neotree_cursor_bg, bold = true })
-   hl(0, "NeoTreeGitDeletedCursorLine",   { fg = is_light and "#1e2030" or "#1e2030", bg = c.neotree_cursor_bg, bold = true })
-   hl(0, "NeoTreeGitConflictCursorLine",  { fg = is_light and "#1e2030" or "#1e2030", bg = c.neotree_cursor_bg, bold = true })
+   hl(0, "NeoTreeGitAddedCursorLine",     { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
+    hl(0, "NeoTreeGitUntrackedCursorLine", { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
+    hl(0, "NeoTreeGitStagedCursorLine",    { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
+    hl(0, "NeoTreeGitModifiedCursorLine",  { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
+    hl(0, "NeoTreeGitRenamedCursorLine",   { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
+    hl(0, "NeoTreeGitUnstagedCursorLine",  { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
+    hl(0, "NeoTreeGitDeletedCursorLine",   { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
+    hl(0, "NeoTreeGitConflictCursorLine",  { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
    
    if not is_light then
      hl(0, "NeoTreeFileName",       { fg = c.neotree_fg })
