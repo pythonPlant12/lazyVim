@@ -3,6 +3,7 @@
 -- Add any additional options here
 
 vim.o.smoothscroll = false
+vim.o.cursorline = true
 
 vim.o.winborder = "rounded"
 vim.o.switchbuf = "useopen"

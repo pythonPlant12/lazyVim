@@ -62,7 +62,7 @@ local function apply_custom_hl()
     neotree_added = "#4D8454",
     neotree_mod = "#A8873A",
     neotree_red = "#B54A5C",
-    neotree_cursor_fg = "#9E6534",
+    neotree_cursor_fg = "#1E2030",
     neotree_cursor_bg = "#D8E2F0",
     param = "#E0B0FF",
     vbuiltin = "#A15391",
@@ -95,7 +95,7 @@ local function apply_custom_hl()
     context_bg = "#f5f5f5",
   } or {
     border = "#585b70",
-    select_bg = "#45475a",
+    select_bg = "#080808",
     ref_bg = "#2a2d31",
     diag_err = "#c44455",
     diag_warn = "#aa9260",
@@ -144,7 +144,7 @@ local function apply_custom_hl()
     snacks_search_bg = "#1e3a5f",
     indent_fg = "#2E3138",
     indent_scope_fg = "#5B6B8A",
-    context_bg = "#1e2030",
+    context_bg = "#313244",
   }
 
   local kind_hl_colors = {
@@ -292,6 +292,8 @@ local function apply_custom_hl()
   hl(0, "TreesitterContext",           { bg = c.context_bg })
   hl(0, "TreesitterContextLineNumber", { bg = c.context_bg })
   hl(0, "TreesitterContextBottom",     { bg = c.context_bg, underline = false })
+  
+  hl(0, "CursorLine", { bg = c.context_bg })
 end
 
 vim.api.nvim_create_autocmd("ColorScheme", {
@@ -488,15 +490,10 @@ end
 vim.api.nvim_create_autocmd("ColorScheme", {
   group = vim.api.nvim_create_augroup("CursorTheme", { clear = true }),
   callback = function()
-    local normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
-    local cursor_color
-    if normal and normal.fg then
-      cursor_color = string.format("#%06x", normal.fg)
-    elseif vim.o.background == "light" then
-      cursor_color = "#1E2030"
-    else
-      cursor_color = "#CDD6F4"
-    end
+    apply_custom_hl()
+    local is_light = vim.o.background == "light"
+    local context_colors = is_light and { context_bg = "#D8E2F0" } or { context_bg = "#313244" }
+    local cursor_color = context_colors.context_bg
     vim.api.nvim_set_hl(0, "Cursor",     { reverse = true })
     vim.api.nvim_set_hl(0, "TermCursor", { reverse = true })
     io.write(("\027]12;%s\007"):format(cursor_color))
