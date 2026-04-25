@@ -62,7 +62,7 @@ local function apply_custom_hl()
     neotree_added = "#4D8454",
     neotree_mod = "#A8873A",
     neotree_red = "#B54A5C",
-    neotree_cursor_fg = "#1E2030",
+    neotree_cursor_fg = "#B8865A",
     neotree_cursor_bg = "#D8E2F0",
     param = "#E0B0FF",
     vbuiltin = "#A15391",
