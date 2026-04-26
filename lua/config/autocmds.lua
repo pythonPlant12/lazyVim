@@ -507,7 +507,9 @@ vim.api.nvim_create_autocmd("ColorScheme", {
   callback = function()
     apply_custom_hl()
     local is_light = vim.o.background == "light"
-    local cursor_color = is_light and "#1E2030" or "#080808"
-    io.write(("\027]12;%s\007"):format(cursor_color))
+    local cursor_bg = is_light and "#1E2030" or "#080808"
+    vim.api.nvim_set_hl(0, "Cursor", { bg = cursor_bg })
+    vim.api.nvim_set_hl(0, "TermCursor", { bg = cursor_bg })
+    io.write(("\027]12;%s\007"):format(cursor_bg))
   end,
 })
