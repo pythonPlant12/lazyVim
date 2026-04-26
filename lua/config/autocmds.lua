@@ -62,8 +62,8 @@ local function apply_custom_hl()
     neotree_added = "#4D8454",
     neotree_mod = "#A8873A",
     neotree_red = "#B54A5C",
-    neotree_cursor_fg = "#B8865A",
-    neotree_cursor_bg = "#D8E2F0",
+    neotree_cursor_fg = "#2F496F",
+    neotree_cursor_bg = "#D2E4F5",
     param = "#E0B0FF",
     vbuiltin = "#A15391",
     ctor = "#8A6B20",
@@ -77,8 +77,8 @@ local function apply_custom_hl()
     green = "#4D8454",
     text = "#4F5966",
     muted_text = "#66707C",
-    snacks_line_fg = "#8E5D33",
-    snacks_line_bg = "#D6E0EE",
+    snacks_line_fg = "#2F496F",
+    snacks_line_bg = "#D2E4F5",
     snacks_file = "#3E464F",
     snacks_dir = "#5E6874",
     snacks_match = "#9E6534",
@@ -114,8 +114,8 @@ local function apply_custom_hl()
      neotree_added = "#6AAB6A",
     neotree_mod = "#B8865A",
     neotree_red = "#B85C5C",
-    neotree_cursor_fg = "#c4864a",
-    neotree_cursor_bg = "#313244",
+    neotree_cursor_fg = "#E8F0FA",
+    neotree_cursor_bg = "#2F496F",
     neotree_fg = "#D0D2D8",
     param = "#D49BFF",
     vbuiltin = "#C77DBB",
@@ -130,8 +130,8 @@ local function apply_custom_hl()
     green = "#a6e3a1",
     text = "#9399b2",
     muted_text = "#6c7086",
-    snacks_line_fg = "#fab387",
-    snacks_line_bg = "#313244",
+    snacks_line_fg = "#E8F0FA",
+    snacks_line_bg = "#2F496F",
     snacks_file = "#cdd6f4",
     snacks_dir = "#7f849c",
     snacks_match = "#fab387",
@@ -316,6 +316,23 @@ vim.api.nvim_create_autocmd("ColorScheme", {
   callback = apply_custom_hl,
 })
 apply_custom_hl()
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "lazy",
+  group = vim.api.nvim_create_augroup("LazyHl", { clear = true }),
+  callback = function()
+    local is_light = vim.o.background == "light"
+    local hl = vim.api.nvim_set_hl
+    if is_light then
+      hl(0, "LazyNormal",     { fg = "#2F496F", bg = "#EAF2FB" })
+      hl(0, "LazyCursorLine", { fg = "#2F496F", bg = "#D2E4F5", bold = true })
+    else
+      hl(0, "LazyNormal",     { fg = "#E8F0FA", bg = "#1C2D40" })
+      hl(0, "LazyCursorLine", { fg = "#E8F0FA", bg = "#2F496F", bold = true })
+    end
+    vim.opt_local.winhighlight = "Normal:LazyNormal,CursorLine:LazyCursorLine"
+  end,
+})
 
 local function apply_grugfar_hl()
   local search = vim.api.nvim_get_hl(0, { name = "Search", link = false })
@@ -506,10 +523,5 @@ vim.api.nvim_create_autocmd("ColorScheme", {
   group = vim.api.nvim_create_augroup("CursorTheme", { clear = true }),
   callback = function()
     apply_custom_hl()
-    local is_light = vim.o.background == "light"
-    local cursor_bg = is_light and "#1E2030" or "#080808"
-    vim.api.nvim_set_hl(0, "Cursor", { bg = cursor_bg })
-    vim.api.nvim_set_hl(0, "TermCursor", { bg = cursor_bg })
-    io.write(("\027]12;%s\007"):format(cursor_bg))
   end,
 })
