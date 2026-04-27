@@ -1,6 +1,8 @@
 return {
   "zbirenbaum/copilot.lua",
   opts = {
+    suggestion = { enabled = false }, -- ghost text updates = redraws = cursor blink
+    panel = { enabled = false },
     copilot_node_command = (function()
       local nvm_dir = vim.fn.expand("~/.nvm/versions/node")
       local best_major, best_minor, best_patch = 0, 0, 0
