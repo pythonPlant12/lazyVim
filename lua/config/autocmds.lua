@@ -11,29 +11,6 @@ vim.api.nvim_create_autocmd("WinEnter", {
   end,
 })
 
-local NO_BLINK = "n-v-c-sm:block-blinkwait0-blinkon0-blinkoff0,i-ci-ve:ver25-blinkwait0-blinkon0-blinkoff0,r-cr-o:hor20-blinkwait0-blinkon0-blinkoff0"
-
-vim.api.nvim_create_autocmd("User", {
-  pattern = "LazyDone",
-  once = true,
-  group = vim.api.nvim_create_augroup("NoBlink", { clear = true }),
-  callback = function()
-    vim.opt.guicursor = NO_BLINK
-    vim.api.nvim_create_autocmd("OptionSet", {
-      pattern = "guicursor",
-      group = vim.api.nvim_create_augroup("NoBlinkGuard", { clear = true }),
-      callback = function()
-        if not vim.go.guicursor:find("blinkon0") then
-          vim.schedule(function()
-            vim.opt.guicursor = NO_BLINK
-          end)
-        end
-      end,
-    })
-  end,
-})
-
-
 vim.api.nvim_create_autocmd("BufWritePre", {
   group = vim.api.nvim_create_augroup("EslintAutoFix", { clear = true }),
   pattern = { "*.js", "*.jsx", "*.ts", "*.tsx", "*.vue", "*.mjs", "*.cjs" },

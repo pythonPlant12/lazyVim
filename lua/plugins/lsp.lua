@@ -79,8 +79,6 @@ return {
       opts.servers = opts.servers or {}
       opts.diagnostics = opts.diagnostics or {}
       opts.diagnostics.signs = false
-      -- Inlay hints cause async LSP redraws which trigger cursor blink on every update
-      opts.inlay_hints = { enabled = false }
       return opts
     end,
     init = function()

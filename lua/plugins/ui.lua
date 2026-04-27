@@ -640,7 +640,6 @@ return {
     },
     opts = {
       words = { enabled = false },
-      indent = { animate = { enabled = false } },
       lazygit = {
         config = {
           os = {
@@ -893,12 +892,6 @@ return {
       presets = {
         lsp_doc_border = true,
       },
-      -- Disable LSP progress notifications: the progress float updates at
-      -- 100ms throttle and is the primary cause of periodic cursor blinks
-      -- whenever LSP servers are running background work.
-      lsp = {
-        progress = { enabled = false },
-      },
       views = {
         cmdline_popup = {
           border = {
@@ -1027,7 +1020,7 @@ return {
         theme = mode_theme,
         section_separators = { left = "", right = "" },
         component_separators = { left = "", right = "" },
-        refresh = { statusline = 99999, tabline = 99999, winbar = 99999 },
+        refresh = { statusline = 1000, tabline = 1000, winbar = 1000 },
       })
       opts.sections = opts.sections or {}
       opts.sections.lualine_a = {
