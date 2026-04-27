@@ -37,6 +37,9 @@ return {
         return items
       end
 
+      opts.completion = opts.completion or {}
+      opts.completion.documentation = { auto_show = false }
+
       opts.keymap = opts.keymap or {}
       opts.keymap["<Tab>"] = {
         function(cmp)
