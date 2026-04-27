@@ -639,6 +639,8 @@ return {
       },
     },
     opts = {
+      words = { enabled = false },
+      indent = { animate = { enabled = false } },
       lazygit = {
         config = {
           os = {

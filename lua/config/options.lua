@@ -7,6 +7,7 @@ vim.o.cursorline = true
 vim.opt.guicursor = "n-v-c-sm:block-blinkwait0-blinkon0-blinkoff0,i-ci-ve:ver25-blinkwait0-blinkon0-blinkoff0,r-cr-o:hor20-blinkwait0-blinkon0-blinkoff0"
 
 vim.g.snacks_animate = false
+vim.g.snacks_words = false
 
 vim.o.winborder = "rounded"
 vim.o.switchbuf = "useopen"
