@@ -1019,6 +1019,7 @@ return {
         theme = mode_theme,
         section_separators = { left = "", right = "" },
         component_separators = { left = "", right = "" },
+        refresh = { statusline = 2000, tabline = 2000, winbar = 2000 },
       })
       opts.sections = opts.sections or {}
       opts.sections.lualine_a = {
