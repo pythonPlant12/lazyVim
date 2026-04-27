@@ -892,11 +892,6 @@ return {
       presets = {
         lsp_doc_border = true,
       },
-      lsp = {
-        progress = {
-          enabled = false, -- 100ms periodic redraw during LSP work causes visible cursor blink
-        },
-      },
       views = {
         cmdline_popup = {
           border = {
