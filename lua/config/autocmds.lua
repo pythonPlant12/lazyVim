@@ -19,7 +19,7 @@ vim.api.nvim_create_autocmd("User", {
   once = true,
   group = vim.api.nvim_create_augroup("NoBlink", { clear = true }),
   callback = function()
-    vim.opt.guicursor:append("a:blinkwait0-blinkon0-blinkoff0")
+    vim.opt.guicursor = "n-v-c-sm:block-blinkwait0-blinkon0-blinkoff0,i-ci-ve:ver25-blinkwait0-blinkon0-blinkoff0,r-cr-o:hor20-blinkwait0-blinkon0-blinkoff0"
   end,
 })
 
