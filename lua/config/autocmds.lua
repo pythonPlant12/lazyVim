@@ -2,6 +2,27 @@
 -- Default autocmds that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/autocmds.lua
 -- Add any additional autocmds here
 
+vim.api.nvim_create_autocmd("WinEnter", {
+  group = vim.api.nvim_create_augroup("FloatNoCursorLine", { clear = true }),
+  callback = function()
+    if vim.api.nvim_win_get_config(0).relative ~= "" then
+      vim.wo.cursorline = false
+    end
+  end,
+})
+
+-- Catppuccin reactive (and other plugins) append their own "a:..." entry to
+-- guicursor after options.lua runs, which drops our blink-off settings.
+-- Re-apply after all lazy plugins are done so our entry is always last.
+vim.api.nvim_create_autocmd("User", {
+  pattern = "LazyDone",
+  once = true,
+  group = vim.api.nvim_create_augroup("NoBlink", { clear = true }),
+  callback = function()
+    vim.opt.guicursor:append("a:blinkwait0-blinkon0-blinkoff0")
+  end,
+})
+
 
 vim.api.nvim_create_autocmd("BufWritePre", {
   group = vim.api.nvim_create_augroup("EslintAutoFix", { clear = true }),
