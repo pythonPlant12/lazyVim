@@ -893,6 +893,12 @@ return {
       presets = {
         lsp_doc_border = true,
       },
+      -- Disable LSP progress notifications: the progress float updates at
+      -- 100ms throttle and is the primary cause of periodic cursor blinks
+      -- whenever LSP servers are running background work.
+      lsp = {
+        progress = { enabled = false },
+      },
       views = {
         cmdline_popup = {
           border = {
