@@ -5,8 +5,6 @@
 vim.o.smoothscroll = false
 vim.o.cursorline = true
 
-vim.g.snacks_words = false
-
 vim.o.winborder = "rounded"
 vim.o.switchbuf = "useopen"
 
