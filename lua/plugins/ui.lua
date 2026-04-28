@@ -1020,7 +1020,7 @@ return {
         theme = mode_theme,
         section_separators = { left = "", right = "" },
         component_separators = { left = "", right = "" },
-        refresh = { statusline = 1000, tabline = 1000, winbar = 1000 },
+        refresh = { statusline = 99999, tabline = 99999, winbar = 99999 },
       })
       opts.sections = opts.sections or {}
       opts.sections.lualine_a = {
@@ -1153,8 +1153,8 @@ return {
       opts.sections.lualine_b = {
         {
           function()
-            local branch = vim.b.gitsigns_head or vim.fn.system("git rev-parse --abbrev-ref HEAD 2>/dev/null"):gsub("\n", "")
-            if branch == "" or branch:find("fatal") then return "" end
+            local branch = vim.b.gitsigns_head
+            if not branch or branch == "" then return "" end
             local parts = { "%#LualineGitBranch#󰘬 " .. branch }
             local a, b = vim.g._git_ahead or 0, vim.g._git_behind or 0
             local u, m, d, c = vim.g._git_untracked or 0, vim.g._git_modified or 0, vim.g._git_deleted or 0, vim.g._git_conflicted or 0
@@ -1172,9 +1172,7 @@ return {
             return table.concat(parts, "")
           end,
           cond = function()
-            if vim.b.gitsigns_head and vim.b.gitsigns_head ~= "" then return true end
-            local b = vim.fn.system("git rev-parse --abbrev-ref HEAD 2>/dev/null"):gsub("\n", "")
-            return b ~= "" and not b:find("fatal")
+            return vim.b.gitsigns_head ~= nil and vim.b.gitsigns_head ~= ""
           end,
           padding = { left = 1, right = 0 },
           separator = { left = "\u{E0B6}", right = "\u{E0B4}" },
@@ -1187,9 +1185,7 @@ return {
             return { fg = vim.o.background == "light" and "#9B9792" or "#6B6F75" }
           end,
           cond = function()
-            if vim.b.gitsigns_head and vim.b.gitsigns_head ~= "" then return true end
-            local b = vim.fn.system("git rev-parse --abbrev-ref HEAD 2>/dev/null"):gsub("\n", "")
-            return b ~= "" and not b:find("fatal")
+            return vim.b.gitsigns_head ~= nil and vim.b.gitsigns_head ~= ""
           end,
         },
       }

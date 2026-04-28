@@ -11,6 +11,7 @@ vim.api.nvim_create_autocmd("WinEnter", {
   end,
 })
 
+
 vim.api.nvim_create_autocmd("BufWritePre", {
   group = vim.api.nvim_create_augroup("EslintAutoFix", { clear = true }),
   pattern = { "*.js", "*.jsx", "*.ts", "*.tsx", "*.vue", "*.mjs", "*.cjs" },
@@ -531,5 +532,17 @@ vim.api.nvim_create_autocmd("ColorScheme", {
   group = vim.api.nvim_create_augroup("CursorTheme", { clear = true }),
   callback = function()
     apply_custom_hl()
+  end,
+})
+
+-- Prevent conceal-related cursor blink in JSON files.
+-- Treesitter JSON has @conceal captures for " chars; with conceallevel>=1 this
+-- causes a redraw (and visible cursor flicker) on every vertical cursor movement.
+vim.api.nvim_create_autocmd("FileType", {
+  group = vim.api.nvim_create_augroup("JsonNoConceallevel", { clear = true }),
+  pattern = { "json", "jsonc", "json5" },
+  callback = function()
+    vim.opt_local.conceallevel = 0
+    vim.opt_local.concealcursor = "nvic"
   end,
 })
