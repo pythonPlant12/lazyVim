@@ -79,10 +79,6 @@ return {
       opts.servers = opts.servers or {}
       opts.diagnostics = opts.diagnostics or {}
       opts.diagnostics.signs = false
-      -- Disable LSP fold ranges: they override treesitter foldexpr asynchronously,
-      -- causing `zc` to find no folds on html/vue/css until the LSP responds.
-      -- Treesitter folds work immediately and reliably for all these filetypes.
-      opts.folds = { enabled = false }
       return opts
     end,
     init = function()
