@@ -546,3 +546,22 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.opt_local.concealcursor = "nvic"
   end,
 })
+
+local ts_fold_fts = { html = true, htmldjango = true, vue = true, css = true, scss = true, less = true }
+
+vim.api.nvim_create_autocmd("LspAttach", {
+  group = vim.api.nvim_create_augroup("TsFoldsOverride", { clear = true }),
+  callback = function(ev)
+    if not ts_fold_fts[vim.bo[ev.buf].filetype] then return end
+    vim.schedule(function()
+      if not vim.api.nvim_buf_is_valid(ev.buf) then return end
+      for _, win in ipairs(vim.fn.win_findbuf(ev.buf)) do
+        local fe = vim.api.nvim_get_option_value("foldexpr", { win = win })
+        if fe:find("lsp", 1, true) then
+          vim.api.nvim_set_option_value("foldmethod", "expr", { win = win })
+          vim.api.nvim_set_option_value("foldexpr", "v:lua.vim.treesitter.foldexpr()", { win = win })
+        end
+      end
+    end)
+  end,
+})

@@ -79,6 +79,7 @@ return {
       opts.servers = opts.servers or {}
       opts.diagnostics = opts.diagnostics or {}
       opts.diagnostics.signs = false
+      opts.folds = { enabled = false }
       return opts
     end,
     init = function()
