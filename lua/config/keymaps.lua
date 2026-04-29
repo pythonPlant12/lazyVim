@@ -703,6 +703,8 @@ local function set_prefixed_search(input)
   return true
 end
 
+keymaps.set("n", "<Esc>", "<cmd>nohlsearch<cr><Esc>", { desc = "Clear search highlight" })
+
 keymaps.set("n", "/", function()
   local input = vim.fn.input("/ ")
   if not set_prefixed_search(input) then
