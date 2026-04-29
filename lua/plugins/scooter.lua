@@ -10,9 +10,22 @@ return {
         close       = { n = "<localleader>C" },
       },
       prefills = { flags = "--fixed-strings" },
+      folding = { enabled = false },
     },
     config = function(_, opts)
       require("grug-far").setup(opts)
+
+      -- Monkey-patch fix: grug-far's getLineWithoutCarriageReturn is a no-op on
+      -- non-Windows, so \r from CRLF files leaks into the results buffer. When
+      -- those lines are written back, they get an extra \r prepended to \r\n.
+      -- Strip \r unconditionally on all platforms to prevent double-CR corruption.
+      local utils = require("grug-far.utils")
+      utils.getLineWithoutCarriageReturn = function(line)
+        if string.sub(line, -1) == "\r" then
+          return string.sub(line, 1, -2)
+        end
+        return line
+      end
 
       vim.api.nvim_create_autocmd("FileType", {
         pattern = "grug-far",
