@@ -892,6 +892,8 @@ return {
       presets = {
         lsp_doc_border = true,
       },
+      -- Throttle UI updates to reduce error frequency and avoid the panic/auto-disable threshold
+      throttle = 1000 / 30,
       views = {
         cmdline_popup = {
           border = {

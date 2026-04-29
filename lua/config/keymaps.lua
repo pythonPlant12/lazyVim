@@ -1597,14 +1597,20 @@ end, { desc = "ESLint errors" })
 
 vim.schedule(function()
   require("which-key").add({
-    { "<leader>I", group = "Inspect" },
-    { "<leader>L", group = "Language" },
-    { "<leader>Lp", group = "Python" },
-    { "<leader>Ls", group = "Shared" },
-    { "<leader>E",  group = "Errors" },
+    { "<leader>I",  group = "Inspect",  icon = { icon = "󰋇", color = "cyan" } },
+    { "<leader>L",  group = "Language", icon = { icon = "󰗊", color = "blue" } },
+    { "<leader>Ln", group = "Noice",    icon = { icon = "󰈸", color = "orange" } },
+    { "<leader>Lp", group = "Python",   icon = { cat = "filetype", name = "python" } },
+    { "<leader>Ls", group = "Shared",   icon = { icon = "󰈝", color = "green" } },
+    { "<leader>E",  group = "Errors",   icon = { icon = "󰅚", color = "red" } },
   })
 end)
 
 keymaps.set("n", "<leader>Lps", function()
   require("config.stub_generator").add_stub_for_diagnostic()
 end, { desc = "Add stub for diagnostic" })
+
+keymaps.set("n", "<leader>Lnr", function()
+  require("noice").enable()
+  vim.notify("Noice restarted", vim.log.levels.INFO, { title = "Noice" })
+end, { desc = "Restart Noice" })
