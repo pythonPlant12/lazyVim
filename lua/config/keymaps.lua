@@ -205,6 +205,8 @@ end, { desc = "ESLint fix file" })
 keymaps.set("n", "<C-j>", ":tabprev<CR>", { desc = "Previous tab" })
 keymaps.set("n", "<C-k>", ":tabnext<CR>", { desc = "Next tab" })
 keymaps.set("n", "<leader><tab>q", ":tabclose<CR>", { desc = "Close tab" })
+pcall(vim.keymap.del, "n", "<leader><tab>]")
+pcall(vim.keymap.del, "n", "<leader><tab>[")
 
 local function move_buf_to_win(dir)
   local buf = vim.api.nvim_get_current_buf()
@@ -372,28 +374,6 @@ keymaps.set("n", "<C-g>d",  function() Snacks.picker.git_diff() end, { desc = "G
 keymaps.set("n", "<C-g>ld", function() require("gitsigns").preview_hunk_inline() end, { desc = "Line diff" })
 keymaps.set("n", "<C-g>lh", function() Snacks.picker.git_log_line() end, { desc = "Line history" })
 keymaps.set("n", "<C-g>lr", function() require("gitsigns").reset_hunk() end, { desc = "Revert line/hunk to HEAD" })
-local close_file_diff
-local function open_file_diff_fullscreen(base)
-  require("gitsigns").diffthis(base)
-  if vim.wo.diff then
-    vim.cmd("wincmd =")
-
-    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-      if vim.wo[win].diff then
-        local buf = vim.api.nvim_win_get_buf(win)
-        vim.b[buf].git_file_diff_mode = true
-        vim.keymap.set("n", "q", function()
-          close_file_diff()
-        end, {
-          buffer = buf,
-          silent = true,
-          desc = "Close file diff",
-        })
-      end
-    end
-  end
-end
-
 local function git_root_or_cwd()
   local ok, root = pcall(function() return LazyVim.root.git() end)
   return (ok and root and root ~= "") and root or vim.fn.getcwd()
@@ -472,50 +452,6 @@ local function list_commits(ref, limit)
   return items, nil
 end
 
-local function pick_diff_base_and_open()
-  local active = current_branch()
-  local branches, err = list_branches(active)
-  if not branches then
-    vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = "Git Diff" })
-    return
-  end
-  if #branches == 0 then
-    vim.notify("No branches found", vim.log.levels.WARN, { title = "Git Diff" })
-    return
-  end
-
-  vim.ui.select(branches, {
-    prompt = "Select branch:",
-    format_item = function(item) return item.label end,
-  }, function(branch_item)
-    if not branch_item then
-      return
-    end
-
-    local commits, commits_err = list_commits(branch_item.ref, 150)
-    if not commits then
-      vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Diff" })
-      return
-    end
-    if #commits == 0 then
-      vim.notify("No commits found for " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Diff" })
-      return
-    end
-
-    vim.ui.select(commits, {
-      prompt = "Select commit from " .. branch_item.ref .. ":",
-      format_item = function(item) return item.label end,
-    }, function(commit_item)
-      if commit_item then
-        open_file_diff_fullscreen(commit_item.ref)
-      end
-    end)
-  end)
-end
-
-keymaps.set("n", "<C-g>fd", open_file_diff_fullscreen, { desc = "File diff" })
-keymaps.set("n", "<C-g>fD", pick_diff_base_and_open, { desc = "File diff against ref" })
-
 local function pick_line_diff_base_and_preview()
   local active = current_branch()
   local branches, err = list_branches(active)
@@ -557,24 +493,65 @@ local function pick_line_diff_base_and_preview()
 end
 
 keymaps.set("n", "<C-g>lD", pick_line_diff_base_and_preview, { desc = "Line diff against ref" })
-close_file_diff = function()
-  if not vim.wo.diff then return end
-  local cur_win = vim.api.nvim_get_current_win()
-  for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-    if w ~= cur_win and vim.wo[w].diff then
-      local buf = vim.api.nvim_win_get_buf(w)
-      pcall(vim.keymap.del, "n", "q", { buffer = buf })
-      vim.b[buf].git_file_diff_mode = nil
-      pcall(vim.api.nvim_win_close, w, false)
+
+local function open_file_diff_fullscreen(base)
+  local orig_win = vim.api.nvim_get_current_win()
+  require("gitsigns").diffthis(base)
+
+  vim.defer_fn(function()
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+      local buf = vim.api.nvim_win_get_buf(win)
+      vim.keymap.set("n", "q", function()
+        vim.cmd("diffoff!")
+        vim.api.nvim_set_current_win(orig_win)
+        vim.cmd("only")
+      end, { buffer = buf, silent = true })
     end
-  end
-  local cur_buf = vim.api.nvim_win_get_buf(cur_win)
-  pcall(vim.keymap.del, "n", "q", { buffer = cur_buf })
-  vim.b[cur_buf].git_file_diff_mode = nil
-  vim.cmd("diffoff!")
+  end, 50)
 end
 
-keymaps.set("n", "<C-g>fq", close_file_diff, { desc = "Close file diff" })
+local function pick_diff_base_and_open()
+  local active = current_branch()
+  local branches, err = list_branches(active)
+  if not branches then
+    vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = "Git Diff" })
+    return
+  end
+  if #branches == 0 then
+    vim.notify("No branches found", vim.log.levels.WARN, { title = "Git Diff" })
+    return
+  end
+
+  vim.ui.select(branches, {
+    prompt = "Select branch:",
+    format_item = function(item) return item.label end,
+  }, function(branch_item)
+    if not branch_item then return end
+
+    local commits, commits_err = list_commits(branch_item.ref, 150)
+    if not commits then
+      vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Diff" })
+      return
+    end
+    if #commits == 0 then
+      vim.notify("No commits found for " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Diff" })
+      return
+    end
+
+    vim.ui.select(commits, {
+      prompt = "Select commit from " .. branch_item.ref .. ":",
+      format_item = function(item) return item.label end,
+    }, function(commit_item)
+      if commit_item then
+        open_file_diff_fullscreen(commit_item.ref)
+      end
+    end)
+  end)
+end
+
+keymaps.set("n", "<C-g>fd", open_file_diff_fullscreen, { desc = "File diff" })
+keymaps.set("n", "<C-g>fD", pick_diff_base_and_open, { desc = "File diff against ref" })
+
 keymaps.set("n", "<C-g>fh", function() Snacks.picker.git_log_file() end, { desc = "File history" })
 keymaps.set("n", "<C-g>fr", function() require("gitsigns").reset_buffer() end, { desc = "Revert file to HEAD" })
 
