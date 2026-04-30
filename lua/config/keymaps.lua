@@ -204,6 +204,12 @@ end, { desc = "ESLint fix file" })
 
 keymaps.set("n", "<C-j>", ":tabprev<CR>", { desc = "Previous tab" })
 keymaps.set("n", "<C-k>", ":tabnext<CR>", { desc = "Next tab" })
+keymaps.set("n", "<C-S-j>", function()
+  if vim.fn.tabpagenr() > 1 then vim.cmd("tabmove -1") end
+end, { desc = "Move tab left" })
+keymaps.set("n", "<C-S-k>", function()
+  if vim.fn.tabpagenr() < vim.fn.tabpagenr("$") then vim.cmd("tabmove +1") end
+end, { desc = "Move tab right" })
 keymaps.set("n", "<leader><tab>q", ":tabclose<CR>", { desc = "Close tab" })
 pcall(vim.keymap.del, "n", "<leader><tab>]")
 pcall(vim.keymap.del, "n", "<leader><tab>[")

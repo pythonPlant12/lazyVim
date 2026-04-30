@@ -83,6 +83,39 @@ local function apply_item_pos(item)
   end)
 end
 
+local function open_in_tab(picker, item)
+  if not item then
+    return
+  end
+
+  require("snacks.picker.util").resolve_loc(item)
+
+  local path = Snacks.picker.util.path(item) or item.file
+  if not path or path == "" then
+    local bufnr = item.buf
+    if not bufnr then return end
+    picker.opts.auto_close = false
+    vim.api.nvim_win_call(picker.main, function()
+      vim.cmd("tabnew")
+      vim.api.nvim_set_current_buf(bufnr)
+    end)
+    picker:focus()
+    picker.opts.auto_close = nil
+    return
+  end
+
+  local buf = vim.fn.bufadd(path)
+  vim.bo[buf].buflisted = true
+
+  picker.opts.auto_close = false
+  vim.api.nvim_win_call(picker.main, function()
+    vim.cmd(("tab sbuffer %d"):format(buf))
+  end)
+  apply_item_pos(item)
+  picker:focus()
+  picker.opts.auto_close = nil
+end
+
 local function confirm_lsp_location(picker, item)
   if not item then
     return
@@ -834,6 +867,7 @@ return {
           toggle_word = function(picker)
             require("config.search_grep").toggle_word(picker)
           end,
+          tab_open = open_in_tab,
           confirm = function(picker, item)
             if not item then return end
             picker:close()
@@ -870,6 +904,18 @@ return {
             vim.api.nvim_set_current_buf(bufnr)
             apply_item_pos(item)
           end,
+        },
+        win = {
+          input = {
+            keys = {
+              ["<S-CR>"] = { "tab_open", mode = { "i", "n" } },
+            },
+          },
+          list = {
+            keys = {
+              ["<S-CR>"] = "tab_open",
+            },
+          },
         },
         formatters = {
           file = {
