@@ -592,9 +592,13 @@ local function set_exact_visual_search(text)
   if not text or text == "" then
     return false
   end
-  text = vim.fn.escape(text, "/\\")
-  text = text:gsub("\n", "\\n")
-  vim.fn.setreg("/", "\\V" .. text)
+  local escaped = vim.fn.escape(text, "/\\")
+  escaped = escaped:gsub("\n", "\\n")
+  if text:match("^%w+$") then
+    vim.fn.setreg("/", "\\<" .. escaped .. "\\>")
+  else
+    vim.fn.setreg("/", "\\V" .. escaped)
+  end
   vim.cmd("set hlsearch")
   return true
 end
