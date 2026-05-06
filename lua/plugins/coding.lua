@@ -1,3 +1,5 @@
+---@diagnostic disable: undefined-global
+
 return {
   {
     "smjonas/inc-rename.nvim",
@@ -37,11 +39,11 @@ return {
         return items
       end
 
-      opts.keymap = opts.keymap or {}
+      --
       opts.keymap["<Tab>"] = {
         function(cmp)
           if cmp.is_menu_visible() then
-            return cmp.select_next()
+            return cmp.select_next({ auto_insert = false })
           end
         end,
         LazyVim.cmp.map({ "snippet_forward", "ai_nes", "ai_accept" }),
@@ -50,7 +52,7 @@ return {
       opts.keymap["<S-Tab>"] = {
         function(cmp)
           if cmp.is_menu_visible() then
-            return cmp.select_prev()
+            return cmp.select_prev({ auto_insert = false })
           end
         end,
         "snippet_backward",
