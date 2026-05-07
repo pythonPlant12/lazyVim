@@ -813,6 +813,10 @@ keymaps.set("n", "<S-Up>",   "Vk", { desc = "Select line upward" })
 keymaps.set("n", "<S-Down>", "Vj", { desc = "Select line downward" })
 keymaps.set("v", "<S-Up>",   "k",  { desc = "Extend selection up" })
 keymaps.set("v", "<S-Down>", "j",  { desc = "Extend selection down" })
+keymaps.set("n", "J",        "Vk", { desc = "Select line upward" })
+keymaps.set("n", "K",        "Vj", { desc = "Select line downward" })
+keymaps.set("v", "J",        "k",  { desc = "Extend selection up" })
+keymaps.set("v", "K",        "j",  { desc = "Extend selection down" })
 
 -- Option+Left/Right: move word by word
 -- <M-Right>/<M-Left>  = xterm sequence  (iTerm2 / most modern terminals)

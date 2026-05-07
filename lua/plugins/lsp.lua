@@ -77,9 +77,12 @@ return {
     opts = function(_, opts)
       opts = opts or {}
       opts.servers = opts.servers or {}
+      opts.servers["*"] = opts.servers["*"] or {}
+      opts.servers["*"].keys = opts.servers["*"].keys or {}
       opts.diagnostics = opts.diagnostics or {}
       opts.diagnostics.signs = false
       opts.folds = { enabled = false }
+      table.insert(opts.servers["*"].keys, { "K", "Vj", desc = "Select line downward" })
       return opts
     end,
     init = function()
