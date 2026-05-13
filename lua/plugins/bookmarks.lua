@@ -1,3 +1,56 @@
+---@diagnostic disable: undefined-global
+
+local function current_git_root()
+  local path = vim.api.nvim_buf_get_name(0)
+  local start_dir = path ~= "" and vim.fn.fnamemodify(path, ":p:h") or vim.fn.getcwd()
+  local root = vim.fn.systemlist({ "git", "-C", start_dir, "rev-parse", "--show-toplevel" })[1]
+
+  if vim.v.shell_error ~= 0 or not root or root == "" then
+    return nil
+  end
+
+  return vim.fs.normalize(vim.fn.fnamemodify(root, ":p"))
+end
+
+local function path_in_root(path, root)
+  if type(path) ~= "string" or path == "" then
+    return false
+  end
+
+  local normalized_path = vim.fs.normalize(vim.fn.fnamemodify(path, ":p"))
+  local root_prefix = root:sub(-1) == "/" and root or (root .. "/")
+
+  return normalized_path == root or normalized_path:sub(1, #root_prefix) == root_prefix
+end
+
+local function delete_repo_bookmarks()
+  local root = current_git_root()
+  if not root then
+    vim.notify("Not inside a git repository", vim.log.levels.WARN, { title = "Bookmarks" })
+    return
+  end
+
+  local repo = require("bookmarks.domain.repo")
+  local sign = require("bookmarks.sign")
+  local tree = require("bookmarks.tree")
+
+  local deleted = 0
+  for _, bookmark in ipairs(repo.get_all_bookmarks()) do
+    if bookmark.location and path_in_root(bookmark.location.path, root) then
+      repo.delete_node(bookmark.id)
+      deleted = deleted + 1
+    end
+  end
+
+  sign.safe_refresh_signs()
+  pcall(tree.refresh)
+
+  local name = vim.fn.fnamemodify(root, ":t")
+  local message = deleted == 1 and "Deleted 1 bookmark for " .. name
+    or "Deleted " .. tostring(deleted) .. " bookmarks for " .. name
+  vim.notify(message, vim.log.levels.INFO, { title = "Bookmarks" })
+end
+
 return {
   {
     "LintaoAmons/bookmarks.nvim",
@@ -37,6 +90,11 @@ return {
         end,
         desc = "Delete bookmark on line",
       },
+      {
+        "<C-b>D",
+        delete_repo_bookmarks,
+        desc = "Delete repository bookmarks",
+      },
     },
     config = function()
       local function bookmark_title(bookmark)
@@ -75,7 +133,12 @@ return {
           return text .. string.rep(" ", width - #text)
         end
 
-        return string.format("%s │ %s │ %s", fit(title, max_title), fit(filename, max_file), fit(location, max_path))
+        return string.format(
+          "%s │ %s │ %s",
+          fit(title, max_title),
+          fit(filename, max_file),
+          fit(location, max_path)
+        )
       end
 
       local is_light = vim.o.background == "light"
