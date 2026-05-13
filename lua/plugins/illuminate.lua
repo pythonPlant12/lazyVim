@@ -1,3 +1,5 @@
+---@diagnostic disable: undefined-global
+
 return {
   {
     "RRethy/vim-illuminate",
@@ -8,6 +10,12 @@ return {
       large_file_overrides = {
         providers = {},
       },
+      filetype_overrides = {
+        html = { providers = { "regex" } },
+        htmldjango = { providers = { "regex" } },
+        jinja = { providers = { "regex" } },
+        jinja2 = { providers = { "regex" } },
+      },
       modes_allowlist = { "n" },
     },
     config = function(_, opts)
@@ -15,8 +23,8 @@ return {
 
       local function set_illuminate_hl()
         local bg = vim.o.background == "light" and "#E6E6E6" or "#3A3A4A"
-        vim.api.nvim_set_hl(0, "IlluminatedWordText",  { bg = bg, underline = false })
-        vim.api.nvim_set_hl(0, "IlluminatedWordRead",  { bg = bg, underline = false })
+        vim.api.nvim_set_hl(0, "IlluminatedWordText", { bg = bg, underline = false })
+        vim.api.nvim_set_hl(0, "IlluminatedWordRead", { bg = bg, underline = false })
         vim.api.nvim_set_hl(0, "IlluminatedWordWrite", { bg = bg, underline = false })
       end
 

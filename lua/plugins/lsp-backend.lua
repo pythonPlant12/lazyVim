@@ -1,3 +1,5 @@
+---@diagnostic disable: undefined-global
+
 local resolver = require("config.lsp_resolver")
 local python_lsp_settings = require("config.python_lsp_settings")
 local stub_generator = require("config.stub_generator")
@@ -62,6 +64,13 @@ local function apply_ruff_cmd_from_venv(_, config)
   end
 end
 
+local function disable_template_document_highlight(client, bufnr)
+  local ft = vim.bo[bufnr].filetype
+  if ft == "html" or ft == "htmldjango" or ft == "jinja" or ft == "jinja2" then
+    client.server_capabilities.documentHighlightProvider = false
+  end
+end
+
 return {
   {
     "mason-org/mason.nvim",
@@ -112,6 +121,7 @@ return {
         root_dir = function(fname)
           return resolver.python_root(fname)
         end,
+        on_attach = disable_template_document_highlight,
       })
 
       local lspconfig = require("lspconfig")
