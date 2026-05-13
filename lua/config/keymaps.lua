@@ -1,3 +1,5 @@
+---@diagnostic disable: undefined-global, unused-local, unused-function, param-type-mismatch
+
 -- Keymaps are automatically loaded on the VeryLazy event
 -- Default keymaps that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua
 -- Add any additional keymaps here
@@ -557,6 +559,65 @@ end
 
 keymaps.set("n", "<C-g>fd", open_file_diff_fullscreen, { desc = "File diff" })
 keymaps.set("n", "<C-g>fD", pick_diff_base_and_open, { desc = "File diff against ref" })
+
+local function pick_ref_and_restore_file()
+  local active = current_branch()
+  local branches, err = list_branches(active)
+  if not branches then
+    vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = "Git Restore" })
+    return
+  end
+  if #branches == 0 then
+    vim.notify("No branches found", vim.log.levels.WARN, { title = "Git Restore" })
+    return
+  end
+
+  vim.ui.select(branches, {
+    prompt = "Select branch:",
+    format_item = function(item) return item.label end,
+  }, function(branch_item)
+    if not branch_item then return end
+
+    local commits, commits_err = list_commits(branch_item.ref, 150)
+    if not commits then
+      vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Restore" })
+      return
+    end
+    if #commits == 0 then
+      vim.notify("No commits found for " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Restore" })
+      return
+    end
+
+    vim.ui.select(commits, {
+      prompt = "Select commit from " .. branch_item.ref .. ":",
+      format_item = function(item) return item.label end,
+    }, function(commit_item)
+      if not commit_item then return end
+
+      local filepath = vim.api.nvim_buf_get_name(0)
+      if not filepath or filepath == "" then
+        vim.notify("No file in current buffer", vim.log.levels.ERROR, { title = "Git Restore" })
+        return
+      end
+
+      local git_root = LazyVim.root.git()
+      local lock = git_root .. "/.git/index.lock"
+      if vim.uv.fs_stat(lock) then
+        vim.uv.fs_unlink(lock)
+      end
+      local result = vim.system({ "git", "checkout", commit_item.ref, "--", filepath }, { cwd = git_root }):wait()
+      if result.code ~= 0 then
+        vim.notify("git checkout failed:\n" .. (result.stderr or ""), vim.log.levels.ERROR, { title = "Git Restore" })
+        return
+      end
+
+      vim.cmd("edit!")
+      vim.notify("Restored to " .. commit_item.ref, vim.log.levels.INFO, { title = "Git Restore" })
+    end)
+  end)
+end
+
+keymaps.set("n", "<C-g>fR", pick_ref_and_restore_file, { desc = "Restore file to ref" })
 
 keymaps.set("n", "<C-g>fh", function() Snacks.picker.git_log_file() end, { desc = "File history" })
 keymaps.set("n", "<C-g>fr", function() require("gitsigns").reset_buffer() end, { desc = "Revert file to HEAD" })
@@ -1333,13 +1394,54 @@ local function read_js_indent_config(dir)
   end
 end
 
+local function read_html_indent_config(dir)
+  for _, name in ipairs({ "biome.json", "biome.jsonc" }) do
+    local raw = read_config_file(dir .. "/" .. name)
+    if raw then
+      if name:find("jsonc$") then raw = strip_json_comments(raw) end
+      local data = json_decode_safe(raw)
+      if data then
+        local val = json_get(data, "html", "formatter", "indentWidth")
+          or json_get(data, "formatter", "indentWidth")
+        if val then return val end
+      end
+    end
+  end
+  for _, name in ipairs({ ".prettierrc", ".prettierrc.json" }) do
+    local raw = read_config_file(dir .. "/" .. name)
+    if raw then
+      local data = json_decode_safe(raw)
+      if data then
+        local val = json_get(data, "tabWidth")
+        if val then return val end
+      else
+        local val = raw:match("tabWidth%s*:%s*(%d+)")
+        if val then return tonumber(val) end
+      end
+    end
+  end
+  local raw = read_config_file(dir .. "/package.json")
+  if raw then
+    local data = json_decode_safe(raw)
+    if data then
+      local val = json_get(data, "prettier", "tabWidth")
+      if val then return val end
+    end
+  end
+end
+
 local js_filetypes = {
   javascript = true, javascriptreact = true,
   typescript = true, typescriptreact = true,
   vue = true,
 }
 
-local auto_indent_filetypes = vim.tbl_extend("force", { python = true }, js_filetypes)
+local html_filetypes = {
+  html = true, htmldjango = true,
+  jinja = true, jinja2 = true,
+}
+
+local auto_indent_filetypes = vim.tbl_extend("force", { python = true }, js_filetypes, html_filetypes)
 
 local function read_project_indent()
   local ft = vim.bo.filetype
@@ -1348,6 +1450,8 @@ local function read_project_indent()
     reader = read_python_indent_config
   elseif js_filetypes[ft] then
     reader = read_js_indent_config
+  elseif html_filetypes[ft] then
+    reader = read_html_indent_config
   end
   if reader then return walk_ancestors(reader) end
   return nil
@@ -1561,7 +1665,7 @@ end
 
 vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("AutoIndent", { clear = true }),
-  pattern = { "python", "javascript", "javascriptreact", "typescript", "typescriptreact", "vue" },
+  pattern = { "python", "javascript", "javascriptreact", "typescript", "typescriptreact", "vue", "html", "htmldjango", "jinja", "jinja2" },
   callback = apply_auto_indent,
 })
 if auto_indent_filetypes[vim.bo.filetype] then apply_auto_indent() end
