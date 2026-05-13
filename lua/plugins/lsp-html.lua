@@ -1,3 +1,5 @@
+---@diagnostic disable: undefined-global
+
 return {
   {
     "mason-org/mason.nvim",
@@ -15,17 +17,18 @@ return {
     opts = function(_, opts)
       opts = opts or {}
       opts.servers = opts.servers or {}
+      local html_filetypes = { "html", "htmldjango" }
 
       opts.servers.html = vim.tbl_deep_extend("force", opts.servers.html or {}, {
-        filetypes = { "html" },
+        filetypes = html_filetypes,
       })
 
       opts.servers.cssls = vim.tbl_deep_extend("force", opts.servers.cssls or {}, {
-        filetypes = { "css", "scss", "less", "html" },
+        filetypes = { "css", "scss", "less", "html", "htmldjango" },
       })
 
       opts.servers.emmet_language_server = vim.tbl_deep_extend("force", opts.servers.emmet_language_server or {}, {
-        filetypes = { "html", "css", "scss", "less" },
+        filetypes = { "html", "htmldjango", "css", "scss", "less" },
       })
 
       return opts
