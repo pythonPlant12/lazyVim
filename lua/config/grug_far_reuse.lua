@@ -39,6 +39,21 @@ local function focus_open_grug_window(grug_far, tabpage)
   if focus_window(win) then return inst end
 end
 
+local function focus_search_input(inst)
+  inst:when_ready(function()
+    vim.schedule(function()
+      vim.schedule(function()
+        if not inst:is_valid() then return end
+        inst:open()
+        pcall(function() inst:goto_input("search") end)
+        if vim.api.nvim_get_current_buf() == inst:get_buf() then
+          vim.cmd("startinsert!")
+        end
+      end)
+    end)
+  end)
+end
+
 function M.open_for_buffer(_, opts)
   local grug_far = require("grug-far")
   local tabpage = vim.api.nvim_get_current_tabpage()
@@ -54,11 +69,14 @@ function M.open_for_buffer(_, opts)
 
   if not inst then
     opts.instanceName = name
-    return grug_far.open(opts)
+    inst = grug_far.open(opts)
+    focus_search_input(inst)
+    return inst
   end
 
   inst:open()
   inst:update_input_values(opts.prefills, true)
+  focus_search_input(inst)
   return inst
 end
 
