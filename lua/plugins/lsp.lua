@@ -1,3 +1,5 @@
+---@diagnostic disable: undefined-global
+
 local resolver = require("config.lsp_resolver")
 
 local function max_popup_size()
@@ -47,7 +49,11 @@ local function command_check_lsp()
   else
     for _, client in ipairs(clients) do
       local client_root = client.root_dir
-      if (not client_root or client_root == "") and type(client.config) == "table" and type(client.config.root_dir) == "string" then
+      if
+        (not client_root or client_root == "")
+        and type(client.config) == "table"
+        and type(client.config.root_dir) == "string"
+      then
         client_root = client.config.root_dir
       end
       local display_root = (client_root and client_root ~= "") and client_root or "(none)"
@@ -56,6 +62,58 @@ local function command_check_lsp()
   end
 
   vim.notify(table.concat(lines, "\n"), vim.log.levels.INFO, { title = "CheckLsp" })
+end
+
+local function install_inlay_hint_guard()
+  if not vim.lsp.inlay_hint or vim.g.inlay_hint_guard_installed then
+    return
+  end
+
+  vim.g.inlay_hint_guard_installed = true
+  local original_on_inlayhint = vim.lsp.inlay_hint.on_inlayhint
+  local versions = {}
+
+  vim.lsp.inlay_hint.on_inlayhint = function(err, result, ctx, ...)
+    if err or not result or not ctx or not ctx.bufnr then
+      return original_on_inlayhint(err, result, ctx, ...)
+    end
+
+    local bufnr = ctx.bufnr
+    local version = ctx.version
+    if version ~= nil and versions[bufnr] ~= nil and versions[bufnr] ~= version then
+      pcall(vim.lsp.inlay_hint.enable, false, { bufnr = bufnr })
+      pcall(vim.lsp.inlay_hint.enable, true, { bufnr = bufnr })
+    end
+    versions[bufnr] = version
+
+    if type(result) ~= "table" or not vim.api.nvim_buf_is_loaded(bufnr) then
+      return original_on_inlayhint(err, result, ctx, ...)
+    end
+
+    local client = ctx.client_id and vim.lsp.get_client_by_id(ctx.client_id)
+    local encoding = (client and client.offset_encoding) or "utf-16"
+    local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    local sanitized = {}
+
+    for _, hint in ipairs(result) do
+      local position = hint.position
+      if type(position) == "table" and type(position.line) == "number" and type(position.character) == "number" then
+        local lnum = math.floor(position.line)
+        local line = lines[lnum + 1]
+        if line then
+          local ok, max_col = pcall(vim.str_utfindex, line, encoding)
+          if not ok or type(max_col) ~= "number" then
+            max_col = #line
+          end
+          position.line = lnum
+          position.character = math.min(math.max(math.floor(position.character), 0), max_col)
+          sanitized[#sanitized + 1] = hint
+        end
+      end
+    end
+
+    return original_on_inlayhint(err, sanitized, ctx, ...)
+  end
 end
 
 return {
@@ -86,6 +144,8 @@ return {
       return opts
     end,
     init = function()
+      install_inlay_hint_guard()
+
       if vim.fn.exists(":CheckLsp") == 0 then
         vim.api.nvim_create_user_command("CheckLsp", command_check_lsp, {
           desc = "Show LSP root resolution for current buffer",
