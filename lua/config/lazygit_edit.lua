@@ -1,20 +1,30 @@
+---@diagnostic disable: undefined-global, unused-local, unused-function
+
 local M = {}
+
+local function is_lazygit_buf(buf)
+  if vim.bo[buf].filetype ~= "snacks_terminal" then
+    return false
+  end
+
+  local meta = vim.b[buf].snacks_terminal
+  local cmd = type(meta) == "table" and meta.cmd or nil
+  return (type(cmd) == "table" and cmd[1] == "lazygit")
+    or (type(cmd) == "string" and cmd:find("lazygit", 1, true) ~= nil)
+end
+
+function M.is_current_lazygit()
+  return is_lazygit_buf(vim.api.nvim_get_current_buf())
+end
 
 function M.jump_to_lazygit()
   for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
     for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
       local buf = vim.api.nvim_win_get_buf(win)
-      if vim.bo[buf].filetype == "snacks_terminal" then
-        local meta = vim.b[buf].snacks_terminal
-        local cmd = type(meta) == "table" and meta.cmd or nil
-        local is_lazygit = (type(cmd) == "table" and cmd[1] == "lazygit")
-          or (type(cmd) == "string" and cmd:find("lazygit", 1, true) ~= nil)
-
-        if is_lazygit then
-          vim.api.nvim_set_current_tabpage(tab)
-          vim.api.nvim_set_current_win(win)
-          return true
-        end
+      if is_lazygit_buf(buf) then
+        vim.api.nvim_set_current_tabpage(tab)
+        vim.api.nvim_set_current_win(win)
+        return true
       end
     end
   end
@@ -123,6 +133,37 @@ function M.open(path, line)
     vim.cmd(("tabedit +%d %s"):format(tonumber(line), escaped))
   else
     vim.cmd("tabedit " .. escaped)
+  end
+end
+
+local function normal_window_in_current_tab()
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local cfg = vim.api.nvim_win_get_config(win)
+    if cfg.relative == "" then
+      local buf = vim.api.nvim_win_get_buf(win)
+      if vim.bo[buf].filetype ~= "snacks_terminal" then
+        return win
+      end
+    end
+  end
+end
+
+function M.open_same_tab(path, line)
+  if not path or path == "" then return end
+
+  local abs = vim.fn.fnamemodify(path, ":p")
+  if abs == "" then return end
+
+  local target = normal_window_in_current_tab()
+  if target and vim.api.nvim_win_is_valid(target) then
+    vim.api.nvim_set_current_win(target)
+  end
+
+  local escaped = vim.fn.fnameescape(abs)
+  if line and tonumber(line) and tonumber(line) > 0 then
+    vim.cmd(("edit +%d %s"):format(tonumber(line), escaped))
+  else
+    vim.cmd("edit " .. escaped)
   end
 end
 

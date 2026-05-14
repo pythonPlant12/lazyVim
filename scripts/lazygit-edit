@@ -6,7 +6,18 @@ import subprocess
 import sys
 
 
-def parse_args(args: list[str]) -> tuple[str, int | None]:
+NVIM_EXPR = ["nvim", "--server"]
+
+
+def parse_args(args: list[str]) -> tuple[str, int | None, bool]:
+    if not args:
+        raise SystemExit(1)
+
+    open_in_tab = False
+    if args[0] == "--tab":
+        open_in_tab = True
+        args = args[1:]
+
     if not args:
         raise SystemExit(1)
 
@@ -27,11 +38,27 @@ def parse_args(args: list[str]) -> tuple[str, int | None]:
     if not os.path.isabs(path):
         path = os.path.abspath(path)
 
-    return path, line
+    return path, line, open_in_tab
+
+
+def remote_expr(server: str, expr: str, *, capture: bool = False) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [*NVIM_EXPR, server, "--remote-expr", expr],
+        stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    )
+
+
+def current_buffer_is_lazygit(server: str) -> bool:
+    lua = "require('config.lazygit_edit').is_current_lazygit() and '1' or '0'"
+    expr = f"luaeval({json.dumps(lua)})"
+    result = remote_expr(server, expr, capture=True)
+    return result.returncode == 0 and result.stdout.strip() == "1"
 
 
 def main() -> int:
-    path, line = parse_args(sys.argv[1:])
+    path, line, open_in_tab = parse_args(sys.argv[1:])
 
     if not os.environ.get("NVIM"):
         cmd = ["nvim"]
@@ -40,13 +67,20 @@ def main() -> int:
         cmd.extend(["--", path])
         os.execvp(cmd[0], cmd)
 
-    lua = "require('config.lazygit_edit').open(_A[1], _A[2])"
+    server = os.environ["NVIM"]
+    lua_function = "open" if open_in_tab else "open_same_tab"
+    lua = f"require('config.lazygit_edit').{lua_function}(_A[1], _A[2])"
     arg2 = "v:null" if line is None else str(line)
     expr = f"luaeval({json.dumps(lua)}, [{json.dumps(path)}, {arg2}])"
-    result = subprocess.run(
-        ["nvim", "--server", os.environ["NVIM"], "--remote-expr", expr],
-        stdout=subprocess.DEVNULL,
-    )
+
+    if not open_in_tab and current_buffer_is_lazygit(server):
+        subprocess.run(
+            ["nvim", "--server", server, "--remote-send", "q"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    result = remote_expr(server, expr)
     return result.returncode
 
 
