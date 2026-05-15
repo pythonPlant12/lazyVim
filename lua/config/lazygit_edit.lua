@@ -148,12 +148,31 @@ local function normal_window_in_current_tab()
   end
 end
 
+local function current_lazygit_window()
+  local win = vim.api.nvim_get_current_win()
+  local buf = vim.api.nvim_win_get_buf(win)
+  return is_lazygit_buf(buf) and win or nil
+end
+
+local function close_lazygit_window(win)
+  if not win or not vim.api.nvim_win_is_valid(win) then
+    return
+  end
+
+  vim.defer_fn(function()
+    if vim.api.nvim_win_is_valid(win) then
+      pcall(vim.api.nvim_win_close, win, true)
+    end
+  end, 50)
+end
+
 function M.open_same_tab(path, line)
   if not path or path == "" then return end
 
   local abs = vim.fn.fnamemodify(path, ":p")
   if abs == "" then return end
 
+  local lazygit_win = current_lazygit_window()
   local target = normal_window_in_current_tab()
   if target and vim.api.nvim_win_is_valid(target) then
     vim.api.nvim_set_current_win(target)
@@ -165,6 +184,7 @@ function M.open_same_tab(path, line)
   else
     vim.cmd("edit " .. escaped)
   end
+  close_lazygit_window(lazygit_win)
 end
 
 return M
