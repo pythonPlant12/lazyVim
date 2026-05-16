@@ -5,15 +5,38 @@ local python_lsp_settings = require("config.python_lsp_settings")
 local stub_generator = require("config.stub_generator")
 stub_generator.setup()
 
+local function add_unique_path(paths, path)
+  if not path or path == "" or vim.fn.isdirectory(path) ~= 1 then
+    return
+  end
+  for _, existing in ipairs(paths) do
+    if existing == path then
+      return
+    end
+  end
+  table.insert(paths, path)
+end
+
+local function python_user_site()
+  if vim.fn.executable("python3") ~= 1 then
+    return nil
+  end
+  local output = vim.fn.systemlist({ "python3", "-m", "site", "--user-site" })
+  if vim.v.shell_error ~= 0 or type(output) ~= "table" then
+    return nil
+  end
+  return output[1]
+end
+
 local function apply_stub_paths(_, config)
   local stub_paths = {}
   local ms_stubs = vim.fn.stdpath("data") .. "/lazy/python-type-stubs"
-  if vim.fn.isdirectory(ms_stubs) == 1 then
-    table.insert(stub_paths, ms_stubs)
-  end
+  add_unique_path(stub_paths, ms_stubs)
   local custom_stubs = vim.fn.stdpath("config") .. "/stubs"
-  if vim.fn.isdirectory(custom_stubs) == 1 then
-    table.insert(stub_paths, custom_stubs)
+  add_unique_path(stub_paths, custom_stubs)
+  local user_site = python_user_site()
+  if user_site and vim.fn.isdirectory(user_site .. "/django-stubs") == 1 then
+    add_unique_path(stub_paths, user_site)
   end
   if #stub_paths == 0 then return end
   config.settings = config.settings or {}
