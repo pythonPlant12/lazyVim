@@ -282,6 +282,21 @@ end, { desc = "Toggle maximize window" })
 keymaps.set("n", "<C-w>_", "<cmd>vsplit<CR>", { desc = "Split window vertically" })
 keymaps.set("n", "<C-w>-", "<cmd>split<CR>",  { desc = "Split window horizontally" })
 
+local function toggle_terminal_split()
+  Snacks.terminal.toggle(nil, {
+    count = 1,
+    win = {
+      position = "bottom",
+    },
+  })
+end
+
+keymaps.set("n", "<C-w>t", toggle_terminal_split, { desc = "Toggle terminal split" })
+keymaps.set("t", "<C-w>t", function()
+  vim.cmd.stopinsert()
+  vim.schedule(toggle_terminal_split)
+end, { desc = "Toggle terminal split" })
+
 keymaps.set("n", "<C-w>=", function()
   vim.cmd("wincmd =")
   for _, win in ipairs(vim.api.nvim_list_wins()) do
