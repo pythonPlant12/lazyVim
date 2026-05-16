@@ -5,7 +5,7 @@ end
 vim.o.background = "dark"
 
 local palette = {
-  bg = "#212120",
+  bg = "#151619",
   fg = "#BCBEC4",
   fg_bright = "#CED0D6",
   muted = "#6F737A",
@@ -25,8 +25,8 @@ local palette = {
   border = "#393B40",
 }
 
-vim.g.colors_name = "islands-dark"
 vim.cmd("highlight clear")
+vim.g.colors_name = "islands-dark"
 
 local hl = vim.api.nvim_set_hl
 

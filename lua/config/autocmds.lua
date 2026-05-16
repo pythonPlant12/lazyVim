@@ -106,7 +106,7 @@ local function apply_custom_hl()
     snacks_selected = "#2E6EA8",
     snacks_comment = "#7B8491",
     snacks_search_bg = "#C8D8EE",
-    indent_fg = "#D8DAE0",
+    indent_fg = "#C4CAD3",
     indent_scope_fg = "#8FA8C8",
     context_bg = "#f5f5f5",
   } or {
@@ -159,7 +159,7 @@ local function apply_custom_hl()
     snacks_selected = "#89b4fa",
     snacks_comment = "#6c7086",
     snacks_search_bg = "#1e3a5f",
-    indent_fg = "#2E3138",
+    indent_fg = "#40454F",
     indent_scope_fg = "#5B6B8A",
     context_bg = "#313244",
   }

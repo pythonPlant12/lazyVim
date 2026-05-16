@@ -41,8 +41,8 @@ local syn = {
   red      = "#eb6f92",
 }
 
-vim.g.colors_name = "islands-rose-pine-dark"
 vim.cmd("highlight clear")
+vim.g.colors_name = "islands-rose-pine-dark"
 
 local hl = vim.api.nvim_set_hl
 

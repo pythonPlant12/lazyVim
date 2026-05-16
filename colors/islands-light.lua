@@ -25,8 +25,8 @@ local palette = {
   border = "#F3F1EE",
 }
 
-vim.g.colors_name = "islands-light"
 vim.cmd("highlight clear")
+vim.g.colors_name = "islands-light"
 
 local hl = vim.api.nvim_set_hl
 
