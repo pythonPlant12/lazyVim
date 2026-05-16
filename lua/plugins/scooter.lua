@@ -1,9 +1,66 @@
+---@diagnostic disable: undefined-global
+
+local function focus_window_for_location(grug_buf, filename)
+  if not filename or filename == "" then
+    return
+  end
+
+  local target = vim.fn.fnamemodify(filename, ":p")
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ":p")
+    if buf ~= grug_buf and name == target then
+      vim.api.nvim_set_current_win(win)
+      return
+    end
+  end
+end
+
+local function run_enter_fallback(fallback)
+  if fallback and type(fallback.callback) == "function" then
+    fallback.callback()
+  end
+end
+
+local function open_grug_result_and_focus(buf, fallback)
+  local grug_far = require("grug-far")
+  local inst = grug_far.get_instance(buf)
+  if not inst or not inst._context then
+    run_enter_fallback(fallback)
+    return
+  end
+
+  if vim.v.count and vim.v.count > 0 then
+    pcall(function() inst:goto_match(vim.v.count) end)
+  end
+
+  local ok, results_list = pcall(require, "grug-far.render.resultsList")
+  if not ok then
+    run_enter_fallback(fallback)
+    return
+  end
+
+  local location = results_list.getResultLocationAtCursor(buf, inst._context)
+  if not location then
+    run_enter_fallback(fallback)
+    return
+  end
+
+  inst:open_location()
+  focus_window_for_location(buf, location.filename)
+end
+
 return {
   {
     "MagicDuck/grug-far.nvim",
     opts = {
       windowCreationCommand = "botright vsplit",
       keymaps = {
+        -- grug-far's default <enter> action is gotoLocation, which calls
+        -- nvim_win_set_cursor without guarding against stale result line
+        -- numbers. OpenLocation performs the same jump defensively.
+        gotoLocation = false,
+        openLocation = { n = "<enter>" },
         syncNext    = { n = "<S-CR>", i = "<S-CR>" },
         historyOpen = { n = "<localleader>h" },
         refresh     = { n = "<localleader>r" },
@@ -37,6 +94,21 @@ return {
             vim.keymap.set({ "n", "i" }, lhs, fn, { buffer = ev.buf, silent = true, desc = desc })
           end
           local inst = function() return require("grug-far").get_instance(ev.buf) end
+
+          vim.schedule(function()
+            if vim.api.nvim_buf_is_valid(ev.buf) then
+              local enter_fallback = nil
+              for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(ev.buf, "n")) do
+                if mapping.lhs == "<CR>" or mapping.lhs:lower() == "<enter>" then
+                  enter_fallback = mapping
+                  break
+                end
+              end
+              vim.keymap.set("n", "<enter>", function()
+                open_grug_result_and_focus(ev.buf, enter_fallback)
+              end, { buffer = ev.buf, silent = true, desc = "Open result and focus file" })
+            end
+          end)
 
           map("<localleader>c", function() inst():toggle_flags({ "--smart-case" })    end, "Toggle camel/smart case")
           map("<localleader>w", function() inst():toggle_flags({ "--word-regexp" })   end, "Toggle whole word")
