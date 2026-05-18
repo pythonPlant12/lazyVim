@@ -1,3 +1,5 @@
+---@diagnostic disable: undefined-global
+
 return {
   {
     "HiPhish/rainbow-delimiters.nvim",
@@ -12,6 +14,7 @@ return {
           [""] = "rainbow-delimiters",
           lua = "rainbow-blocks",
         },
+        blacklist = { "html", "vue" },
         highlight = {
           "RainbowDelimiterBlueMuted",
           "RainbowDelimiterGoldMuted",

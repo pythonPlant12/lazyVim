@@ -1,3 +1,5 @@
+---@diagnostic disable: undefined-global, trailing-space
+
 -- Autocmds are automatically loaded on the VeryLazy event
 -- Default autocmds that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/autocmds.lua
 -- Add any additional autocmds here
@@ -80,7 +82,7 @@ local function apply_custom_hl()
     neotree_red = "#B54A5C",
     neotree_cursor_fg = "#2F496F",
     neotree_cursor_bg = "#D2E4F5",
-    param = "#E0B0FF",
+    param = "#6E52A8",
     vbuiltin = "#A15391",
     ctor = "#8A6B20",
     blue = "#2A6296",
@@ -133,7 +135,7 @@ local function apply_custom_hl()
     neotree_cursor_fg = "#E8F0FA",
     neotree_cursor_bg = "#2F496F",
     neotree_fg = "#D0D2D8",
-    param = "#D49BFF",
+    param = "#cba6f7",
     vbuiltin = "#C77DBB",
     ctor = "#f9e2af",
     blue = "#89b4fa",
@@ -364,77 +366,39 @@ apply_grugfar_hl()
 local function apply_html_hl()
   if not is_islands_or_catppuccin() then return end
   local hl = vim.api.nvim_set_hl
-  local blue, amber, muted, cyan, text, green
+  local blue, amber, muted, text
   if vim.o.background == "light" then
     blue   = "#356FAF"
     amber  = "#8E5324"
     muted  = "#7B8596"
-    cyan   = "#2A6678"
     text   = "#4C4F69"
-    green  = "#4F7C61"
   else
     blue   = "#56A8F5"
     amber  = "#CF8E6D"
     muted  = "#6F737A"
-    cyan   = "#2AACB8"
     text   = "#BCBEC4"
-    green  = "#a6e3a1"
   end
-  hl(0, "htmlTag",                  { fg = muted })
-  hl(0, "htmlEndTag",               { fg = muted })
-  hl(0, "htmlTagName",              { fg = amber })
-  hl(0, "htmlSpecialTagName",       { fg = blue })
-  hl(0, "htmlArg",                  { fg = amber })
-  hl(0, "htmlSpecialChar",          { fg = cyan })
-  hl(0, "htmlString",               { fg = green })
-  hl(0, "htmlValue",                { fg = green })
-  hl(0, "@tag",                     { fg = blue })
-  hl(0, "@tag.builtin",             { fg = blue })
-  hl(0, "@tag.attribute",           { fg = amber })
-  hl(0, "@tag.delimiter",           { fg = muted })
-  hl(0, "@punctuation.bracket",     { fg = muted })
-  hl(0, "@punctuation.special",     { fg = blue })
-  hl(0, "@attribute",               { fg = amber })
-  hl(0, "@tag.html",                { fg = blue })
-  hl(0, "@tag.builtin.html",        { fg = blue })
-  hl(0, "@tag.attribute.html",      { fg = amber })
-  hl(0, "@tag.delimiter.html",      { fg = muted })
-  hl(0, "@tag.htmldjango",          { fg = blue })
-  hl(0, "@tag.builtin.htmldjango",  { fg = blue })
-  hl(0, "@tag.attribute.htmldjango", { fg = amber })
-  hl(0, "@tag.delimiter.htmldjango", { fg = muted })
-  hl(0, "@punctuation.bracket.html", { fg = muted })
-  hl(0, "@string.special.url.html", { fg = cyan, underline = true })
-  hl(0, "@string.htmldjango",       { fg = green })
+  hl(0, "@tag.vue",                 { link = "@tag" })
+  hl(0, "@tag.builtin.vue",         { link = "@tag.builtin" })
+  hl(0, "@tag.attribute.vue",       { link = "@tag.attribute" })
+  hl(0, "@tag.delimiter.vue",       { link = "@tag.delimiter" })
+  hl(0, "@punctuation.bracket.vue", { link = "@punctuation.bracket" })
+  hl(0, "@constructor.vue",         { link = "@tag" })
+  hl(0, "@lsp.type.component",      { link = "@tag" })
+  hl(0, "@lsp.type.component.vue",  { link = "@tag.vue" })
   hl(0, "@keyword.directive.jinja", { fg = blue })
   hl(0, "@keyword.directive.htmldjango", { fg = blue })
-  hl(0, "@tag.vue",                 { fg = blue })
-  hl(0, "@tag.builtin.vue",         { fg = blue })
-  hl(0, "@tag.attribute.vue",       { fg = amber })
-  hl(0, "@tag.delimiter.vue",       { fg = muted })
-  hl(0, "@punctuation.bracket.vue", { fg = muted })
-  hl(0, "@punctuation.special.vue", { fg = blue })
-  hl(0, "@constructor.vue",         { fg = blue })
-  hl(0, "@attribute.vue",           { fg = amber })
-  hl(0, "@keyword.directive.vue",   { fg = blue })
-  hl(0, "@keyword.modifier.vue",    { fg = blue })
-  hl(0, "@function.method.vue",     { fg = blue })
-  hl(0, "@character.special.vue",   { fg = blue })
   hl(0, "@variable.vue",            { fg = text })
   hl(0, "@variable.member.vue",     { fg = text })
   hl(0, "@none.vue",                { fg = text })
   hl(0, "@property",                { fg = text })
   hl(0, "@property.vue",            { fg = text })
-  hl(0, "@string",                  { fg = green })
-  hl(0, "@string.html",             { fg = green })
-  hl(0, "@string.vue",              { fg = green })
 
   hl(0, "jinjaTagBlock",            { fg = blue })
   hl(0, "jinjaVarBlock",            { fg = blue })
   hl(0, "jinjaStatement",           { fg = amber })
   hl(0, "jinjaVariable",            { fg = text })
-  hl(0, "jinjaFilter",              { fg = cyan })
-  hl(0, "jinjaString",              { fg = green })
+  hl(0, "jinjaFilter",              { fg = blue })
   hl(0, "jinjaNumber",              { fg = amber })
   hl(0, "jinjaOperator",            { fg = muted })
   hl(0, "jinjaComment",             { fg = muted, italic = true })
@@ -442,8 +406,8 @@ local function apply_html_hl()
   hl(0, "djangoTagBlock",           { fg = blue })
   hl(0, "djangoVarBlock",           { fg = blue })
   hl(0, "djangoStatement",          { fg = amber })
-  hl(0, "djangoFilter",             { fg = cyan })
-  hl(0, "djangoArgument",           { fg = green })
+  hl(0, "djangoFilter",             { fg = blue })
+  hl(0, "djangoArgument",           { fg = text })
   hl(0, "djangoComment",            { fg = muted, italic = true })
   hl(0, "djangoComBlock",           { fg = muted, italic = true })
 end

@@ -173,7 +173,7 @@ return {
         max_height = max_height,
       })
 
-      vim.api.nvim_set_hl(0, "@lsp.type.component", { link = "@type" })
+      vim.api.nvim_set_hl(0, "@lsp.type.component", { link = "@tag" })
     end,
   },
 }

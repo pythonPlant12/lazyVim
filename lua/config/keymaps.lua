@@ -1700,6 +1700,8 @@ vim.keymap.set("n", "<leader>Iw", function()
   require("trouble").toggle("diagnostics")
 end, { desc = "Workspace diagnostics" })
 
+vim.keymap.set("n", "<leader>Ih", "<cmd>Inspect<CR>", { desc = "Inspect highlight groups" })
+
 vim.keymap.set("n", "<leader>Ef", function()
   require("trouble").toggle({ mode = "diagnostics", filter = { buf = 0 } })
 end, { desc = "File errors (LSP)" })

@@ -1,3 +1,5 @@
+---@diagnostic disable: undefined-global
+
 local grug_far_reuse = require("config.grug_far_reuse")
 local tab_jump = require("config.tab_jump")
 
@@ -1207,13 +1209,13 @@ return {
             local a, b = vim.g._git_ahead or 0, vim.g._git_behind or 0
             local u, m, d, c = vim.g._git_untracked or 0, vim.g._git_modified or 0, vim.g._git_deleted or 0, vim.g._git_conflicted or 0
             local indicators = {}
-            if a > 0 and b > 0 then table.insert(indicators, "%#LualineGitYellow#▲▼") end
-            if a > 0 and b == 0 then table.insert(indicators, "%#LualineGitGreen#▲") end
-            if b > 0 and a == 0 then table.insert(indicators, "%#LualineGitPeach#▼") end
-            if c > 0 then table.insert(indicators, "%#LualineGitRed#●") end
-            if u > 0 then table.insert(indicators, "%#LualineGitGreen#●") end
-            if m > 0 then table.insert(indicators, "%#LualineGitYellow#●") end
-            if d > 0 then table.insert(indicators, "%#LualineGitRed#●") end
+            if a > 0 and b > 0 then table.insert(indicators, "%#LualineGitYellow#+-") end
+            if a > 0 and b == 0 then table.insert(indicators, "%#LualineGitGreen#+") end
+            if b > 0 and a == 0 then table.insert(indicators, "%#LualineGitPeach#-") end
+            if c > 0 then table.insert(indicators, "%#LualineGitRed#!") end
+            if u > 0 then table.insert(indicators, "%#LualineGitGreen#?") end
+            if m > 0 then table.insert(indicators, "%#LualineGitYellow#*") end
+            if d > 0 then table.insert(indicators, "%#LualineGitRed#x") end
             if #indicators > 0 then
               table.insert(parts, " " .. table.concat(indicators, "") .. "%#LualineGitBase#")
             end
@@ -1290,7 +1292,7 @@ return {
                     return not (item.item and item.item.kind == "Struct")
                   end,
                 },
-                format = "{kind_icon}{symbol.name:Normal}",
+                format = "{symbol.name:Normal}",
                 hl_group = "LualineBreadcrumbStatus",
               })
               breadcrumb_symbols = symbols
@@ -1639,7 +1641,7 @@ return {
             if type(original) == "function" then
               styled_comp[1] = function(self)
                 local str = (original(self) or ""):gsub("^%s+", ""):gsub("%s+$", "")
-                return str:gsub(" %%#", "%%#" .. sep_hl .. "# %%#")
+                return str:gsub(" %%#", "%%#" .. sep_hl .. "#> %%#")
               end
             end
             styled_comp.fmt = function(str)
@@ -1659,7 +1661,7 @@ return {
                   table.insert(out, str:sub(i, i + char_len - 1)); count = count + 1; i = i + char_len
                 end
               end
-              return table.concat(out) .. "…"
+              return table.concat(out) .. "..."
             end
           end
           table.insert(styled_c, styled_comp)
