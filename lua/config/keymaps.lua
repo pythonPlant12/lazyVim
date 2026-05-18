@@ -292,10 +292,6 @@ local function toggle_terminal_split()
 end
 
 keymaps.set("n", "<C-w>t", toggle_terminal_split, { desc = "Toggle terminal split" })
-keymaps.set("t", "<C-w>t", function()
-  vim.cmd.stopinsert()
-  vim.schedule(toggle_terminal_split)
-end, { desc = "Toggle terminal split" })
 
 keymaps.set("n", "<C-w>=", function()
   vim.cmd("wincmd =")
