@@ -1270,38 +1270,16 @@ return {
       end
       opts.sections.lualine_c = new_c
 
-      -- Replace LazyVim's Trouble symbols component with a kind-filtered version.
-      -- The component is identified by: table with function at [1] and a cond function.
-      -- For Vue/HTML files, Struct kind items (template elements, custom component tags)
-      -- are excluded so they don't pollute the statusline breadcrumb.
+      -- Remove LazyVim's Trouble symbols component from the statusline. Keep
+      -- the file path chip, but avoid showing the current code breadcrumb next
+      -- to it.
       local breadcrumb_symbols = nil
       do
-        local ok_t, trouble_api = pcall(require, "trouble")
+        local ok_t = pcall(require, "trouble")
         if ok_t then
           for i, comp in ipairs(opts.sections.lualine_c) do
             if type(comp) == "table" and type(comp[1]) == "function" and type(comp.cond) == "function" then
-              local symbols = trouble_api.statusline({
-                mode = "symbols",
-                groups = {},
-                title = false,
-                filter = { range = true, no_vue_struct = true },
-                filters = {
-                  no_vue_struct = function(item)
-                    local ft = vim.bo.filetype
-                    if ft ~= "vue" and ft ~= "html" then return true end
-                    return not (item.item and item.item.kind == "Struct")
-                  end,
-                },
-                format = "{symbol.name:Normal}",
-                hl_group = "LualineBreadcrumbStatus",
-              })
-              breadcrumb_symbols = symbols
-              opts.sections.lualine_c[i] = {
-                symbols and symbols.get,
-                cond = function()
-                  return vim.b.trouble_lualine ~= false and symbols.has()
-                end,
-              }
+              table.remove(opts.sections.lualine_c, i)
               break
             end
           end
