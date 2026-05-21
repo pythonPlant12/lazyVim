@@ -2,6 +2,12 @@
 
 local M = {}
 
+local _open_tab_next = false
+
+function M.set_open_tab_next()
+  _open_tab_next = true
+end
+
 local function is_lazygit_buf(buf)
   if vim.bo[buf].filetype ~= "snacks_terminal" then
     return false
@@ -11,6 +17,20 @@ local function is_lazygit_buf(buf)
   local cmd = type(meta) == "table" and meta.cmd or nil
   return (type(cmd) == "table" and cmd[1] == "lazygit")
     or (type(cmd) == "string" and cmd:find("lazygit", 1, true) ~= nil)
+end
+
+function M.open_tab_next_and_edit()
+  _open_tab_next = true
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if is_lazygit_buf(buf) then
+      local chan = vim.bo[buf].channel
+      if chan and chan > 0 then
+        vim.api.nvim_chan_send(chan, "e")
+        return
+      end
+    end
+  end
+  _open_tab_next = false
 end
 
 function M.is_current_lazygit()
@@ -172,18 +192,34 @@ function M.open_same_tab(path, line)
   local abs = vim.fn.fnamemodify(path, ":p")
   if abs == "" then return end
 
-  local lazygit_win = current_lazygit_window()
-  local target = normal_window_in_current_tab()
-  if target and vim.api.nvim_win_is_valid(target) then
-    vim.api.nvim_set_current_win(target)
+  if _open_tab_next then
+    _open_tab_next = false
+    M.open(abs, line)
+    return
   end
 
+  local lazygit_win = current_lazygit_window()
+  local target = normal_window_in_current_tab()
+
   local escaped = vim.fn.fnameescape(abs)
+  local edit_cmd
   if line and tonumber(line) and tonumber(line) > 0 then
-    vim.cmd(("edit +%d %s"):format(tonumber(line), escaped))
+    edit_cmd = ("edit +%d %s"):format(tonumber(line), escaped)
   else
-    vim.cmd("edit " .. escaped)
+    edit_cmd = "edit " .. escaped
   end
+
+  if target and vim.api.nvim_win_is_valid(target) then
+    vim.api.nvim_set_current_win(target)
+    vim.cmd(edit_cmd)
+  else
+    close_lazygit_window(lazygit_win)
+    vim.defer_fn(function()
+      vim.cmd(edit_cmd)
+    end, 60)
+    return
+  end
+
   close_lazygit_window(lazygit_win)
 end
 
