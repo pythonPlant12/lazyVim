@@ -52,6 +52,27 @@ local function is_islands_or_catppuccin()
   return cs:find("^islands") ~= nil or cs:find("^catppuccin") ~= nil
 end
 
+local function apply_snacks_diff_hl()
+  if Snacks == nil then return end
+  local is_light = vim.o.background == "light"
+  local diff_add = is_light and "#DFF1E4" or "#1e3028"
+  local diff_del = is_light and "#F5DEDE" or "#361515"
+  Snacks.util.set_hl({
+    SnacksDiffAdd             = { bg = diff_add },
+    SnacksDiffDelete          = { bg = diff_del },
+    SnacksDiffContext         = { bg = "NONE" },
+    SnacksDiffContextLineNr   = { bg = "NONE" },
+    SnacksDiffAddLineNr       = { bg = diff_add },
+    SnacksDiffDeleteLineNr    = { bg = diff_del },
+    SnacksGhDiffAdd           = { bg = diff_add },
+    SnacksGhDiffDelete        = { bg = diff_del },
+    SnacksGhDiffContext       = { bg = "NONE" },
+    SnacksGhDiffContextLineNr = { bg = "NONE" },
+    SnacksGhDiffAddLineNr     = { bg = diff_add },
+    SnacksGhDiffDeleteLineNr  = { bg = diff_del },
+  })
+end
+
 local function apply_custom_hl()
   local hl = vim.api.nvim_set_hl
   local normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
@@ -234,6 +255,8 @@ local function apply_custom_hl()
   hl(0, "DiffChange", { bg = c.diff_change })
   hl(0, "DiffText",   { bg = c.diff_text })
 
+  vim.schedule(apply_snacks_diff_hl)
+
   hl(0, "GitSignsAdd",    { fg = c.green })
   hl(0, "GitSignsChange", { fg = c.yellow })
   hl(0, "GitSignsDelete", { fg = c.rose })
@@ -336,6 +359,37 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 })
 apply_custom_hl()
 
+vim.api.nvim_create_autocmd("User", {
+  pattern = "VeryLazy",
+  group = vim.api.nvim_create_augroup("SnacksPickerDiffHl", { clear = true }),
+  once = true,
+  callback = function()
+    if Snacks == nil then return end
+    local orig_set_hl = Snacks.util.set_hl
+    Snacks.util.set_hl = function(groups, opts)
+      if opts and opts.default then
+        local is_light = vim.o.background == "light"
+        local diff_add = is_light and "#DFF1E4" or "#1e3028"
+        local diff_del = is_light and "#F5DEDE" or "#361515"
+        local overrides = {
+          DiffContext       = { bg = "NONE" },
+          DiffContextLineNr = { bg = "NONE" },
+          DiffAdd           = { bg = diff_add },
+          DiffDelete        = { bg = diff_del },
+          DiffAddLineNr     = { bg = diff_add },
+          DiffDeleteLineNr  = { bg = diff_del },
+        }
+        for k, v in pairs(overrides) do
+          if groups[k] ~= nil then
+            groups[k] = v
+          end
+        end
+      end
+      orig_set_hl(groups, opts)
+    end
+  end,
+})
+
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "lazy",
   group = vim.api.nvim_create_augroup("LazyHl", { clear = true }),
@@ -436,46 +490,76 @@ vim.api.nvim_create_autocmd("BufEnter", {
   end,
 })
 
-vim.api.nvim_create_autocmd("BufEnter", {
+local function bind_lazygit_tab_nav(buf)
+  if not vim.api.nvim_buf_is_valid(buf) or vim.bo[buf].filetype ~= "snacks_terminal" then
+    return false
+  end
+
+  local meta = vim.b[buf].snacks_terminal
+  if type(meta) ~= "table" then
+    return false
+  end
+
+  local cmd = meta.cmd
+  local is_lazygit = (type(cmd) == "table" and cmd[1] == "lazygit")
+    or (type(cmd) == "string" and cmd:find("lazygit", 1, true) ~= nil)
+
+  if not is_lazygit then
+    return false
+  end
+
+  vim.keymap.set("t", "<C-j>", function()
+    vim.cmd.stopinsert()
+    vim.schedule(function() vim.cmd.tabprev() end)
+  end, {
+    buffer = buf,
+    nowait = true,
+    silent = true,
+    desc = "Previous tab from LazyGit",
+  })
+  vim.keymap.set("t", "<C-k>", function()
+    vim.cmd.stopinsert()
+    vim.schedule(function() vim.cmd.tabnext() end)
+  end, {
+    buffer = buf,
+    nowait = true,
+    silent = true,
+    desc = "Next tab from LazyGit",
+  })
+  vim.keymap.set("n", "<C-j>", ":tabprev<CR>", {
+    buffer = buf,
+    silent = true,
+    desc = "Previous tab from LazyGit",
+  })
+  vim.keymap.set("n", "<C-k>", ":tabnext<CR>", {
+    buffer = buf,
+    silent = true,
+    desc = "Next tab from LazyGit",
+  })
+
+  return true
+end
+
+local function bind_lazygit_tab_nav_deferred(buf)
+  if bind_lazygit_tab_nav(buf) then
+    return
+  end
+
+  vim.defer_fn(function()
+    if bind_lazygit_tab_nav(buf) then
+      return
+    end
+
+    vim.defer_fn(function()
+      bind_lazygit_tab_nav(buf)
+    end, 150)
+  end, 25)
+end
+
+vim.api.nvim_create_autocmd({ "BufEnter", "FileType", "TermOpen" }, {
   group = vim.api.nvim_create_augroup("LazyGitTerminalTabNav", { clear = true }),
   callback = function(ev)
-    if vim.bo[ev.buf].filetype ~= "snacks_terminal" then
-      return
-    end
-
-    local meta = vim.b[ev.buf].snacks_terminal
-    if type(meta) ~= "table" then
-      return
-    end
-
-    local cmd = meta.cmd
-    local is_lazygit = (type(cmd) == "table" and cmd[1] == "lazygit")
-      or (type(cmd) == "string" and cmd:find("lazygit", 1, true) ~= nil)
-
-    if not is_lazygit then
-      return
-    end
-
-    vim.keymap.set("t", "<C-j>", [[<C-\><C-n>:tabprev<CR>]], {
-      buffer = ev.buf,
-      silent = true,
-      desc = "Previous tab from LazyGit",
-    })
-    vim.keymap.set("t", "<C-k>", [[<C-\><C-n>:tabnext<CR>]], {
-      buffer = ev.buf,
-      silent = true,
-      desc = "Next tab from LazyGit",
-    })
-    vim.keymap.set("n", "<C-j>", ":tabprev<CR>", {
-      buffer = ev.buf,
-      silent = true,
-      desc = "Previous tab from LazyGit",
-    })
-    vim.keymap.set("n", "<C-k>", ":tabnext<CR>", {
-      buffer = ev.buf,
-      silent = true,
-      desc = "Next tab from LazyGit",
-    })
+    bind_lazygit_tab_nav_deferred(ev.buf)
   end,
 })
 

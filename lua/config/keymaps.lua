@@ -818,6 +818,8 @@ keymaps.set("n", "<leader>rv", function()
   return ":IncRename " .. vim.fn.expand("<cword>")
 end, { desc = "Rename variable", expr = true })
 
+keymaps.set("n", "<leader>cdf", function() Snacks.picker.diagnostics_buffer() end, { desc = "File diagnostics" })
+keymaps.set("n", "<leader>cdw", function() Snacks.picker.diagnostics() end, { desc = "Workspace diagnostics" })
 keymaps.set("n", "<leader>se", function() Snacks.picker.diagnostics_buffer() end, { desc = "Buffer diagnostics" })
 Snacks.toggle({
   name = "ESLint Auto-fix",
@@ -1001,7 +1003,7 @@ customCommands:
   - key: E
     context: files
     description: Open file in new tab
-    command: "python3 /Users/nikita/.config/nvim/scripts/lazygit-edit --tab {{.SelectedFile.Name | quote}}"
+    command: "python3 /Users/nikita/.config/nvim/scripts/lazygit-edit --tab {{if .SelectedFile}}{{.SelectedFile.Name | quote}}{{else}}{{.SelectedPath | quote}}{{end}}"
 git:
   paging:
     colorArg: always
