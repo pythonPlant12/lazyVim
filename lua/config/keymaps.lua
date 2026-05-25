@@ -94,16 +94,12 @@ keymaps.set("n", "d", '"_d', opts)
 keymaps.set("n", "D", '"_D', opts)
 keymaps.set("n", "dd", '"_dd', opts)
 keymaps.set("n", "dw", '"_dw', opts)
-keymaps.set("n", "dW", '"_dW', opts)
 keymaps.set("n", "db", '"_db', opts)
-keymaps.set("n", "dB", '"_dB', opts)
 keymaps.set("n", "c", '"_c', opts)
 keymaps.set("n", "C", '"_C', opts)
 keymaps.set("n", "cc", '"_cc', opts)
 keymaps.set("n", "cw", '"_cw', opts)
-keymaps.set("n", "cW", '"_cW', opts)
 keymaps.set("n", "cb", '"_cb', opts)
-keymaps.set("n", "cB", '"_cB', opts)
 keymaps.set("n", "x", '"+x', opts)
 keymaps.set("n", "X", '"+X', opts)
 keymaps.set("n", "s", '"_s', opts)
@@ -113,6 +109,163 @@ keymaps.set("v", "c", '"_c', opts)
 keymaps.set("v", "C", '"_C', opts)
 keymaps.set("v", "x", '"+x', opts)
 keymaps.set("v", "s", '"_s', opts)
+
+local function delete_range(start_row, start_col, end_row, end_col, enter_insert)
+  vim.api.nvim_buf_set_text(0, start_row, start_col, end_row, end_col, { "" })
+  vim.api.nvim_win_set_cursor(0, { start_row + 1, start_col })
+  if enter_insert then vim.cmd("startinsert") end
+end
+
+local function change_to_custom_line_motion(side, enter_insert)
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local line = vim.api.nvim_get_current_line()
+  local row0 = row - 1
+
+  if side == "right" then
+    if col >= #line - 1 then
+      if enter_insert then vim.cmd("startinsert!") end
+      return
+    end
+    delete_range(row0, col, row0, #line, false)
+    if enter_insert then vim.cmd("startinsert!") end
+    return
+  end
+
+  local first_nonblank = vim.fn.indent(row) + 1
+  local target_col = col == first_nonblank - 1 and 0 or first_nonblank - 1
+  if target_col == col then
+    if enter_insert then vim.cmd("startinsert") end
+    return
+  end
+  delete_range(row0, target_col, row0, col, enter_insert)
+end
+
+keymaps.set("n", "dW", function() change_to_custom_line_motion("right", false) end, { desc = "Delete to custom W target" })
+keymaps.set("n", "dB", function() change_to_custom_line_motion("left", false) end, { desc = "Delete to custom B target" })
+keymaps.set("n", "cW", function() change_to_custom_line_motion("right", true) end, { desc = "Change to custom W target" })
+keymaps.set("n", "cB", function() change_to_custom_line_motion("left", true) end, { desc = "Change to custom B target" })
+
+local function node_contains_cursor(node, row, col)
+  local start_row, start_col, end_row, end_col = node:range()
+  if row < start_row or row > end_row then return false end
+  if row == start_row and col < start_col then return false end
+  if row == end_row and col > end_col then return false end
+  return true
+end
+
+local function node_type_matches(kind, node_type)
+  local function_types = {
+    function_declaration = true,
+    function_definition = true,
+    function_item = true,
+    function_statement = true,
+    function_expression = true,
+    arrow_function = true,
+    method_declaration = true,
+    method_definition = true,
+    method = true,
+    closure_expression = true,
+  }
+  local class_types = {
+    class_declaration = true,
+    class_definition = true,
+    class = true,
+    struct_item = true,
+    enum_item = true,
+    trait_item = true,
+    impl_item = true,
+    interface_declaration = true,
+    type_alias_declaration = true,
+  }
+  return kind == "function" and function_types[node_type] or kind == "class" and class_types[node_type]
+end
+
+local function treesitter_containing_range(kind)
+  local ok, node = pcall(vim.treesitter.get_node)
+  if not ok or not node then return nil end
+
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  row = row - 1
+  while node do
+    if node_type_matches(kind, node:type()) and node_contains_cursor(node, row, col) then
+      local start_row, _, end_row = node:range()
+      return start_row, end_row
+    end
+    node = node:parent()
+  end
+  return nil
+end
+
+local function lsp_symbol_kind_matches(kind, symbol_kind)
+  local lsp_kind = vim.lsp.protocol.SymbolKind
+  if kind == "function" then
+    return symbol_kind == lsp_kind.Function or symbol_kind == lsp_kind.Method or symbol_kind == lsp_kind.Constructor
+  end
+  return symbol_kind == lsp_kind.Class
+    or symbol_kind == lsp_kind.Interface
+    or symbol_kind == lsp_kind.Struct
+    or symbol_kind == lsp_kind.Enum
+end
+
+local function lsp_containing_range(kind)
+  local params = { textDocument = vim.lsp.util.make_text_document_params(0) }
+  local responses = vim.lsp.buf_request_sync(0, "textDocument/documentSymbol", params, 1000)
+  if not responses then return nil end
+
+  local cursor_row = vim.api.nvim_win_get_cursor(0)[1] - 1
+  local best_start
+  local best_end
+  local best_size
+
+  local function visit(symbols)
+    for _, symbol in ipairs(symbols or {}) do
+      local range = symbol.range or symbol.location and symbol.location.range
+      if range then
+        local start_row = range.start.line
+        local end_row = range["end"].line
+        if cursor_row >= start_row and cursor_row <= end_row and lsp_symbol_kind_matches(kind, symbol.kind) then
+          local size = end_row - start_row
+          if not best_size or size < best_size then
+            best_start = start_row
+            best_end = end_row
+            best_size = size
+          end
+        end
+      end
+      visit(symbol.children)
+    end
+  end
+
+  for _, response in pairs(responses) do
+    if response.result then visit(response.result) end
+  end
+
+  return best_start, best_end
+end
+
+local function delete_code_object(kind, enter_insert)
+  local start_row, end_row = treesitter_containing_range(kind)
+  if not start_row then
+    start_row, end_row = lsp_containing_range(kind)
+  end
+
+  if not start_row then
+    vim.notify("No containing " .. kind .. " found", vim.log.levels.WARN, { title = "Code Object" })
+    if enter_insert then vim.cmd("startinsert") end
+    return
+  end
+
+  local line_count = vim.api.nvim_buf_line_count(0)
+  vim.api.nvim_buf_set_lines(0, start_row, math.min(end_row + 1, line_count), false, {})
+  local target_row = math.min(start_row + 1, vim.api.nvim_buf_line_count(0))
+  vim.api.nvim_win_set_cursor(0, { target_row, 0 })
+  if enter_insert then vim.cmd("startinsert") end
+end
+
+keymaps.set("n", "dF", function() delete_code_object("function", false) end, { desc = "Delete containing function" })
+keymaps.set("n", "dC", function() delete_code_object("class", false) end, { desc = "Delete containing class" })
+keymaps.set("n", "cF", function() delete_code_object("function", true) end, { desc = "Change containing function" })
+keymaps.set("n", "cC", function() delete_code_object("class", true) end, { desc = "Change containing class" })
 
 -- Line navigation
 keymaps.set({ "n", "v" }, "B", function()
