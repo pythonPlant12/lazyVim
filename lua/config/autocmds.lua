@@ -324,8 +324,10 @@ local function apply_custom_hl()
   hl(0, "@variable.parameter.builtin",        { fg = c.param })
   hl(0, "@lsp.type.parameter",                { fg = c.param })
   hl(0, "@lsp.typemod.parameter.declaration", { fg = c.param })
-  hl(0, "@lsp.typemod.variable.readonly",     { fg = c.param })
+  hl(0, "@lsp.typemod.variable.readonly",     { link = "@variable" })
   hl(0, "@lsp.typemod.variable.parameter",    { fg = c.param })
+
+  hl(0, "@lsp.type.variable",         { link = "@variable" })
 
   hl(0, "@variable.builtin",          { fg = c.vbuiltin })
   hl(0, "@lsp.typemod.variable.self", { fg = c.vbuiltin })
