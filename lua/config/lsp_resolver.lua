@@ -73,6 +73,30 @@ local function ancestors_until(start_dir, stop_dir)
   return dirs
 end
 
+-- ESLint config file names (flat config + legacy)
+local eslint_config_names = {
+  "eslint.config.js",
+  "eslint.config.cjs",
+  "eslint.config.mjs",
+  "eslint.config.ts",
+  "eslint.config.cts",
+  "eslint.config.mts",
+  ".eslintrc",
+  ".eslintrc.js",
+  ".eslintrc.cjs",
+  ".eslintrc.json",
+  ".eslintrc.yml",
+  ".eslintrc.yaml",
+}
+
+-- Global eslint fallback config (used when no project config found)
+M.global_eslint_config_dir  = vim.fn.stdpath("config") .. "/eslint"
+M.global_eslint_config_file = vim.fn.stdpath("config") .. "/eslint/eslint.config.mjs"
+
+-- Per-project state (keyed by workspace_root())
+M.eslint_no_config_roots = {}   -- roots where user explicitly disabled global config
+M.eslint_warned_roots    = {}   -- roots where we already showed the one-time warning
+
 local function package_json_has_eslint(dir)
   local package_json = join_path(dir, "package.json")
   if not is_file(package_json) then
@@ -165,20 +189,6 @@ function M.nearest_root_by_markers(bufnr, markers)
 end
 
 function M.eslint_root(bufnr)
-  local eslint_configs = {
-    "eslint.config.js",
-    "eslint.config.cjs",
-    "eslint.config.mjs",
-    "eslint.config.ts",
-    "eslint.config.cts",
-    "eslint.config.mts",
-    ".eslintrc",
-    ".eslintrc.js",
-    ".eslintrc.cjs",
-    ".eslintrc.json",
-    ".eslintrc.yml",
-    ".eslintrc.yaml",
-  }
   local ignore_files = { ".gitignore", ".eslintignore" }
   local fname = vim.api.nvim_buf_get_name(bufnr)
   local file_dir = dir_of(fname)
@@ -188,7 +198,7 @@ function M.eslint_root(bufnr)
   local package_candidate = nil
 
   for _, dir in ipairs(ancestors_until(file_dir, root)) do
-    local has_config = has_any_file(dir, eslint_configs) or package_json_has_eslint(dir)
+    local has_config = has_any_file(dir, eslint_config_names) or package_json_has_eslint(dir)
     local has_ignore = has_any_file(dir, ignore_files)
     local has_package = is_file(join_path(dir, "package.json"))
 
@@ -206,6 +216,21 @@ function M.eslint_root(bufnr)
   end
 
   return config_candidate or package_candidate or root or normalize(vim.env.HOME) or "/"
+end
+
+-- Returns true if a project-level eslint config exists anywhere between
+-- the file's directory and the workspace root.
+function M.eslint_has_project_config(bufnr)
+  local fname = vim.api.nvim_buf_get_name(bufnr)
+  local file_dir = dir_of(fname)
+  local root = M.workspace_root()
+
+  for _, dir in ipairs(ancestors_until(file_dir, root)) do
+    if has_any_file(dir, eslint_config_names) or package_json_has_eslint(dir) then
+      return true
+    end
+  end
+  return false
 end
 
 function M.active_venv_dir()
