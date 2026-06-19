@@ -492,6 +492,40 @@ return {
         vim.fn.setreg("+", abs)
         vim.notify(abs, vim.log.levels.INFO, { title = "Yanked absolute path" })
       end
+      opts.window.mappings["<C-b>d"] = function(state)
+        local node = state.tree:get_node()
+        if not node then return end
+        local path = vim.fs.normalize(vim.fn.fnamemodify(node:get_id(), ":p"))
+        if path == "" then return end
+
+        local repo = require("bookmarks.domain.repo")
+        local sign = require("bookmarks.sign")
+        local bm_tree = require("bookmarks.tree")
+
+        local deleted = 0
+        for _, bookmark in ipairs(repo.get_all_bookmarks()) do
+          if bookmark.location and bookmark.location.path then
+            local bpath = vim.fs.normalize(vim.fn.fnamemodify(bookmark.location.path, ":p"))
+            -- match exact file OR anything under a directory
+            if bpath == path or bpath:sub(1, #path + 1) == path .. "/" then
+              repo.delete_node(bookmark.id)
+              deleted = deleted + 1
+            end
+          end
+        end
+
+        sign.safe_refresh_signs()
+        pcall(bm_tree.refresh)
+
+        local name = vim.fn.fnamemodify(path, ":t")
+        if deleted > 0 then
+          local msg = deleted == 1 and "Deleted 1 bookmark for " .. name
+            or "Deleted " .. deleted .. " bookmarks for " .. name
+          vim.notify(msg, vim.log.levels.INFO, { title = "Bookmarks" })
+        else
+          vim.notify("No bookmarks found for " .. name, vim.log.levels.WARN, { title = "Bookmarks" })
+        end
+      end
 
       opts.default_component_configs = opts.default_component_configs or {}
       opts.default_component_configs.git_status = {

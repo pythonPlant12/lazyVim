@@ -110,6 +110,9 @@ keymaps.set("v", "c", '"_c', opts)
 keymaps.set("v", "C", '"_C', opts)
 keymaps.set("v", "x", '"+x', opts)
 keymaps.set("v", "s", '"_s', opts)
+-- Paste over selection without yanking the replaced text
+keymaps.set("v", "p", '"_dP', opts)
+keymaps.set("v", "P", '"_dP', opts)
 
 local function delete_range(start_row, start_col, end_row, end_col, enter_insert)
   vim.api.nvim_buf_set_text(0, start_row, start_col, end_row, end_col, { "" })
@@ -1089,6 +1092,13 @@ local function toggle_bookmark_at_source()
 end
 
 keymaps.set("n", "<C-b>b", toggle_bookmark_at_source, { desc = "Toggle bookmark" })
+keymaps.set("n", "<C-b>b", function()
+  if vim.bo.filetype == "neo-tree" then
+    vim.notify("Cannot add bookmarks from neo-tree", vim.log.levels.WARN, { title = "Bookmarks" })
+    return
+  end
+  vim.cmd("BookmarksMark")
+end, { desc = "Toggle bookmark" })
 keymaps.set("n", "<C-b>l", "<cmd>BookmarksGoto<cr>", { desc = "List bookmarks" })
 keymaps.set("n", "<leader>cFc", function()
   local conform = require("conform")
@@ -2069,3 +2079,45 @@ keymaps.set("n", "<leader>Lnr", function()
   require("noice").enable()
   vim.notify("Noice restarted", vim.log.levels.INFO, { title = "Noice" })
 end, { desc = "Restart Noice" })
+
+keymaps.set("n", "<leader>Lje", function()
+  local resolver = require("config.lsp_resolver")
+  local bufnr = vim.api.nvim_get_current_buf()
+
+  if resolver.eslint_has_project_config(bufnr) then
+    vim.notify(
+      "Project ESLint config found — global config toggle has no effect",
+      vim.log.levels.INFO,
+      { title = "ESLint" }
+    )
+    return
+  end
+
+  local root = resolver.workspace_root()
+
+  if resolver.eslint_no_config_roots[root] then
+    -- Currently disabled → enable global config
+    resolver.eslint_no_config_roots[root] = nil
+    resolver.eslint_warned_roots[root] = nil
+    vim.schedule(function()
+      local ok, lspconf = pcall(require, "lspconfig")
+      if ok and lspconf.eslint and lspconf.eslint.manager then
+        for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+          if vim.api.nvim_buf_is_loaded(buf) then
+            pcall(lspconf.eslint.manager.try_add, lspconf.eslint.manager, buf)
+          end
+        end
+      end
+    end)
+    vim.notify("ESLint global config enabled", vim.log.levels.INFO, { title = "ESLint" })
+  else
+    -- Currently enabled → disable global config
+    resolver.eslint_no_config_roots[root] = true
+    for _, client in ipairs(vim.lsp.get_clients({ name = "eslint" })) do
+      if client.root_dir == resolver.global_eslint_config_dir then
+        client.stop()
+      end
+    end
+    vim.notify("ESLint global config disabled", vim.log.levels.WARN, { title = "ESLint" })
+  end
+end, { desc = "Toggle ESLint global config" })

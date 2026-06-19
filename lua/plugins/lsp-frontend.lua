@@ -137,9 +137,53 @@ return {
         end,
       })
 
-      opts.servers.eslint = vim.tbl_deep_extend("force", opts.servers.eslint or {}, {
+      local prev_eslint = opts.servers.eslint or {}
+      local prev_eslint_on_init = prev_eslint.on_init
+
+      opts.servers.eslint = vim.tbl_deep_extend("force", prev_eslint, {
         root_dir = function(bufnr, on_dir)
-          on_dir(resolver.eslint_root(bufnr))
+          if resolver.eslint_has_project_config(bufnr) then
+            on_dir(resolver.eslint_root(bufnr))
+            return
+          end
+
+          local root = resolver.workspace_root()
+
+          if resolver.eslint_no_config_roots[root] then
+            -- User disabled global eslint for this project; don't attach.
+            return
+          end
+
+          if not resolver.eslint_warned_roots[root] then
+            resolver.eslint_warned_roots[root] = true
+            vim.schedule(function()
+              vim.notify(
+                "No ESLint config found — using global config. Toggle with <leader>Lje",
+                vim.log.levels.WARN,
+                { title = "ESLint" }
+              )
+            end)
+          end
+
+          on_dir(resolver.global_eslint_config_dir)
+        end,
+        on_init = function(client, init_result)
+          if prev_eslint_on_init then
+            prev_eslint_on_init(client, init_result)
+          end
+          if client.root_dir == resolver.global_eslint_config_dir then
+            vim.defer_fn(function()
+              client.notify("workspace/didChangeConfiguration", {
+                settings = {
+                  eslint = {
+                    options = {
+                      overrideConfigFile = resolver.global_eslint_config_file,
+                    },
+                  },
+                },
+              })
+            end, 100)
+          end
         end,
         settings = {
           format = true,

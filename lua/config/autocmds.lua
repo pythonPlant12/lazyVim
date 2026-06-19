@@ -878,3 +878,14 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.opt_local.concealcursor = "nvic"
   end,
 })
+
+-- Treesitter markdown highlights use (#set! conceal_lines "") to fully hide
+-- fenced code block delimiters (```) when conceallevel >= 1. This makes code
+-- blocks appear to collapse/vanish. Disable conceal for markdown files.
+vim.api.nvim_create_autocmd("FileType", {
+  group = vim.api.nvim_create_augroup("MarkdownNoConceallevel", { clear = true }),
+  pattern = { "markdown" },
+  callback = function()
+    vim.opt_local.conceallevel = 0
+  end,
+})
