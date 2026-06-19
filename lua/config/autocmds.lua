@@ -103,7 +103,7 @@ local function apply_custom_hl()
     neotree_red = "#B54A5C",
     neotree_cursor_fg = "#2F496F",
     neotree_cursor_bg = "#D2E4F5",
-    param = "#6E52A8",
+    param = "#7A48B3",
     vbuiltin = "#A15391",
     ctor = "#8A6B20",
     blue = "#2A6296",
@@ -156,7 +156,7 @@ local function apply_custom_hl()
     neotree_cursor_fg = "#E8F0FA",
     neotree_cursor_bg = "#2F496F",
     neotree_fg = "#D0D2D8",
-    param = "#cba6f7",
+    param = "#A87EC8",
     vbuiltin = "#C77DBB",
     ctor = "#f9e2af",
     blue = "#89b4fa",
@@ -277,7 +277,7 @@ local function apply_custom_hl()
     hl(0, "NeoTreeGitDeleted",   { fg = c.neotree_red,   bold = true })
     hl(0, "NeoTreeGitConflict",  { fg = c.neotree_red,   bold = true })
    hl(0, "NeoTreeCursorLine",   { fg = c.neotree_cursor_fg, bg = c.neotree_cursor_bg, bold = true })
-   
+
    hl(0, "NeoTreeGitAddedCursorLine",     { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
     hl(0, "NeoTreeGitUntrackedCursorLine", { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
     hl(0, "NeoTreeGitStagedCursorLine",    { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
@@ -286,7 +286,7 @@ local function apply_custom_hl()
     hl(0, "NeoTreeGitUnstagedCursorLine",  { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
     hl(0, "NeoTreeGitDeletedCursorLine",   { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
     hl(0, "NeoTreeGitConflictCursorLine",  { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
-   
+
    if not is_light then
      hl(0, "NeoTreeFileName",       { fg = c.neotree_fg })
      hl(0, "NeoTreeDirectoryName",  { fg = c.neotree_fg, bold = true })
@@ -324,11 +324,24 @@ local function apply_custom_hl()
   hl(0, "@variable.parameter.builtin",        { fg = c.param })
   hl(0, "@lsp.type.parameter",                { fg = c.param })
   hl(0, "@lsp.typemod.parameter.declaration", { fg = c.param })
-  hl(0, "@lsp.typemod.variable.readonly",     { fg = c.param })
   hl(0, "@lsp.typemod.variable.parameter",    { fg = c.param })
+
+  hl(0, "@variable",                         { fg = normal_fg })
+  hl(0, "@variable.typescript",              { fg = normal_fg })
+  hl(0, "@variable.javascript",              { fg = normal_fg })
+  hl(0, "@lsp.type.variable",                { fg = normal_fg })
+  hl(0, "@lsp.typemod.variable.readonly",    { fg = normal_fg })
+  hl(0, "@lsp.typemod.variable.declaration", { fg = normal_fg })
 
   hl(0, "@variable.builtin",          { fg = c.vbuiltin })
   hl(0, "@lsp.typemod.variable.self", { fg = c.vbuiltin })
+  local function apply_special_function_hl()
+    hl(0, "@function.special",            { fg = c.vbuiltin })
+    hl(0, "@function.special.typescript", { fg = c.vbuiltin })
+    hl(0, "@function.special.javascript", { fg = c.vbuiltin })
+  end
+  apply_special_function_hl()
+  vim.defer_fn(apply_special_function_hl, 100)
 
   hl(0, "@constructor",                { fg = c.ctor })
   hl(0, "@lsp.type.class",             { fg = c.ctor })
@@ -348,16 +361,44 @@ local function apply_custom_hl()
   hl(0, "TreesitterContext",           { bg = c.context_bg })
   hl(0, "TreesitterContextLineNumber", { bg = c.context_bg })
   hl(0, "TreesitterContextBottom",     { bg = c.context_bg, underline = false })
-  
+
   hl(0, "CursorLine",   { bg = c.context_bg })
   hl(0, "CursorLineNr", { fg = normal_fg, bg = c.context_bg, bold = true })
 end
 
+local function align_special_function_hl()
+  local builtin = vim.api.nvim_get_hl(0, { name = "@variable.builtin", link = false })
+  if not builtin or next(builtin) == nil then
+    return
+  end
+  vim.api.nvim_set_hl(0, "@function.special", builtin)
+  vim.api.nvim_set_hl(0, "@function.special.typescript", builtin)
+  vim.api.nvim_set_hl(0, "@function.special.javascript", builtin)
+  vim.api.nvim_set_hl(0, "@function.special.vue", builtin)
+end
+
+local function schedule_special_function_hl()
+  align_special_function_hl()
+  for _, delay in ipairs({ 100, 500, 1000 }) do
+    vim.defer_fn(align_special_function_hl, delay)
+  end
+end
+
 vim.api.nvim_create_autocmd("ColorScheme", {
   group = vim.api.nvim_create_augroup("CustomHl", { clear = true }),
-  callback = apply_custom_hl,
+  callback = function()
+    apply_custom_hl()
+    schedule_special_function_hl()
+  end,
 })
 apply_custom_hl()
+schedule_special_function_hl()
+
+vim.api.nvim_create_autocmd("FileType", {
+  group = vim.api.nvim_create_augroup("SpecialFunctionHl", { clear = true }),
+  pattern = { "javascript", "javascriptreact", "typescript", "typescriptreact", "vue" },
+  callback = schedule_special_function_hl,
+})
 
 vim.api.nvim_create_autocmd("User", {
   pattern = "VeryLazy",
@@ -420,17 +461,27 @@ apply_grugfar_hl()
 local function apply_html_hl()
   if not is_islands_or_catppuccin() then return end
   local hl = vim.api.nvim_set_hl
-  local blue, amber, muted, text
+  local function copy_hl(dst, src, fallback)
+    local source = vim.api.nvim_get_hl(0, { name = src, link = false })
+    if source and next(source) ~= nil then
+      hl(0, dst, source)
+    elseif fallback then
+      hl(0, dst, fallback)
+    end
+  end
+  local blue, amber, muted, cyan, text, green
   if vim.o.background == "light" then
     blue   = "#356FAF"
     amber  = "#8E5324"
     muted  = "#7B8596"
     text   = "#4C4F69"
+    green  = "#4D8454"
   else
     blue   = "#56A8F5"
     amber  = "#CF8E6D"
     muted  = "#6F737A"
     text   = "#BCBEC4"
+    green  = "#a6e3a1"
   end
   hl(0, "@tag.vue",                 { link = "@tag" })
   hl(0, "@tag.builtin.vue",         { link = "@tag.builtin" })
@@ -442,11 +493,69 @@ local function apply_html_hl()
   hl(0, "@lsp.type.component.vue",  { link = "@tag.vue" })
   hl(0, "@keyword.directive.jinja", { fg = blue })
   hl(0, "@keyword.directive.htmldjango", { fg = blue })
-  hl(0, "@variable.vue",            { fg = text })
-  hl(0, "@variable.member.vue",     { fg = text })
+  hl(0, "@tag.vue",                 { fg = blue })
+  hl(0, "@tag.builtin.vue",         { fg = blue })
+  hl(0, "@tag.attribute.vue",       { fg = amber })
+  hl(0, "@tag.delimiter.vue",       { fg = muted })
+  hl(0, "@punctuation.bracket.vue", { fg = muted })
+  hl(0, "@punctuation.special.vue", { fg = blue })
+  hl(0, "@constructor.vue",         { fg = blue })
+  hl(0, "@attribute.vue",           { fg = amber })
+  hl(0, "@keyword.directive.vue",   { fg = blue })
+  hl(0, "@keyword.modifier.vue",    { fg = blue })
+  copy_hl("@function.vue",            "@function",        { fg = blue })
+  copy_hl("@function.special.vue",     "@variable.builtin", { fg = blue })
+  copy_hl("@function.call.vue",       "@function.call",   { fg = blue })
+  copy_hl("@function.method.vue",     "@function.method", { fg = blue })
+  copy_hl("@function.method.call.vue", "@function.method.call", { fg = blue })
+  hl(0, "@character.special.vue",   { fg = blue })
+  copy_hl("@variable.vue",            "@variable",        { fg = text })
+  copy_hl("@variable.member.vue",     "@variable.member", { fg = text })
   hl(0, "@none.vue",                { fg = text })
   hl(0, "@property",                { fg = text })
-  hl(0, "@property.vue",            { fg = text })
+  copy_hl("@property.vue",            "@property",        { fg = text })
+  local vue_param = vim.o.background == "light" and "#7A48B3" or "#A87EC8"
+  copy_hl("@lsp.type.variable.vue",             "@lsp.type.variable",             { fg = text })
+  copy_hl("@lsp.typemod.variable.readonly.vue", "@lsp.typemod.variable.readonly", { fg = text })
+  copy_hl("@lsp.typemod.variable.declaration.vue", "@lsp.typemod.variable.declaration", { fg = text })
+  copy_hl("@lsp.type.property.vue",             "@lsp.type.property",             { fg = text })
+  copy_hl("@lsp.typemod.property.readonly.vue", "@lsp.typemod.property.readonly", { fg = text })
+  copy_hl("@lsp.type.method.vue",               "@lsp.type.method",               { fg = blue })
+  copy_hl("@lsp.typemod.method.declaration.vue", "@lsp.typemod.method.declaration", { fg = blue })
+  copy_hl("@lsp.mod.readonly.vue",              "@lsp.typemod.variable.readonly", { fg = text })
+  hl(0, "@variable.parameter.vue",                  { fg = vue_param })
+  hl(0, "@variable.parameter.builtin.vue",          { fg = vue_param })
+  hl(0, "@lsp.type.parameter.vue",                  { fg = vue_param })
+  hl(0, "@lsp.typemod.parameter.declaration.vue",   { fg = vue_param })
+  hl(0, "@lsp.typemod.parameter.readonly.vue",      { fg = vue_param })
+  hl(0, "@lsp.typemod.variable.parameter.vue",      { fg = vue_param })
+  hl(0, "@lsp.typemod.variable.parameter.readonly.vue", { fg = vue_param })
+  hl(0, "@lsp.typemod.variable.readonly.parameter.vue", { fg = vue_param })
+
+  local function align_vue_script_hl()
+    copy_hl("@function.vue",            "@function",        { fg = blue })
+    copy_hl("@function.special.vue",     "@variable.builtin", { fg = blue })
+    copy_hl("@function.call.vue",       "@function.call",   { fg = blue })
+    copy_hl("@function.method.vue",     "@function.method", { fg = blue })
+    copy_hl("@function.method.call.vue", "@function.method.call", { fg = blue })
+    copy_hl("@variable.vue",            "@variable",        { fg = text })
+    copy_hl("@variable.member.vue",     "@variable.member", { fg = text })
+    copy_hl("@property.vue",            "@property",        { fg = text })
+    copy_hl("@lsp.type.variable.vue",             "@lsp.type.variable",             { fg = text })
+    copy_hl("@lsp.typemod.variable.readonly.vue", "@lsp.typemod.variable.readonly", { fg = text })
+    copy_hl("@lsp.typemod.variable.declaration.vue", "@lsp.typemod.variable.declaration", { fg = text })
+    copy_hl("@lsp.type.property.vue",             "@lsp.type.property",             { fg = text })
+    copy_hl("@lsp.typemod.property.readonly.vue", "@lsp.typemod.property.readonly", { fg = text })
+    copy_hl("@lsp.type.method.vue",               "@lsp.type.method",               { fg = blue })
+    copy_hl("@lsp.typemod.method.declaration.vue", "@lsp.typemod.method.declaration", { fg = blue })
+    copy_hl("@lsp.mod.readonly.vue",              "@lsp.typemod.variable.readonly", { fg = text })
+  end
+  align_vue_script_hl()
+  vim.defer_fn(align_vue_script_hl, 50)
+
+  hl(0, "@string",                  { fg = green })
+  hl(0, "@string.html",             { fg = green })
+  hl(0, "@string.vue",              { fg = green })
 
   hl(0, "jinjaTagBlock",            { fg = blue })
   hl(0, "jinjaVarBlock",            { fg = blue })

@@ -1,4 +1,5 @@
 local resolver = require("config.lsp_resolver")
+local typescript_lsp_settings = require("config.typescript_lsp_settings")
 
 local function normalize(path)
   if not path or path == "" then
@@ -122,6 +123,7 @@ return {
           if semantic and semantic.full ~= nil then
             semantic.full = vim.bo[bufnr].filetype ~= "vue"
           end
+          typescript_lsp_settings.attach(client)
         end,
       })
 
@@ -129,6 +131,9 @@ return {
         filetypes = { "vue" },
         root_dir = function(bufnr, on_dir)
           on_dir(resolver.nearest_root_by_markers(bufnr, resolver.frontend_markers.vue_ls))
+        end,
+        on_attach = function(client)
+          typescript_lsp_settings.attach(client)
         end,
       })
 

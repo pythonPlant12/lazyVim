@@ -1265,6 +1265,7 @@ return {
         if i == 1 then goto skip end
         if type(comp) == "table" and comp[1] == "diagnostics" then goto skip end
         if type(comp) == "table" and comp[1] == "filetype" and comp.icon_only then goto skip end
+        if type(comp) == "table" and type(comp[1]) == "function" and type(comp.cond) == "function" then goto skip end
         table.insert(new_c, comp)
         ::skip::
       end

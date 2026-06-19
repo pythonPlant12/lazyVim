@@ -8,6 +8,7 @@ local opts = { noremap = true, silent = true }
 local lazygit_edit = require("config.lazygit_edit")
 local tab_jump = require("config.tab_jump")
 local python_lsp_settings = require("config.python_lsp_settings")
+local typescript_lsp_settings = require("config.typescript_lsp_settings")
 
 vim.keymap.set({ "n", "i", "x", "s" }, "<C-s>", "<Nop>", { noremap = true, silent = true })
 
@@ -310,6 +311,69 @@ keymaps.set("n", "<leader>fP", function()
   vim.fn.setreg("+", abs)
   vim.notify("Copied: " .. abs, vim.log.levels.INFO, { title = "Path" })
 end, { desc = "Copy absolute path" })
+
+local function path_under_cursor_or_buffer()
+  if vim.bo.filetype == "neo-tree" then
+    local ok, state = pcall(function()
+      return require("neo-tree.sources.manager").get_state("filesystem")
+    end)
+
+    if ok and state and state.tree then
+      local node = state.tree:get_node()
+      if node then
+        local path = node:get_id()
+        if path and path ~= "" then return path end
+      end
+    end
+  end
+
+  return vim.api.nvim_buf_get_name(0)
+end
+
+local function file_manager_reveal_command(path)
+  if vim.fn.has("macunix") == 1 then
+    return { "open", "-R", path }
+  end
+
+  if vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1 then
+    return { "explorer", "/select," .. path:gsub("/", "\\") }
+  end
+
+  local target = path
+  if vim.fn.filereadable(path) == 1 then
+    target = vim.fn.fnamemodify(path, ":h")
+  end
+
+  return { "xdg-open", target }
+end
+
+keymaps.set("n", "<leader>fd", function()
+  local path = path_under_cursor_or_buffer()
+  if path == "" then
+    vim.notify("Current buffer has no file path", vim.log.levels.WARN, { title = "Reveal File" })
+    return
+  end
+
+  path = vim.fn.fnamemodify(path, ":p")
+  if vim.fn.filereadable(path) ~= 1 and vim.fn.isdirectory(path) ~= 1 then
+    vim.notify("File not found: " .. path, vim.log.levels.WARN, { title = "Reveal File" })
+    return
+  end
+
+  local cmd = file_manager_reveal_command(path)
+  if vim.fn.executable(cmd[1]) ~= 1 then
+    vim.notify("File manager command not found: " .. cmd[1], vim.log.levels.ERROR, { title = "Reveal File" })
+    return
+  end
+
+  local ok = pcall(vim.system, cmd, { detach = true })
+  if not ok then
+    vim.notify("Failed to reveal: " .. path, vim.log.levels.ERROR, { title = "Reveal File" })
+    return
+  end
+
+  vim.notify("Revealed externally: " .. vim.fn.fnamemodify(path, ":t"), vim.log.levels.INFO, { title = "Reveal File" })
+end, { desc = "Reveal file in file manager" })
 
 keymaps.set("n", "<leader>fo", function()
   local path = vim.api.nvim_buf_get_name(0)
@@ -1607,6 +1671,46 @@ local js_filetypes = {
   vue = true,
 }
 
+local function get_typescript_clients()
+  local seen = {}
+  local attached = {}
+  for _, name in ipairs({ "vtsls", "vue_ls" }) do
+    local clients = vim.lsp.get_clients({ bufnr = 0, name = name })
+    for _, client in ipairs(clients) do
+      if not seen[client.id] then
+        seen[client.id] = true
+        attached[#attached + 1] = client
+      end
+    end
+  end
+  return attached
+end
+
+local function with_typescript_project_clients(fn)
+  if not js_filetypes[vim.bo.filetype] then
+    vim.notify("Not a TypeScript/Vue buffer", vim.log.levels.WARN, { title = "TypeScript" })
+    return
+  end
+
+  local clients = get_typescript_clients()
+  if #clients == 0 then
+    vim.notify("No vtsls/vue_ls client attached", vim.log.levels.WARN, { title = "TypeScript" })
+    return
+  end
+
+  local seen_roots = {}
+  local roots = {}
+  for _, client in ipairs(clients) do
+    local root = typescript_lsp_settings.root_for_client(client)
+    if not seen_roots[root] then
+      seen_roots[root] = true
+      roots[#roots + 1] = root
+    end
+  end
+
+  return fn(roots)
+end
+
 local html_filetypes = {
   html = true, htmldjango = true,
   jinja = true, jinja2 = true,
@@ -1675,6 +1779,42 @@ keymaps.set("n", "<leader>Lpt", function()
     end)
   end)
 end, { desc = "Type check level" })
+
+keymaps.set("n", "<leader>LTt", function()
+  with_typescript_project_clients(function(roots)
+    local first_level = typescript_lsp_settings.type_check_level(roots[1])
+    local same_level = true
+    for _, root in ipairs(roots) do
+      if typescript_lsp_settings.type_check_level(root) ~= first_level then
+        same_level = false
+        break
+      end
+    end
+    local items = {}
+    for _, level in ipairs({ "project", "off" }) do
+      local marker = same_level and level == first_level and " ●" or ""
+      items[#items + 1] = { label = level .. marker, value = level }
+    end
+    vim.ui.select(items, {
+      prompt = "TypeScript type checking (project):",
+      format_item = function(item) return item.label end,
+    }, function(choice)
+      if not choice then return end
+      local applied_roots = {}
+      local level = choice.value
+      for _, root in ipairs(roots) do
+        level = typescript_lsp_settings.set_type_check_level(root, choice.value)
+        typescript_lsp_settings.apply_to_root(root)
+        applied_roots[#applied_roots + 1] = vim.fn.fnamemodify(root, ":~")
+      end
+      vim.notify(
+        "typeCheckLevel = " .. level .. " (" .. table.concat(applied_roots, ", ") .. ")",
+        vim.log.levels.INFO,
+        { title = "TypeScript" }
+      )
+    end)
+  end)
+end, { desc = "TypeScript type check level" })
 
 keymaps.set({ "n", "v" }, "<leader>Lpc", function()
   with_python_client(function()
@@ -1871,6 +2011,7 @@ vim.schedule(function()
     { "<leader>L",  group = "Language", icon = { icon = "󰗊", color = "blue" } },
     { "<leader>Ln", group = "Noice",    icon = { icon = "󰈸", color = "orange" } },
     { "<leader>Lp", group = "Python",   icon = { cat = "filetype", name = "python" } },
+    { "<leader>LT", group = "TypeScript", icon = { cat = "filetype", name = "typescript" } },
     { "<leader>Ls", group = "Shared",   icon = { icon = "󰈝", color = "green" } },
     { "<leader>E",  group = "Errors",   icon = { icon = "󰅚", color = "red" } },
   })
