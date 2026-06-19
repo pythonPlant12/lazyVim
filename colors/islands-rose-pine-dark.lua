@@ -10,7 +10,7 @@ local ui = {
   muted = "#6F737A",
   line = "#2B2D30",
   line_alt = "#1F2024",
-  selection = "#35538F",
+  selection = "#253A63",
   search = "#114957",
   border = "#393B40",
 }
@@ -49,6 +49,12 @@ local hl = vim.api.nvim_set_hl
 hl(0, "Normal",        { fg = ui.fg,        bg = ui.bg })
 hl(0, "NormalNC",      { fg = ui.fg,        bg = ui.bg })
 hl(0, "NormalFloat",   { fg = ui.fg,        bg = ui.bg })
+hl(0, "Cursor",        { fg = ui.bg,        bg = "#e0def4" })
+hl(0, "CursorInsert",  { fg = ui.bg,        bg = syn.foam })
+hl(0, "CursorReplace", { fg = ui.bg,        bg = syn.rose })
+hl(0, "lCursor",       { link = "CursorInsert" })
+hl(0, "CursorIM",      { link = "CursorInsert" })
+hl(0, "TermCursor",    { link = "Cursor" })
 hl(0, "FloatBorder",   { fg = "#585b70",    bg = ui.bg })
 hl(0, "CursorLine",    { bg = ui.line_alt })
 hl(0, "CursorLineNr",  { fg = ui.fg_bright, bg = ui.line_alt, bold = true })

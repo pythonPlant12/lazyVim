@@ -17,28 +17,28 @@ local ui = {
 }
 
 local syn = {
-  comment  = "#979BAA",
-  string   = "#8c5200",
-  number   = "#8c5200",
-  func     = "#c43864",
-  keyword  = "#0f5e78",
-  operator = "#979BAA",
-  type     = "#1888a4",
-  constant = "#8c5200",
-  preproc  = "#6038b0",
-  special  = "#1888a4",
+  comment  = "#7D8190",
+  string   = "#6F4100",
+  number   = "#6F4100",
+  func     = "#A72E53",
+  keyword  = "#0A5269",
+  operator = "#7D8190",
+  type     = "#0F6F87",
+  constant = "#6F4100",
+  preproc  = "#4F2C91",
+  special  = "#0F6F87",
   ident    = "#3a3650",
-  tag      = "#1888a4",
-  tag_attr = "#6038b0",
-  tag_delim = "#979BAA",
-  iris     = "#6038b0",
-  pine     = "#0f5e78",
-  foam     = "#1888a4",
-  subtle   = "#979BAA",
+  tag      = "#0F6F87",
+  tag_attr = "#4F2C91",
+  tag_delim = "#7D8190",
+  iris     = "#4F2C91",
+  pine     = "#0A5269",
+  foam     = "#0F6F87",
+  subtle   = "#7D8190",
   text     = "#3a3650",
-  gold     = "#8c5200",
-  rose     = "#c43864",
-  red      = "#b01830",
+  gold     = "#6F4100",
+  rose     = "#A72E53",
+  red      = "#941426",
 }
 
 vim.cmd("highlight clear")
@@ -49,6 +49,12 @@ local hl = vim.api.nvim_set_hl
 hl(0, "Normal",        { fg = ui.fg,        bg = ui.bg })
 hl(0, "NormalNC",      { fg = ui.fg,        bg = ui.bg })
 hl(0, "NormalFloat",   { fg = ui.fg,        bg = ui.bg })
+hl(0, "Cursor",        { fg = "#FFFFFF",   bg = ui.fg_bright })
+hl(0, "CursorInsert",  { fg = "#FFFFFF",   bg = syn.foam })
+hl(0, "CursorReplace", { fg = "#FFFFFF",   bg = syn.rose })
+hl(0, "lCursor",       { link = "CursorInsert" })
+hl(0, "CursorIM",      { link = "CursorInsert" })
+hl(0, "TermCursor",    { link = "Cursor" })
 hl(0, "FloatBorder",   { fg = "#9098A6",    bg = ui.bg })
 hl(0, "CursorLine",    { bg = ui.line_alt })
 hl(0, "CursorLineNr",  { fg = ui.fg_bright, bg = ui.line_alt, bold = true })

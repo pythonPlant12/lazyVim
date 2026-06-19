@@ -619,6 +619,43 @@ return {
   },
   {
     "folke/snacks.nvim",
+    init = function()
+      vim.api.nvim_create_autocmd("User", {
+        pattern = "VeryLazy",
+        once = true,
+        callback = function()
+          local ok, statuscolumn = pcall(require, "snacks.statuscolumn")
+          if not ok or statuscolumn._current_lnum_left_offset then
+            return
+          end
+
+          statuscolumn._current_lnum_left_offset = true
+          local original_get = statuscolumn.get
+          statuscolumn.get = function()
+            local ret = original_get()
+            if vim.v.virtnum ~= 0 or vim.v.relnum ~= 0 then
+              return ret
+            end
+
+            local win = vim.g.statusline_winid
+            local nu = vim.wo[win].number
+            local rnu = vim.wo[win].relativenumber
+            if not (nu or rnu) then
+              return ret
+            end
+
+            local num = rnu and nu and vim.v.lnum or rnu and vim.v.relnum or vim.v.lnum
+            local needle = "%=" .. num .. " "
+            local start_col, end_col = ret:find(needle, 1, true)
+            if not start_col then
+              return ret
+            end
+
+            return ret:sub(1, end_col) .. " " .. ret:sub(end_col + 1)
+          end
+        end,
+      })
+    end,
     keys = {
       {
         "<leader>,",

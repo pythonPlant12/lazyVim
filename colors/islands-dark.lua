@@ -20,7 +20,7 @@ local palette = {
   magenta = "#C77DBB",
   red = "#F75464",
   purple = "#B189F5",
-  selection = "#35538F",
+  selection = "#253A63",
   search = "#114957",
   border = "#393B40",
 }
@@ -34,6 +34,12 @@ local hl = vim.api.nvim_set_hl
 hl(0, "Normal", { fg = palette.fg, bg = palette.bg })
 hl(0, "NormalNC", { fg = palette.fg, bg = palette.bg })
 hl(0, "NormalFloat", { fg = palette.fg, bg = palette.bg })
+hl(0, "Cursor", { fg = palette.bg, bg = "#E8F0FA" })
+hl(0, "CursorInsert", { fg = palette.bg, bg = palette.blue })
+hl(0, "CursorReplace", { fg = palette.bg, bg = palette.amber })
+hl(0, "lCursor", { link = "CursorInsert" })
+hl(0, "CursorIM", { link = "CursorInsert" })
+hl(0, "TermCursor", { link = "Cursor" })
 hl(0, "FloatBorder", { fg = "#585b70", bg = palette.bg })
 hl(0, "CursorLine", { bg = palette.line_alt })
 hl(0, "CursorLineNr", { fg = palette.fg_bright, bg = palette.line_alt, bold = true })

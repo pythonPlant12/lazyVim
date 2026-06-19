@@ -6,7 +6,12 @@ vim.o.timeoutlen = 500
 
 vim.o.smoothscroll = false
 vim.o.cursorline = true
-vim.opt.guicursor = "n-v-c-sm:block,i-ci-ve:ver25,r-cr-o:hor20,a:blinkwait0-blinkon0-blinkoff0"
+vim.opt.guicursor = table.concat({
+  "n-v-c-sm:block-Cursor",
+  "i-ci-ve:ver25-CursorInsert",
+  "r-cr-o:hor20-CursorReplace",
+  "a:blinkwait0-blinkon0-blinkoff0",
+}, ",")
 
 vim.o.winborder = "rounded"
 vim.o.switchbuf = "useopen"

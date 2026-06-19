@@ -1044,7 +1044,51 @@ Snacks.toggle({
   set = function(state) vim.g.eslint_autosave = state end,
 }):map("<leader>cFe")
 keymaps.set("n", "<C-b>", "<Nop>", opts)
-keymaps.set("n", "<C-b>b", "<cmd>BookmarksMark<cr>", { desc = "Toggle bookmark" })
+
+local function toggle_bookmark_at_source()
+  local source_win = vim.api.nvim_get_current_win()
+  local source_buf = vim.api.nvim_win_get_buf(source_win)
+  local source_cursor = vim.api.nvim_win_get_cursor(source_win)
+  local source_path = vim.api.nvim_buf_get_name(source_buf)
+
+  if source_path == "" or vim.bo[source_buf].buftype ~= "" or vim.bo[source_buf].filetype == "neo-tree" then
+    vim.notify("Bookmarks can only be added from file buffers", vim.log.levels.WARN, { title = "Bookmarks" })
+    return
+  end
+
+  local location = {
+    path = source_path,
+    line = source_cursor[1],
+    col = source_cursor[2],
+  }
+
+  local service = require("bookmarks.domain.service")
+  local sign = require("bookmarks.sign")
+  local tree = require("bookmarks.tree.operate")
+  local bookmark = service.find_bookmark_by_location(location)
+
+  vim.ui.input({ prompt = "[Bookmarks Toggle]", default = bookmark and bookmark.name or "" }, function(input)
+    if not input then return end
+
+    if not vim.api.nvim_win_is_valid(source_win) or not vim.api.nvim_buf_is_valid(source_buf) then
+      vim.notify("Bookmark source window is no longer available", vim.log.levels.WARN, { title = "Bookmarks" })
+      return
+    end
+
+    if vim.api.nvim_win_get_buf(source_win) ~= source_buf then
+      vim.notify("Bookmark source buffer changed", vim.log.levels.WARN, { title = "Bookmarks" })
+      return
+    end
+
+    vim.api.nvim_set_current_win(source_win)
+    vim.api.nvim_win_set_cursor(source_win, source_cursor)
+    service.toggle_mark(input, location)
+    sign.safe_refresh_signs()
+    pcall(tree.refresh)
+  end)
+end
+
+keymaps.set("n", "<C-b>b", toggle_bookmark_at_source, { desc = "Toggle bookmark" })
 keymaps.set("n", "<C-b>l", "<cmd>BookmarksGoto<cr>", { desc = "List bookmarks" })
 keymaps.set("n", "<leader>cFc", function()
   local conform = require("conform")
