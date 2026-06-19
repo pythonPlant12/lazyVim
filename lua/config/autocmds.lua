@@ -49,6 +49,8 @@ vim.api.nvim_create_autocmd("WinLeave", {
 
 local function is_islands_or_catppuccin()
   local cs = vim.g.colors_name or ""
+  -- exclude rose-pine variants (islands-rose-pine-light/dark have their own colorscheme files)
+  if cs:find("^islands%-rose%-pine") ~= nil then return false end
   return cs:find("^islands") ~= nil or cs:find("^catppuccin") ~= nil
 end
 
@@ -282,7 +284,7 @@ local function apply_custom_hl()
     snacks_search_bg = "#C8D8EE",
     indent_fg = "#C4CAD3",
     indent_scope_fg = "#8FA8C8",
-    context_bg = "#f5f5f5",
+    context_bg = "#E5E5E5",
   } or {
     border = "#585b70",
     select_bg = "#253A63",
@@ -473,34 +475,6 @@ local function apply_custom_hl()
     hl(0, "SnacksPickerGitStatusUntracked", { fg = picker_colors.cyan })
   end, 20)
 
-  if is_islands_or_catppuccin() then
-  hl(0, "@variable.parameter",                { fg = c.param })
-  hl(0, "@variable.parameter.builtin",        { fg = c.param })
-  hl(0, "@lsp.type.parameter",                { fg = c.param })
-  hl(0, "@lsp.typemod.parameter.declaration", { fg = c.param })
-  hl(0, "@lsp.typemod.variable.parameter",    { fg = c.param })
-
-  hl(0, "@variable",                         { fg = normal_fg })
-  hl(0, "@variable.typescript",              { fg = normal_fg })
-  hl(0, "@variable.javascript",              { fg = normal_fg })
-  hl(0, "@lsp.type.variable",                { fg = normal_fg })
-  hl(0, "@lsp.typemod.variable.readonly",    { fg = normal_fg })
-  hl(0, "@lsp.typemod.variable.declaration", { fg = normal_fg })
-
-  hl(0, "@variable.builtin",          { fg = c.vbuiltin })
-  hl(0, "@lsp.typemod.variable.self", { fg = c.vbuiltin })
-  local function apply_special_function_hl()
-    hl(0, "@function.special",            { fg = c.vbuiltin })
-    hl(0, "@function.special.typescript", { fg = c.vbuiltin })
-    hl(0, "@function.special.javascript", { fg = c.vbuiltin })
-  end
-  apply_special_function_hl()
-  vim.defer_fn(apply_special_function_hl, 100)
-
-  hl(0, "@constructor",                { fg = c.ctor })
-  hl(0, "@lsp.type.class",             { fg = c.ctor })
-  hl(0, "@lsp.typemod.class.callable", { fg = c.ctor })
-
   hl(0, "RainbowDelimiterBlueMuted",   { fg = normal_fg })
   hl(0, "RainbowDelimiterGoldMuted",   { fg = normal_fg })
   hl(0, "RainbowDelimiterCyanMuted",   { fg = normal_fg })
@@ -510,7 +484,6 @@ local function apply_custom_hl()
 
   hl(0, "SnacksIndent",      { fg = c.indent_fg })
   hl(0, "SnacksIndentScope", { fg = c.indent_scope_fg, bold = false })
-  end
 
   hl(0, "TreesitterContext",           { bg = c.context_bg })
   hl(0, "TreesitterContextLineNumber", { bg = c.context_bg })
@@ -520,24 +493,6 @@ local function apply_custom_hl()
   hl(0, "CursorLineNr", { fg = normal_fg, bg = c.context_bg, bold = true })
 end
 
-local function align_special_function_hl()
-  local builtin = vim.api.nvim_get_hl(0, { name = "@variable.builtin", link = false })
-  if not builtin or next(builtin) == nil then
-    return
-  end
-  vim.api.nvim_set_hl(0, "@function.special", builtin)
-  vim.api.nvim_set_hl(0, "@function.special.typescript", builtin)
-  vim.api.nvim_set_hl(0, "@function.special.javascript", builtin)
-  vim.api.nvim_set_hl(0, "@function.special.vue", builtin)
-end
-
-local function schedule_special_function_hl()
-  align_special_function_hl()
-  for _, delay in ipairs({ 100, 500, 1000 }) do
-    vim.defer_fn(align_special_function_hl, delay)
-  end
-end
-
 vim.api.nvim_create_autocmd("ColorScheme", {
   group = vim.api.nvim_create_augroup("CustomHl", { clear = true }),
   callback = function()
@@ -545,13 +500,11 @@ vim.api.nvim_create_autocmd("ColorScheme", {
     apply_cursor_hl()
     schedule_plain_keyword_hl()
     schedule_semantic_token_hl()
-    schedule_special_function_hl()
   end,
 })
 apply_custom_hl()
 schedule_plain_keyword_hl()
 schedule_semantic_token_hl()
-schedule_special_function_hl()
 
 vim.api.nvim_create_autocmd({ "FileType", "BufEnter", "LspAttach" }, {
   group = vim.api.nvim_create_augroup("PlainKeywordHl", { clear = true }),
@@ -559,12 +512,6 @@ vim.api.nvim_create_autocmd({ "FileType", "BufEnter", "LspAttach" }, {
     schedule_plain_keyword_hl()
     schedule_semantic_token_hl()
   end,
-})
-
-vim.api.nvim_create_autocmd("FileType", {
-  group = vim.api.nvim_create_augroup("SpecialFunctionHl", { clear = true }),
-  pattern = { "javascript", "javascriptreact", "typescript", "typescriptreact", "vue" },
-  callback = schedule_special_function_hl,
 })
 
 vim.api.nvim_create_autocmd("User", {

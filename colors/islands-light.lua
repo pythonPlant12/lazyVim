@@ -10,11 +10,12 @@ local palette = {
   fg_bright = "#1E2030",
   muted = "#6E7380",
   comment = "#979BAA",
-  line = "#FBFAF8",
-  line_alt = "#F9F8F7",
+  line = "#F3F3F3",
+  line_alt = "#ECECEC",
   blue = "#2D6DB8",
   cyan = "#0E7294",
   green = "#3A7D50",
+  string_color = "#8B5728",
   amber = "#A8631A",
   gold = "#8A7220",
   magenta = "#7C52AE",
@@ -22,7 +23,7 @@ local palette = {
   purple = "#6B4FAD",
   selection = "#DEE9F5",
   search = "#D6E5F2",
-  border = "#F3F1EE",
+  border = "#DEDEDE",
 }
 
 vim.cmd("highlight clear")
@@ -63,8 +64,8 @@ hl(0, "TabLineSel", { fg = palette.fg_bright, bg = palette.line_alt, bold = true
 hl(0, "TabLineFill", { fg = palette.muted, bg = palette.line })
 
 hl(0, "Comment", { fg = palette.comment, italic = false })
-hl(0, "String", { fg = palette.green })
-hl(0, "Character", { fg = palette.green })
+hl(0, "String", { fg = palette.string_color })
+hl(0, "Character", { fg = palette.string_color })
 hl(0, "Number", { fg = palette.cyan })
 hl(0, "Boolean", { fg = palette.cyan })
 hl(0, "Float", { fg = palette.cyan })
@@ -82,6 +83,23 @@ hl(0, "@variable.builtin", { fg = "#A15391" })
 hl(0, "@variable.builtin.python", { fg = "#A15391" })
 hl(0, "@lsp.typemod.variable.self", { fg = "#A15391" })
 hl(0, "@lsp.typemod.variable.self.python", { fg = "#A15391" })
+hl(0, "@variable.typescript",              { fg = palette.fg })
+hl(0, "@variable.javascript",              { fg = palette.fg })
+hl(0, "@function.special",            { fg = "#A15391" })
+hl(0, "@function.special.typescript", { fg = "#A15391" })
+hl(0, "@function.special.javascript", { fg = "#A15391" })
+hl(0, "@function.special.vue",        { fg = "#A15391" })
+hl(0, "@constructor",                { fg = palette.gold })
+hl(0, "@lsp.type.class",             { fg = palette.gold })
+hl(0, "@lsp.typemod.class.callable", { fg = palette.gold })
+hl(0, "@lsp.type.struct",            { fg = palette.gold })
+hl(0, "@lsp.type.interface",         { fg = palette.gold })
+hl(0, "@lsp.type.enum",              { fg = palette.gold })
+hl(0, "@lsp.type.type",              { fg = palette.gold })
+hl(0, "@lsp.type.typeAlias",         { fg = palette.gold })
+hl(0, "@lsp.type.namespace",         { fg = palette.gold })
+hl(0, "@lsp.type.typeParameter",     { fg = "#7A48B3" })
+hl(0, "@lsp.type.enumMember",        { fg = palette.magenta })
 hl(0, "Statement", { fg = palette.amber })
 hl(0, "Keyword", { fg = palette.amber })
 hl(0, "Operator", { fg = palette.fg })
@@ -118,8 +136,8 @@ hl(0, "htmlEndTag", { fg = "#7B8596" })
 hl(0, "htmlTagName", { fg = "#356FAF" })
 hl(0, "htmlSpecialTagName", { fg = "#356FAF" })
 hl(0, "htmlArg", { fg = "#8E5324" })
-hl(0, "htmlString", { fg = palette.green })
-hl(0, "htmlValue", { fg = palette.green })
+hl(0, "htmlString", { fg = palette.string_color })
+hl(0, "htmlValue", { fg = palette.string_color })
 hl(0, "htmlSpecialChar", { fg = palette.cyan })
 hl(0, "htmlComment", { fg = palette.comment, italic = false })
 hl(0, "htmlCommentPart", { fg = palette.comment, italic = false })
@@ -157,9 +175,9 @@ hl(0, "@variable.member.vue", { fg = palette.fg })
 hl(0, "@none.vue", { fg = palette.fg })
 hl(0, "@property", { fg = palette.fg })
 hl(0, "@property.vue", { fg = palette.fg })
-hl(0, "@string", { fg = palette.green })
-hl(0, "@string.html", { fg = palette.green })
-hl(0, "@string.vue", { fg = palette.green })
+hl(0, "@string", { fg = palette.string_color })
+hl(0, "@string.html", { fg = palette.string_color })
+hl(0, "@string.vue", { fg = palette.string_color })
 
 hl(0, "@lsp.type.keyword.vue", { fg = palette.amber })
 
