@@ -3,6 +3,7 @@
 -- Add any additional options here
 
 vim.o.swapfile = false
+vim.opt.scrolloff=8
 
 vim.o.timeoutlen = 500
 
