@@ -1091,7 +1091,6 @@ local function toggle_bookmark_at_source()
   end)
 end
 
-keymaps.set("n", "<C-b>b", toggle_bookmark_at_source, { desc = "Toggle bookmark" })
 keymaps.set("n", "<C-b>b", function()
   if vim.bo.filetype == "neo-tree" then
     vim.notify("Cannot add bookmarks from neo-tree", vim.log.levels.WARN, { title = "Bookmarks" })
