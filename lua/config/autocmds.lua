@@ -350,6 +350,8 @@ local function apply_custom_hl()
     indent_fg = "#C4CAD3",
     indent_scope_fg = "#8FA8C8",
     context_bg = "#E5E5E5",
+    fold_bg = "#EEF2F7",
+    fold_fg = "#66707C",
   } or {
     border = "#585b70",
     select_bg = "#253A63",
@@ -403,6 +405,8 @@ local function apply_custom_hl()
     indent_fg = "#40454F",
     indent_scope_fg = "#5B6B8A",
     context_bg = "#313244",
+    fold_bg = "#242833",
+    fold_fg = "#7f849c",
   }
 
   local kind_hl_colors = {
@@ -481,7 +485,9 @@ local function apply_custom_hl()
   hl(0, "GitSignsAdd",    { fg = c.green })
   hl(0, "GitSignsChange", { fg = c.yellow })
   hl(0, "GitSignsDelete", { fg = c.rose })
-  hl(0, "GitSignsCurrentLineBlame", { fg = is_light and "#7B8491" or "#7f849c", bg = "NONE" })
+  local blame_fg = is_light and "#7B8491" or "#7f849c"
+  hl(0, "GitSignsCurrentLineBlame", { fg = blame_fg, bg = "NONE" })
+  hl(0, "LspInlayHint", { fg = blame_fg, bg = "NONE" })
 
   hl(0, "GitSignsAddInline",      { bg = c.gadd_inline })
   hl(0, "GitSignsDeleteInline",   { bg = c.gdel_inline })
@@ -554,6 +560,12 @@ local function apply_custom_hl()
   hl(0, "TreesitterContext",           { bg = c.context_bg })
   hl(0, "TreesitterContextLineNumber", { bg = c.context_bg })
   hl(0, "TreesitterContextBottom",     { bg = c.context_bg, underline = false })
+
+  hl(0, "Folded",            { fg = c.fold_fg, bg = c.fold_bg })
+  hl(0, "FoldColumn",        { fg = c.fold_fg, bg = "NONE" })
+  hl(0, "UfoFoldedFg",       { fg = c.fold_fg })
+  hl(0, "UfoFoldedBg",       { bg = c.fold_bg })
+  hl(0, "UfoFoldedEllipsis", { fg = c.fold_fg, bg = c.fold_bg })
 
   hl(0, "CursorLine",   { bg = c.context_bg })
   hl(0, "CursorLineNr", { fg = normal_fg, bg = c.context_bg, bold = true })

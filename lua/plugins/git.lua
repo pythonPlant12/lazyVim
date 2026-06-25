@@ -4,7 +4,9 @@ return {
     init = function()
       local function apply_blame_hl()
         local is_light = vim.o.background == "light"
-        vim.api.nvim_set_hl(0, "GitSignsCurrentLineBlame", { fg = is_light and "#7B8491" or "#7f849c", bg = "NONE" })
+        local blame_fg = is_light and "#7B8491" or "#7f849c"
+        vim.api.nvim_set_hl(0, "GitSignsCurrentLineBlame", { fg = blame_fg, bg = "NONE" })
+        vim.api.nvim_set_hl(0, "LspInlayHint", { fg = blame_fg, bg = "NONE" })
       end
       vim.api.nvim_create_autocmd("ColorScheme", { callback = apply_blame_hl })
       apply_blame_hl()
