@@ -226,6 +226,66 @@ local function apply_cursor_hl()
   hl(0, "TermCursor",    { link = "Cursor" })
 end
 
+local function apply_transparent_hl()
+  local hl = vim.api.nvim_set_hl
+  local bgless_groups = {
+    "Normal",
+    "NormalNC",
+    "NormalFloat",
+    "FloatBorder",
+    "FloatTitle",
+    "FloatFooter",
+    "FloatShadow",
+    "FloatShadowThrough",
+    "SignColumn",
+    "FoldColumn",
+    "LineNr",
+    "EndOfBuffer",
+    "WinSeparator",
+    "VertSplit",
+    "NeoTreeNormal",
+    "NeoTreeNormalNC",
+    "StatusLine",
+    "StatusLineNC",
+    "TabLine",
+    "TabLineFill",
+    "Pmenu",
+    "SnacksPickerBorder",
+    "SnacksPickerBox",
+    "SnacksPickerInput",
+    "SnacksPickerList",
+    "SnacksPickerPreview",
+    "SnacksPickerTitle",
+    "SnacksPickerFooter",
+    "SnacksInputNormal",
+    "SnacksInputBorder",
+    "SnacksInputTitle",
+    "NoiceCmdlinePopup",
+    "NoiceCmdlinePopupBorder",
+    "NoiceCmdlinePopupTitle",
+    "NoicePopup",
+    "NoicePopupBorder",
+    "NoicePopupmenu",
+    "WhichKey",
+    "WhichKeyNormal",
+    "WhichKeyBorder",
+    "BlinkCmpMenu",
+    "BlinkCmpMenuBorder",
+    "BlinkCmpDoc",
+    "BlinkCmpDocBorder",
+    "BlinkCmpDocSeparator",
+    "BlinkCmpSignatureHelp",
+    "BlinkCmpSignatureHelpBorder",
+    "PmenuBorder",
+  }
+
+  for _, group in ipairs(bgless_groups) do
+    local current = vim.api.nvim_get_hl(0, { name = group, link = false })
+    current.bg = nil
+    hl(0, group, current)
+  end
+end
+
 local function apply_custom_hl()
   local hl = vim.api.nvim_set_hl
   local normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
@@ -491,6 +551,7 @@ local function apply_custom_hl()
 
   hl(0, "CursorLine",   { bg = c.context_bg })
   hl(0, "CursorLineNr", { fg = normal_fg, bg = c.context_bg, bold = true })
+  apply_transparent_hl()
 end
 
 vim.api.nvim_create_autocmd("ColorScheme", {
@@ -500,11 +561,13 @@ vim.api.nvim_create_autocmd("ColorScheme", {
     apply_cursor_hl()
     schedule_plain_keyword_hl()
     schedule_semantic_token_hl()
+    apply_transparent_hl()
   end,
 })
 apply_custom_hl()
 schedule_plain_keyword_hl()
 schedule_semantic_token_hl()
+apply_transparent_hl()
 
 vim.api.nvim_create_autocmd({ "FileType", "BufEnter", "LspAttach" }, {
   group = vim.api.nvim_create_augroup("PlainKeywordHl", { clear = true }),

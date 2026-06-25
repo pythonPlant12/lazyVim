@@ -94,6 +94,25 @@ local function disable_template_document_highlight(client, bufnr)
   end
 end
 
+local function ensure_ty_lspconfig()
+  local configs = require("lspconfig.configs")
+  if not configs.ty then
+    configs.ty = {
+      default_config = {
+        cmd = { "ty", "server" },
+        filetypes = { "python" },
+        root_dir = function(fname)
+          return resolver.python_root(fname)
+        end,
+        single_file_support = true,
+      },
+      docs = {
+        description = "https://github.com/astral-sh/ty",
+      },
+    }
+  end
+end
+
 return {
   {
     "mason-org/mason.nvim",
@@ -104,6 +123,7 @@ return {
         "pyright",
         "basedpyright",
         "jinja-lsp",
+        "ty",
       })
     end,
   },
@@ -113,6 +133,7 @@ return {
       opts = opts or {}
       opts.servers = opts.servers or {}
       opts.setup = opts.setup or {}
+      ensure_ty_lspconfig()
 
       opts.servers.pylsp = { enabled = false }
       opts.servers.pyright = { enabled = false }
@@ -139,6 +160,26 @@ return {
         end,
       })
 
+      opts.servers.ty = vim.tbl_deep_extend("force", opts.servers.ty or {}, {
+        autostart = false,
+        root_dir = function(fname)
+          return resolver.python_root(fname)
+        end,
+        on_init = function(client)
+          client.server_capabilities.completionProvider     = nil
+          client.server_capabilities.hoverProvider          = false
+          client.server_capabilities.definitionProvider     = false
+          client.server_capabilities.referencesProvider     = false
+          client.server_capabilities.documentSymbolProvider = false
+          client.server_capabilities.workspaceSymbolProvider= false
+          client.server_capabilities.renameProvider         = false
+          client.server_capabilities.signatureHelpProvider  = nil
+          client.server_capabilities.codeActionProvider     = false
+          client.server_capabilities.inlayHintProvider      = false
+          client.server_capabilities.semanticTokensProvider = nil
+        end,
+      })
+
       opts.servers.jinja_lsp = vim.tbl_deep_extend("force", opts.servers.jinja_lsp or {}, {
         filetypes = { "html", "jinja", "jinja2", "htmldjango" },
         root_dir = function(fname)
@@ -158,6 +199,10 @@ return {
       end
       opts.setup.ruff_lsp = function(_, server_opts)
         lspconfig.ruff_lsp.setup(server_opts)
+        return true
+      end
+      opts.setup.ty = function(_, server_opts)
+        lspconfig.ty.setup(server_opts)
         return true
       end
       opts.setup.jinja_lsp = function(_, server_opts)

@@ -24,6 +24,101 @@ local picker_excludes = {
   "**/shelved.patch",
 }
 
+local language_icon_theme_colors = {
+  ["islands-dark"] = {
+    typescript = "#4FA6E8",
+    javascript = "#F0D55C",
+    python = "#5DADE2",
+  },
+  ["islands-light"] = {
+    typescript = "#256FB8",
+    javascript = "#B8860B",
+    python = "#2F6F9F",
+  },
+  ["islands-rose-pine-dark"] = {
+    typescript = "#4FA6E8",
+    javascript = "#E8D05A",
+    python = "#5BA8D9",
+  },
+  ["islands-rose-pine-light"] = {
+    typescript = "#2F76B7",
+    javascript = "#9A7600",
+    python = "#286B96",
+  },
+  ["rose-pine"] = {
+    typescript = "#4FA6E8",
+    javascript = "#E8D05A",
+    python = "#5BA8D9",
+  },
+  ["rose-pine-main"] = {
+    typescript = "#4FA6E8",
+    javascript = "#E8D05A",
+    python = "#5BA8D9",
+  },
+  ["rose-pine-moon"] = {
+    typescript = "#66B2EA",
+    javascript = "#EAD56A",
+    python = "#6DB2DE",
+  },
+  ["rose-pine-dawn"] = {
+    typescript = "#2F76B7",
+    javascript = "#9A7600",
+    python = "#286B96",
+  },
+  ["catppuccin"] = {
+    typescript = "#89B4FA",
+    javascript = "#F9E2AF",
+    python = "#74C7EC",
+  },
+  ["catppuccin-mocha"] = {
+    typescript = "#89B4FA",
+    javascript = "#F9E2AF",
+    python = "#74C7EC",
+  },
+  ["catppuccin-macchiato"] = {
+    typescript = "#8AADF4",
+    javascript = "#EED49F",
+    python = "#7DC4E4",
+  },
+  ["catppuccin-frappe"] = {
+    typescript = "#8CAAEE",
+    javascript = "#E5C890",
+    python = "#99D1DB",
+  },
+  ["catppuccin-latte"] = {
+    typescript = "#1E66F5",
+    javascript = "#A17900",
+    python = "#209FB5",
+  },
+}
+
+local function language_icon_colors()
+  local theme = vim.g.colors_name or ""
+  return language_icon_theme_colors[theme] or language_icon_theme_colors["islands-dark"]
+end
+
+local function apply_language_icon_hl()
+  local colors = language_icon_colors()
+  vim.api.nvim_set_hl(0, "MiniIconsLanguageTypeScript", { fg = colors.typescript })
+  vim.api.nvim_set_hl(0, "MiniIconsLanguageJavaScript", { fg = colors.javascript })
+  vim.api.nvim_set_hl(0, "MiniIconsLanguagePython", { fg = colors.python })
+end
+
+local function language_icon_extension_overrides()
+  return {
+    ts = { glyph = "󰛦", hl = "MiniIconsLanguageTypeScript" },
+    tsx = { glyph = "", hl = "MiniIconsLanguageTypeScript" },
+    mts = { glyph = "󰛦", hl = "MiniIconsLanguageTypeScript" },
+    cts = { glyph = "󰛦", hl = "MiniIconsLanguageTypeScript" },
+    js = { glyph = "󰌞", hl = "MiniIconsLanguageJavaScript" },
+    jsx = { glyph = "", hl = "MiniIconsLanguageJavaScript" },
+    mjs = { glyph = "󰌞", hl = "MiniIconsLanguageJavaScript" },
+    cjs = { glyph = "󰌞", hl = "MiniIconsLanguageJavaScript" },
+    py = { glyph = "󰌠", hl = "MiniIconsLanguagePython" },
+    pyi = { glyph = "󰌠", hl = "MiniIconsLanguagePython" },
+  }
+end
+
 local function grep_case_mode_args(args, camel_case)
   local filtered = {}
   for _, arg in ipairs(args or {}) do
@@ -351,6 +446,22 @@ return {
         },
       },
     },
+  },
+  {
+    "nvim-mini/mini.icons",
+    opts = function(_, opts)
+      opts.extension = vim.tbl_deep_extend("force", opts.extension or {}, language_icon_extension_overrides())
+      return opts
+    end,
+    init = function()
+      apply_language_icon_hl()
+      vim.api.nvim_create_autocmd("ColorScheme", {
+        group = vim.api.nvim_create_augroup("LanguageFileIconHl", { clear = true }),
+        callback = function()
+          vim.schedule(apply_language_icon_hl)
+        end,
+      })
+    end,
   },
   -- neo-tree: always show hidden files
   {
@@ -1673,7 +1784,7 @@ return {
             styled_comp[1] = function(self)
               local icon = require("mini.icons").get("file", vim.fn.expand("%:t"))
               local path = type(path_fn) == "function" and path_fn(self) or ""
-              if icon and icon ~= "" then return icon .. " " .. path end
+              if icon and icon ~= "" then return " " .. icon .. " " .. path end
               return path
             end
             local existing_color_fn = styled_comp.color
@@ -1720,7 +1831,7 @@ return {
               return chip_bgs()[1]
             end
             local sep_comp = style_chip({ function() return "|" end }, sep_bg_fn)
-            sep_comp.padding = { left = 1, right = 1 }
+            sep_comp.padding = { left = 0, right = 1 }
             sep_comp.color = function()
               return { fg = vim.o.background == "light" and "#9B9792" or "#6B6F75", bg = sep_bg_fn() }
             end

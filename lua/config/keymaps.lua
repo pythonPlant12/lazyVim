@@ -1911,6 +1911,150 @@ python_snacks_toggle({ "analysis", "inlayHints", "callArgumentNamesMatching" }, 
 python_snacks_toggle({ "analysis", "inlayHints", "functionReturnTypes" },       "Function return type hints",  "<leader>LpR")
 python_snacks_toggle({ "analysis", "inlayHints", "genericTypes" },              "Generic type hints",          "<leader>Lpg")
 
+keymaps.set("n", "<leader>LpV", function()
+  local resolver = require("config.lsp_resolver")
+  local uv = vim.uv
+  local root = resolver.workspace_root() or vim.fn.getcwd()
+  local items = {}
+  local seen = {}
+
+  local function add_venv(path, label)
+    local real = uv.fs_realpath(path) or path
+    if seen[real] then return end
+    local py = real .. "/bin/python"
+    if vim.fn.executable(py) ~= 1 then return end
+    seen[real] = true
+    local cur = uv.fs_realpath(vim.env.VIRTUAL_ENV or "") or ""
+    local marker = (real == cur) and "  ✓" or ""
+    table.insert(items, { label = label .. marker, path = real, python = py })
+  end
+
+  -- 1. project-local venvs
+  for _, name in ipairs(resolver.python_venv_dirs) do
+    local candidate = root .. "/" .. name
+    if uv.fs_stat(candidate) and uv.fs_stat(candidate .. "/pyvenv.cfg") then
+      add_venv(candidate, name .. " (project)")
+    end
+  end
+
+  -- 2. active shell venvs
+  if vim.env.VIRTUAL_ENV and vim.env.VIRTUAL_ENV ~= "" then
+    add_venv(vim.env.VIRTUAL_ENV, vim.fn.fnamemodify(vim.env.VIRTUAL_ENV, ":t") .. " (shell)")
+  end
+  if vim.env.CONDA_PREFIX and vim.env.CONDA_PREFIX ~= "" then
+    add_venv(vim.env.CONDA_PREFIX, vim.fn.fnamemodify(vim.env.CONDA_PREFIX, ":t") .. " (conda)")
+  end
+
+  -- 3. ~/.virtualenvs (virtualenvwrapper)
+  local workon = vim.env.WORKON_HOME or (vim.env.HOME .. "/.virtualenvs")
+  for _, cfg in ipairs(vim.fn.glob(workon .. "/*/pyvenv.cfg", false, true)) do
+    local d = vim.fn.fnamemodify(cfg, ":h")
+    add_venv(d, vim.fn.fnamemodify(d, ":t") .. " (~/.virtualenvs)")
+  end
+
+  -- 4. pyenv versions
+  local pyenv_root = vim.env.PYENV_ROOT or (vim.env.HOME .. "/.pyenv")
+  for _, py in ipairs(vim.fn.glob(pyenv_root .. "/versions/*/bin/python", false, true)) do
+    local ver_dir = vim.fn.fnamemodify(py, ":h:h")
+    local real = uv.fs_realpath(ver_dir) or ver_dir
+    if not seen[real] and vim.fn.executable(py) == 1 then
+      seen[real] = true
+      table.insert(items, { label = vim.fn.fnamemodify(ver_dir, ":t") .. " (pyenv)", path = real, python = py })
+    end
+  end
+
+  -- 5. system python fallback
+  local sys_py = vim.fn.exepath("python3") ~= "" and vim.fn.exepath("python3") or vim.fn.exepath("python")
+  if sys_py and sys_py ~= "" then
+    table.insert(items, { label = "system (" .. sys_py .. ")", path = "", python = sys_py, system = true })
+  end
+
+  if #items == 0 then
+    vim.notify("No Python environments found", vim.log.levels.WARN, { title = "Python venv" })
+    return
+  end
+
+  vim.ui.select(items, {
+    prompt = "Select Python environment",
+    format_item = function(item) return item.label end,
+  }, function(choice)
+    if not choice then return end
+
+    vim.env.VIRTUAL_ENV = (not choice.system) and choice.path or nil
+    local bufnr = vim.api.nvim_get_current_buf()
+    local updated = {}
+
+    for _, client in ipairs(vim.lsp.get_clients({ bufnr = bufnr })) do
+      if client.name == "basedpyright" then
+        local settings = vim.tbl_deep_extend("force", client.settings or {}, {
+          python = { pythonPath = choice.python },
+        })
+        client.settings = settings
+        client.config.settings = vim.tbl_deep_extend("force", client.config.settings or {}, settings)
+        client:notify("workspace/didChangeConfiguration", { settings = client.settings })
+        table.insert(updated, "basedpyright")
+      elseif client.name == "ty" then
+        vim.lsp.stop_client(client.id)
+        vim.defer_fn(function() require('lspconfig').ty.launch() end, 200)
+        table.insert(updated, "ty (restarted)")
+      end
+    end
+
+    local msg = vim.fn.fnamemodify(choice.python, ":~")
+    if #updated > 0 then msg = msg .. "\n↳ " .. table.concat(updated, ", ") end
+    vim.notify(msg, vim.log.levels.INFO, { title = "Python env" })
+  end)
+end, { desc = "Select Python virtual environment" })
+
+keymaps.set("n", "<leader>LpL", function()
+  local bufnr = vim.api.nvim_get_current_buf()
+  if vim.bo[bufnr].filetype ~= "python" then
+    vim.notify("Not a Python buffer", vim.log.levels.WARN, { title = "Python LSP" })
+    return
+  end
+
+  local py_servers = { "basedpyright", "ty" }
+  local items = {}
+
+  for _, name in ipairs(py_servers) do
+    local clients = vim.lsp.get_clients({ bufnr = bufnr, name = name })
+    local active = #clients > 0
+    local icon = active and "✓" or "○"
+    local role = name == "basedpyright"
+      and (active and " — primary (completions, hover, goto)" or " — primary (inactive)")
+      or  (active and " — diagnostics-only" or " — diagnostics-only (inactive)")
+    table.insert(items, { label = icon .. " " .. name .. role, name = name, active = active, client = clients[1] })
+  end
+
+  local active_count = 0
+  for _, i in ipairs(items) do if i.active then active_count = active_count + 1 end end
+
+  vim.ui.select(items, {
+    prompt = "Python LSP (" .. active_count .. " active) — toggle",
+    format_item = function(item) return item.label end,
+  }, function(choice)
+    if not choice then return end
+    if choice.name == "basedpyright" then
+      if choice.active then
+        vim.notify(
+          "basedpyright is the primary LSP.\nUse :LspStop basedpyright to force-stop.",
+          vim.log.levels.INFO, { title = "Python LSP" })
+      else
+        require('lspconfig').basedpyright.launch()
+        vim.notify("basedpyright started", vim.log.levels.INFO, { title = "Python LSP" })
+      end
+    elseif choice.name == "ty" then
+      if choice.active then
+        vim.lsp.stop_client(choice.client.id)
+        vim.notify("ty stopped", vim.log.levels.INFO, { title = "Python LSP" })
+      else
+        require('lspconfig').ty.launch()
+        vim.notify("ty started (diagnostics-only alongside basedpyright)", vim.log.levels.INFO, { title = "Python LSP" })
+      end
+    end
+  end)
+end, { desc = "Python LSP manager" })
+
 keymaps.set("n", "<leader>Lpd", function()
   select_python_server_value({ "analysis", "diagnosticMode" }, { "openFilesOnly", "workspace" }, "diagnosticMode")
 end, { desc = "Diagnostic mode" })
