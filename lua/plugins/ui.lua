@@ -700,70 +700,68 @@ return {
     keys = {
     },
     opts = function(_, opts)
-      local _appearance = vim.fn.system("defaults read -g AppleInterfaceStyle 2>/dev/null"):gsub("%s+", "")
-      local is_light = _appearance ~= "Dark"
       opts = opts or {}
       opts.options = vim.tbl_deep_extend("force", opts.options or {}, {
         mode = "tabs",
-        separator_style = { "", "" },
+        separator_style = { "│", "│" },
         show_buffer_close_icons = false,
         show_close_icon = false,
         indicator = { style = "none" },
         diagnostics = false,
       })
-      opts.highlights = is_light and {
-        fill                    = { bg = "#D8D4CE" },
-        background              = { fg = "#52505A", bg = "#C8C2B8" },
-        tab                     = { fg = "#52505A", bg = "#C8C2B8" },
-        tab_selected            = { fg = "#2F496F", bg = "#D2E4F5", bold = true },
-        tab_separator           = { fg = "#C8C2B8", bg = "#D8D4CE" },
-        tab_separator_selected  = { fg = "#D2E4F5", bg = "#D8D4CE" },
-        tab_close               = { fg = "#52505A", bg = "#D8D4CE" },
-        buffer_selected         = { fg = "#2F496F", bg = "#D2E4F5", bold = true, italic = false },
-        buffer_visible          = { fg = "#52505A", bg = "#C8C2B8", italic = false },
-        numbers_selected        = { fg = "#2F496F", bg = "#D2E4F5", bold = true },
-        numbers_visible         = { fg = "#52505A", bg = "#C8C2B8" },
-        close_button            = { fg = "#52505A", bg = "#C8C2B8" },
-        close_button_visible    = { fg = "#52505A", bg = "#C8C2B8" },
-        close_button_selected   = { fg = "#2F496F", bg = "#D2E4F5" },
-        indicator_selected      = { fg = "#D2E4F5", bg = "#D2E4F5" },
-        indicator_visible       = { fg = "#C8C2B8", bg = "#C8C2B8" },
-        separator               = { fg = "#B8B2A8", bg = "#D8D4CE" },
-        separator_selected      = { fg = "#D2E4F5", bg = "#D8D4CE" },
-        separator_visible       = { fg = "#B8B2A8", bg = "#D8D4CE" },
-        duplicate_selected      = { fg = "#2F496F", bg = "#D2E4F5", bold = true, italic = false },
-        duplicate               = { fg = "#52505A", bg = "#C8C2B8", italic = false },
-        duplicate_visible       = { fg = "#52505A", bg = "#C8C2B8", italic = false },
-        modified_selected       = { fg = "#2F496F", bg = "#D2E4F5", italic = false },
-        modified                = { fg = "#52505A", bg = "#C8C2B8", italic = false },
-        modified_visible        = { fg = "#52505A", bg = "#C8C2B8", italic = false },
-      } or {
-        fill                    = { bg = "#1e1e2e" },
-        background              = { fg = "#6c7086", bg = "#181825" },
-        tab                     = { fg = "#6c7086", bg = "#181825" },
-        tab_selected            = { fg = "#E8F0FA", bg = "#2F496F", bold = true },
-        tab_separator           = { fg = "#181825", bg = "#1e1e2e" },
-        tab_separator_selected  = { fg = "#2F496F", bg = "#1e1e2e" },
-        tab_close               = { fg = "#6c7086", bg = "#1e1e2e" },
-        buffer_selected         = { fg = "#E8F0FA", bg = "#2F496F", bold = true, italic = false },
-        buffer_visible          = { fg = "#6c7086", bg = "#181825", italic = false },
-        numbers_selected        = { fg = "#E8F0FA", bg = "#2F496F", bold = true },
-        numbers_visible         = { fg = "#6c7086", bg = "#181825" },
-        close_button            = { fg = "#6c7086", bg = "#181825" },
-        close_button_visible    = { fg = "#6c7086", bg = "#181825" },
-        close_button_selected   = { fg = "#E8F0FA", bg = "#2F496F" },
-        indicator_selected      = { fg = "#2F496F", bg = "#2F496F" },
-        indicator_visible       = { fg = "#181825", bg = "#181825" },
-        separator               = { fg = "#181825", bg = "#1e1e2e" },
-        separator_selected      = { fg = "#2F496F", bg = "#1e1e2e" },
-        separator_visible       = { fg = "#181825", bg = "#1e1e2e" },
-        duplicate_selected      = { fg = "#E8F0FA", bg = "#2F496F", bold = true, italic = false },
-        duplicate               = { fg = "#6c7086", bg = "#181825", italic = false },
-        duplicate_visible       = { fg = "#6c7086", bg = "#181825", italic = false },
-        modified_selected       = { fg = "#E8F0FA", bg = "#2F496F", italic = false },
-        modified                = { fg = "#6c7086", bg = "#181825", italic = false },
-        modified_visible        = { fg = "#6c7086", bg = "#181825", italic = false },
-      }
+      local function palette()
+        local name = vim.g.colors_name or ""
+        if name == "rose-pine-dark-dimmed" then
+          return { fg = "#b0acbc", muted = "#7a7686", border = "#524f67", active_bg = "#26233a", active_fg = "#c7c3d1", bg = "NONE" }
+        elseif name:find("rose%-pine") and vim.o.background == "dark" then
+          return { fg = "#e0def4", muted = "#908caa", border = "#524f67", active_bg = "#26233a", active_fg = "#e0def4", bg = "NONE" }
+        elseif vim.o.background == "light" then
+          return { fg = "#4C4F69", muted = "#7A7880", border = "#B8B2A8", active_bg = "#D2E4F5", active_fg = "#2F496F", bg = "NONE" }
+        end
+        return { fg = "#BCBEC4", muted = "#6F737A", border = "#4A4F57", active_bg = "#2F496F", active_fg = "#E8F0FA", bg = "NONE" }
+      end
+
+      local function tab_highlights()
+        local c = palette()
+        return {
+          fill                    = { bg = c.bg },
+          background              = { fg = c.muted, bg = c.bg },
+          tab                     = { fg = c.muted, bg = c.bg },
+          tab_selected            = { fg = c.active_fg, bg = c.active_bg, bold = true },
+          tab_separator           = { fg = c.border, bg = c.bg },
+          tab_separator_selected  = { fg = c.active_bg, bg = c.bg },
+          tab_close               = { fg = c.muted, bg = c.bg },
+          buffer_selected         = { fg = c.active_fg, bg = c.active_bg, bold = true, italic = false },
+          buffer_visible          = { fg = c.fg, bg = c.bg, italic = false },
+          numbers_selected        = { fg = c.active_fg, bg = c.active_bg, bold = true },
+          numbers_visible         = { fg = c.fg, bg = c.bg },
+          close_button            = { fg = c.muted, bg = c.bg },
+          close_button_visible    = { fg = c.muted, bg = c.bg },
+          close_button_selected   = { fg = c.active_fg, bg = c.active_bg },
+          indicator_selected      = { fg = c.active_bg, bg = c.active_bg },
+          indicator_visible       = { fg = c.bg, bg = c.bg },
+          separator               = { fg = c.border, bg = c.bg },
+          separator_selected      = { fg = c.active_bg, bg = c.bg },
+          separator_visible       = { fg = c.border, bg = c.bg },
+          duplicate_selected      = { fg = c.active_fg, bg = c.active_bg, bold = true, italic = false },
+          duplicate               = { fg = c.muted, bg = c.bg, italic = false },
+          duplicate_visible       = { fg = c.muted, bg = c.bg, italic = false },
+          modified_selected       = { fg = c.active_fg, bg = c.active_bg, italic = false },
+          modified                = { fg = c.muted, bg = c.bg, italic = false },
+          modified_visible        = { fg = c.muted, bg = c.bg, italic = false },
+        }
+      end
+
+      opts.highlights = tab_highlights()
+      vim.api.nvim_create_autocmd("ColorScheme", {
+        callback = function()
+          local ok, bufferline = pcall(require, "bufferline")
+          if ok then
+            opts.highlights = tab_highlights()
+            bufferline.setup(opts)
+          end
+        end,
+      })
       return opts
     end,
   },
