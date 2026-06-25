@@ -60,6 +60,11 @@ local language_icon_theme_colors = {
     javascript = "#EAD56A",
     python = "#6DB2DE",
   },
+  ["rose-pine-dark-dimmed"] = {
+    typescript = "#6e9eb0",
+    javascript = "#a89780",
+    python = "#476991",
+  },
   ["rose-pine-dawn"] = {
     typescript = "#2F76B7",
     javascript = "#9A7600",
@@ -1231,20 +1236,20 @@ return {
     event = "VeryLazy",
     opts = function(_, opts)
       local lualine_light = {
-        normal   = { a = { fg = "#2F496F", bg = "#D2E4F5", gui = "bold" }, b = { fg = "#4C4F69", bg = "#D5D0CA", gui = "bold" }, c = { fg = "#4C4F69", bg = "#E2DFDB" } },
-        insert   = { a = { fg = "#34523E", bg = "#D8E8DA", gui = "bold" }, b = { fg = "#4C4F69", bg = "#D5D0CA", gui = "bold" } },
-        visual   = { a = { fg = "#342F67", bg = "#DDD9F7", gui = "bold" }, b = { fg = "#4C4F69", bg = "#D5D0CA", gui = "bold" } },
-        replace  = { a = { fg = "#672D2D", bg = "#F5DADA", gui = "bold" }, b = { fg = "#4C4F69", bg = "#D5D0CA", gui = "bold" } },
-        command  = { a = { fg = "#5A3A1A", bg = "#F0E0C8", gui = "bold" }, b = { fg = "#4C4F69", bg = "#D5D0CA", gui = "bold" } },
-        inactive = { a = { fg = "#7A7880", bg = "#E2DFDB" }, b = { fg = "#7A7880", bg = "#E2DFDB" }, c = { fg = "#7A7880", bg = "#E2DFDB" } },
+        normal   = { a = { fg = "#2F496F", bg = "#D2E4F5", gui = "bold" }, b = { fg = "#4C4F69", bg = "NONE", gui = "bold" }, c = { fg = "#4C4F69", bg = "NONE" } },
+        insert   = { a = { fg = "#34523E", bg = "#D8E8DA", gui = "bold" }, b = { fg = "#4C4F69", bg = "NONE", gui = "bold" } },
+        visual   = { a = { fg = "#342F67", bg = "#DDD9F7", gui = "bold" }, b = { fg = "#4C4F69", bg = "NONE", gui = "bold" } },
+        replace  = { a = { fg = "#672D2D", bg = "#F5DADA", gui = "bold" }, b = { fg = "#4C4F69", bg = "NONE", gui = "bold" } },
+        command  = { a = { fg = "#5A3A1A", bg = "#F0E0C8", gui = "bold" }, b = { fg = "#4C4F69", bg = "NONE", gui = "bold" } },
+        inactive = { a = { fg = "#7A7880", bg = "NONE" }, b = { fg = "#7A7880", bg = "NONE" }, c = { fg = "#7A7880", bg = "NONE" } },
       }
       local lualine_dark = {
-        normal   = { a = { fg = "#E8F0FA", bg = "#2F496F", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#3B3F45", gui = "bold" }, c = { fg = "#BCBEC4", bg = "#2B2D30" } },
-        insert   = { a = { fg = "#EFF3F0", bg = "#34523E", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#3B3F45", gui = "bold" } },
-        visual   = { a = { fg = "#ECEBFB", bg = "#342F67", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#3B3F45", gui = "bold" } },
-        replace  = { a = { fg = "#FCF0F0", bg = "#672D2D", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#3B3F45", gui = "bold" } },
-        command  = { a = { fg = "#F5E8D0", bg = "#5A3A1A", gui = "bold" }, b = { fg = "#BCBEC4", bg = "#3B3F45", gui = "bold" } },
-        inactive = { a = { fg = "#6F737A", bg = "#191A1C" }, b = { fg = "#6F737A", bg = "#191A1C" }, c = { fg = "#6F737A", bg = "#191A1C" } },
+        normal   = { a = { fg = "#E8F0FA", bg = "#2F496F", gui = "bold" }, b = { fg = "#BCBEC4", bg = "NONE", gui = "bold" }, c = { fg = "#BCBEC4", bg = "NONE" } },
+        insert   = { a = { fg = "#EFF3F0", bg = "#34523E", gui = "bold" }, b = { fg = "#BCBEC4", bg = "NONE", gui = "bold" } },
+        visual   = { a = { fg = "#ECEBFB", bg = "#342F67", gui = "bold" }, b = { fg = "#BCBEC4", bg = "NONE", gui = "bold" } },
+        replace  = { a = { fg = "#FCF0F0", bg = "#672D2D", gui = "bold" }, b = { fg = "#BCBEC4", bg = "NONE", gui = "bold" } },
+        command  = { a = { fg = "#F5E8D0", bg = "#5A3A1A", gui = "bold" }, b = { fg = "#BCBEC4", bg = "NONE", gui = "bold" } },
+        inactive = { a = { fg = "#6F737A", bg = "NONE" }, b = { fg = "#6F737A", bg = "NONE" }, c = { fg = "#6F737A", bg = "NONE" } },
       }
       local _hint = vim.g._lualine_theme_hint or ""
       local mode_theme = _hint == "islands-light" and lualine_light or _hint == "islands-dark" and lualine_dark or (vim.o.background == "light" and lualine_light or lualine_dark)
@@ -1329,9 +1334,7 @@ return {
       refresh_git_all()
 
       local function setup_breadcrumb_hl()
-        local chip_bgs_hl = vim.o.background == "light"
-          and { "#D5D0CA", "#D5D0CA", "#D5D0CA" }
-          or  { "#3A3D41", "#42464D", "#4A4F57" }
+        local chip_bgs_hl = { "NONE", "NONE", "NONE" }
         local breadcrumb_bg = chip_bgs_hl[2] or chip_bgs_hl[1]
         local breadcrumb_fg = vim.o.background == "light" and "#4C4F69" or "#CED0D6"
         local arrow_fg = vim.o.background == "light" and "#2F3147" or "#DCE0E8"
@@ -1345,19 +1348,19 @@ return {
 
       local function setup_git_hl()
         if vim.o.background == "light" then
-          vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = "#7A7880", bg = "#D5D0CA", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = "#6B3CC8", bg = "#D5D0CA", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = "#7CA686", bg = "#D5D0CA", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = "#A8983A", bg = "#D5D0CA", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = "#C87A3A", bg = "#D5D0CA", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = "#B85C5C", bg = "#D5D0CA", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = "#7A7880", bg = "NONE", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = "#6B3CC8", bg = "NONE", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = "#7CA686", bg = "NONE", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = "#A8983A", bg = "NONE", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = "#C87A3A", bg = "NONE", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = "#B85C5C", bg = "NONE", bold = true })
         else
-          vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = "#BCBEC4", bg = "#3B3F45", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = "#cba6f7", bg = "#3B3F45", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = "#a6e3a1", bg = "#3B3F45", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = "#f9e2af", bg = "#3B3F45", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = "#fab387", bg = "#3B3F45", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = "#f38ba8", bg = "#3B3F45", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = "#BCBEC4", bg = "NONE", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = "#cba6f7", bg = "NONE", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = "#a6e3a1", bg = "NONE", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = "#f9e2af", bg = "NONE", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = "#fab387", bg = "NONE", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = "#f38ba8", bg = "NONE", bold = true })
         end
       end
       setup_git_hl()
@@ -1379,8 +1382,14 @@ return {
         cfg.options = cfg.options or {}
         cfg.options.theme = theme
         lualine.setup(cfg)
+        vim.api.nvim_set_hl(0, "StatusLine",   { fg = vim.o.background == "light" and "#4C4F69" or "#BCBEC4", bg = "NONE" })
+        vim.api.nvim_set_hl(0, "StatusLineNC", { fg = vim.o.background == "light" and "#7A7880" or "#6F737A", bg = "NONE" })
       end
       vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_lualine_theme_hl })
+      vim.defer_fn(function()
+        vim.api.nvim_set_hl(0, "StatusLine",   { fg = vim.o.background == "light" and "#4C4F69" or "#BCBEC4", bg = "NONE" })
+        vim.api.nvim_set_hl(0, "StatusLineNC", { fg = vim.o.background == "light" and "#7A7880" or "#6F737A", bg = "NONE" })
+      end, 50)
 
       opts.sections.lualine_b = {
         {

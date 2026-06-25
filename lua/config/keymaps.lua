@@ -1326,6 +1326,15 @@ local function apply_rose_pine(variant)
   update_lazygit_theme(nil)
 end
 
+local function apply_rose_pine_dark_dimmed()
+  vim.o.background = "dark"
+  vim.g._lualine_theme_hint = "auto"
+  vim.cmd.colorscheme("rose-pine-dark-dimmed")
+  vim.g.theme_mode = "dark"
+  save_theme("rose-pine-dark-dimmed")
+  update_lazygit_theme(nil)
+end
+
 local function apply_islands_rose_pine(variant)
   local cs = "islands-rose-pine-" .. variant
   local bg = variant == "light" and "light" or "dark"
@@ -1347,6 +1356,7 @@ keymaps.set("n", "<leader>ut", function()
     { label = "Catppuccin Latte (light)",  action = function() apply_catppuccin("latte") end },
     { label = "Rose Pine (dark)",              action = function() apply_rose_pine("main") end },
     { label = "Rose Pine Moon (dark)",         action = function() apply_rose_pine("moon") end },
+    { label = "Rose Pine Dark Dimmed",         action = apply_rose_pine_dark_dimmed },
     { label = "Rose Pine Dawn (light)",        action = function() apply_rose_pine("dawn") end },
     { label = "Islands × Rose Pine (dark)",   action = function() apply_islands_rose_pine("dark") end },
     { label = "Islands × Rose Pine (light)",  action = function() apply_islands_rose_pine("light") end },

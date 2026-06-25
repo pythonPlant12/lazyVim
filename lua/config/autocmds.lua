@@ -281,9 +281,14 @@ local function apply_transparent_hl()
 
   for _, group in ipairs(bgless_groups) do
     local current = vim.api.nvim_get_hl(0, { name = group, link = false })
-    current.bg = nil
+    current.bg = "NONE"
     hl(0, group, current)
   end
+end
+
+local function schedule_transparent_hl()
+  apply_transparent_hl()
+  vim.defer_fn(apply_transparent_hl, 50)
 end
 
 local function apply_custom_hl()
@@ -476,6 +481,7 @@ local function apply_custom_hl()
   hl(0, "GitSignsAdd",    { fg = c.green })
   hl(0, "GitSignsChange", { fg = c.yellow })
   hl(0, "GitSignsDelete", { fg = c.rose })
+  hl(0, "GitSignsCurrentLineBlame", { fg = is_light and "#7B8491" or "#7f849c", bg = "NONE" })
 
   hl(0, "GitSignsAddInline",      { bg = c.gadd_inline })
   hl(0, "GitSignsDeleteInline",   { bg = c.gdel_inline })
@@ -561,13 +567,13 @@ vim.api.nvim_create_autocmd("ColorScheme", {
     apply_cursor_hl()
     schedule_plain_keyword_hl()
     schedule_semantic_token_hl()
-    apply_transparent_hl()
+    schedule_transparent_hl()
   end,
 })
 apply_custom_hl()
 schedule_plain_keyword_hl()
 schedule_semantic_token_hl()
-apply_transparent_hl()
+schedule_transparent_hl()
 
 vim.api.nvim_create_autocmd({ "FileType", "BufEnter", "LspAttach" }, {
   group = vim.api.nvim_create_augroup("PlainKeywordHl", { clear = true }),

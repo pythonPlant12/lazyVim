@@ -124,10 +124,12 @@ return {
       vim.list_extend(opts.ensure_installed, {
         "stylua",
         "selene",
-        "luacheck",
         "shellcheck",
         "shfmt",
       })
+      if vim.fn.executable("luarocks") == 1 then
+        vim.list_extend(opts.ensure_installed, { "luacheck" })
+      end
     end,
   },
   {
