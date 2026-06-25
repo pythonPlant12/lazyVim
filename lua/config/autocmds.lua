@@ -56,9 +56,13 @@ end
 
 local function apply_snacks_diff_hl()
   if Snacks == nil then return end
-  local is_light = vim.o.background == "light"
-  local diff_add = is_light and "#DFF1E4" or "#1e3028"
-  local diff_del = is_light and "#F5DEDE" or "#361515"
+  local theme = type(vim.g.theme_custom_hl) == "table" and vim.g.theme_custom_hl.name == vim.g.colors_name and vim.g.theme_custom_hl or {}
+  local function bg(group, fallback)
+    local ok, current = pcall(vim.api.nvim_get_hl, 0, { name = group, link = false })
+    return ok and current and current.bg and string.format("#%06x", current.bg) or fallback
+  end
+  local diff_add = theme.diff_add or bg("DiffAdd", "NONE")
+  local diff_del = theme.diff_del or bg("DiffDelete", "NONE")
   Snacks.util.set_hl({
     SnacksDiffAdd             = { bg = diff_add },
     SnacksDiffDelete          = { bg = diff_del },
@@ -226,6 +230,83 @@ local function apply_cursor_hl()
   hl(0, "TermCursor",    { link = "Cursor" })
 end
 
+local function color_from_hl(group, key, fallback)
+  local ok, current = pcall(vim.api.nvim_get_hl, 0, { name = group, link = false })
+  local value = ok and current and current[key] or nil
+  return value and string.format("#%06x", value) or fallback
+end
+
+local function current_custom_hl_palette()
+  if type(vim.g.theme_custom_hl) == "table" and vim.g.theme_custom_hl.name == vim.g.colors_name then
+    return vim.g.theme_custom_hl
+  end
+
+  local normal_fg = color_from_hl("Normal", "fg", "#BCBEC4")
+  local normal_bg = color_from_hl("Normal", "bg", "#191A1C")
+  local muted = color_from_hl("Comment", "fg", normal_fg)
+  local selection = color_from_hl("Visual", "bg", normal_bg)
+  local cursorline = color_from_hl("CursorLine", "bg", normal_bg)
+
+  return {
+    border = color_from_hl("FloatBorder", "fg", muted),
+    select_bg = selection,
+    ref_bg = cursorline,
+    diag_err = color_from_hl("DiagnosticVirtualTextError", "fg", color_from_hl("DiagnosticError", "fg", normal_fg)),
+    diag_warn = color_from_hl("DiagnosticVirtualTextWarn", "fg", color_from_hl("DiagnosticWarn", "fg", normal_fg)),
+    diag_info = color_from_hl("DiagnosticVirtualTextInfo", "fg", color_from_hl("DiagnosticInfo", "fg", normal_fg)),
+    diag_hint = color_from_hl("DiagnosticVirtualTextHint", "fg", color_from_hl("DiagnosticHint", "fg", muted)),
+    diff_add = color_from_hl("DiffAdd", "bg", cursorline),
+    diff_del = color_from_hl("DiffDelete", "bg", cursorline),
+    diff_change = color_from_hl("DiffChange", "bg", cursorline),
+    diff_text = color_from_hl("DiffText", "bg", cursorline),
+    gadd_inline = color_from_hl("DiffAdd", "bg", cursorline),
+    gdel_inline = color_from_hl("DiffDelete", "bg", cursorline),
+    gchg_inline = color_from_hl("DiffChange", "bg", cursorline),
+    gadd_ln = color_from_hl("DiffAdd", "bg", cursorline),
+    gdel_ln = color_from_hl("DiffDelete", "bg", cursorline),
+    gchg_ln = color_from_hl("DiffChange", "bg", cursorline),
+    neotree_added = color_from_hl("String", "fg", normal_fg),
+    neotree_mod = color_from_hl("DiagnosticWarn", "fg", normal_fg),
+    neotree_red = color_from_hl("DiagnosticError", "fg", normal_fg),
+    neotree_cursor_fg = normal_fg,
+    neotree_cursor_bg = selection,
+    neotree_cursor_line_fg = normal_fg,
+    neotree_fg = normal_fg,
+    param = color_from_hl("@variable.parameter", "fg", normal_fg),
+    vbuiltin = color_from_hl("@variable.builtin", "fg", normal_fg),
+    ctor = color_from_hl("Type", "fg", normal_fg),
+    blue = color_from_hl("Function", "fg", normal_fg),
+    pink = color_from_hl("Special", "fg", normal_fg),
+    rose = color_from_hl("Constant", "fg", normal_fg),
+    yellow = color_from_hl("Type", "fg", normal_fg),
+    purple = color_from_hl("@variable.parameter", "fg", normal_fg),
+    cyan = color_from_hl("DiagnosticInfo", "fg", normal_fg),
+    peach = color_from_hl("Number", "fg", normal_fg),
+    green = color_from_hl("String", "fg", normal_fg),
+    text = normal_fg,
+    muted_text = muted,
+    snacks_line_fg = normal_fg,
+    snacks_line_bg = selection,
+    snacks_file = normal_fg,
+    snacks_dir = muted,
+    snacks_match = color_from_hl("Search", "bg", selection),
+    snacks_row = color_from_hl("DiagnosticInfo", "fg", normal_fg),
+    snacks_col = muted,
+    snacks_directory = color_from_hl("Directory", "fg", normal_fg),
+    snacks_prompt = color_from_hl("Special", "fg", normal_fg),
+    snacks_delim = muted,
+    snacks_selected = color_from_hl("Directory", "fg", normal_fg),
+    snacks_comment = muted,
+    snacks_search_bg = color_from_hl("Search", "bg", selection),
+    indent_fg = color_from_hl("LineNr", "fg", muted),
+    indent_scope_fg = muted,
+    context_bg = cursorline,
+    fold_bg = cursorline,
+    fold_fg = muted,
+    blame_fg = color_from_hl("GitSignsCurrentLineBlame", "fg", muted),
+  }
+end
+
 local function apply_transparent_hl()
   local hl = vim.api.nvim_set_hl
   local bgless_groups = {
@@ -296,118 +377,7 @@ local function apply_custom_hl()
   local normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
   local border_bg = (normal and normal.bg) and string.format("#%06x", normal.bg) or "#191A1C"
   local normal_fg = (normal and normal.fg) and string.format("#%06x", normal.fg) or "#BCBEC4"
-  local is_light = vim.o.background == "light"
-
-  local c = is_light and {
-    border = "#8F98A8",
-    select_bg = "#D9E7F4",
-    ref_bg = "#F2F2F4",
-    diag_err = "#B54A5C",
-    diag_warn = "#8A6B20",
-    diag_info = "#2A6296",
-    diag_hint = "#6B7582",
-    diff_add = "#DFF1E4",
-    diff_del = "#F5DEDE",
-    diff_change = "#F3E8D6",
-    diff_text = "#EAD6B8",
-    gadd_inline = "#D1E8D7",
-    gdel_inline = "#EFD2D2",
-    gchg_inline = "#EEDFC5",
-    gadd_ln = "#E2F2E6",
-    gdel_ln = "#F4E2E2",
-    gchg_ln = "#F2E8D6",
-    neotree_added = "#4D8454",
-    neotree_mod = "#A8873A",
-    neotree_red = "#B54A5C",
-    neotree_cursor_fg = "#2F496F",
-    neotree_cursor_bg = "#D2E4F5",
-    param = "#7A48B3",
-    vbuiltin = "#A15391",
-    ctor = "#8A6B20",
-    blue = "#2A6296",
-    pink = "#A15391",
-    rose = "#B06276",
-    yellow = "#8A6B20",
-    purple = "#6E52A8",
-    cyan = "#2F6E7E",
-    peach = "#8E5324",
-    green = "#4D8454",
-    text = "#4F5966",
-    muted_text = "#66707C",
-    snacks_line_fg = "#2F496F",
-    snacks_line_bg = "#D2E4F5",
-    snacks_file = "#3E464F",
-    snacks_dir = "#5E6874",
-    snacks_match = "#9E6534",
-    snacks_row = "#3C7E8F",
-    snacks_col = "#6B7582",
-    snacks_directory = "#2E6EA8",
-    snacks_prompt = "#7A5EB4",
-    snacks_delim = "#7B8491",
-    snacks_selected = "#2E6EA8",
-    snacks_comment = "#7B8491",
-    snacks_search_bg = "#C8D8EE",
-    indent_fg = "#C4CAD3",
-    indent_scope_fg = "#8FA8C8",
-    context_bg = "#E5E5E5",
-    fold_bg = "#EEF2F7",
-    fold_fg = "#66707C",
-  } or {
-    border = "#585b70",
-    select_bg = "#253A63",
-    ref_bg = "#2a2d31",
-    diag_err = "#c44455",
-    diag_warn = "#aa9260",
-    diag_info = "#4487c4",
-    diag_hint = "#7a7e85",
-    diff_add = "#1e3028",
-    diff_del = "#361515",
-    diff_change = "#2c2518",
-    diff_text = "#453b25",
-    gadd_inline = "#2a4535",
-    gdel_inline = "#4d1e1e",
-    gchg_inline = "#453b25",
-    gadd_ln = "#1e3028",
-    gdel_ln = "#361515",
-    gchg_ln = "#2c2518",
-     neotree_added = "#6AAB6A",
-    neotree_mod = "#B8865A",
-    neotree_red = "#B85C5C",
-    neotree_cursor_fg = "#E8F0FA",
-    neotree_cursor_bg = "#2F496F",
-    neotree_fg = "#D0D2D8",
-    param = "#A87EC8",
-    vbuiltin = "#C77DBB",
-    ctor = "#f9e2af",
-    blue = "#89b4fa",
-    pink = "#f5c2e7",
-    rose = "#eba0ac",
-    yellow = "#f9e2af",
-    purple = "#cba6f7",
-    cyan = "#74c7ec",
-    peach = "#fab387",
-    green = "#a6e3a1",
-    text = "#9399b2",
-    muted_text = "#6c7086",
-    snacks_line_fg = "#E8F0FA",
-    snacks_line_bg = "#2F496F",
-    snacks_file = "#cdd6f4",
-    snacks_dir = "#7f849c",
-    snacks_match = "#fab387",
-    snacks_row = "#94e2d5",
-    snacks_col = "#7f849c",
-    snacks_directory = "#89b4fa",
-    snacks_prompt = "#cba6f7",
-    snacks_delim = "#6c7086",
-    snacks_selected = "#89b4fa",
-    snacks_comment = "#6c7086",
-    snacks_search_bg = "#1e3a5f",
-    indent_fg = "#40454F",
-    indent_scope_fg = "#5B6B8A",
-    context_bg = "#313244",
-    fold_bg = "#242833",
-    fold_fg = "#7f849c",
-  }
+  local c = current_custom_hl_palette()
 
   local kind_hl_colors = {
     Text = c.text,
@@ -485,7 +455,7 @@ local function apply_custom_hl()
   hl(0, "GitSignsAdd",    { fg = c.green })
   hl(0, "GitSignsChange", { fg = c.yellow })
   hl(0, "GitSignsDelete", { fg = c.rose })
-  local blame_fg = is_light and "#7B8491" or "#7f849c"
+  local blame_fg = c.blame_fg
   hl(0, "GitSignsCurrentLineBlame", { fg = blame_fg, bg = "NONE" })
   hl(0, "LspInlayHint", { fg = blame_fg, bg = "NONE" })
 
@@ -506,16 +476,16 @@ local function apply_custom_hl()
     hl(0, "NeoTreeGitConflict",  { fg = c.neotree_red,   bold = true })
    hl(0, "NeoTreeCursorLine",   { fg = c.neotree_cursor_fg, bg = c.neotree_cursor_bg, bold = true })
 
-   hl(0, "NeoTreeGitAddedCursorLine",     { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
-    hl(0, "NeoTreeGitUntrackedCursorLine", { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
-    hl(0, "NeoTreeGitStagedCursorLine",    { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
-    hl(0, "NeoTreeGitModifiedCursorLine",  { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
-    hl(0, "NeoTreeGitRenamedCursorLine",   { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
-    hl(0, "NeoTreeGitUnstagedCursorLine",  { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
-    hl(0, "NeoTreeGitDeletedCursorLine",   { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
-    hl(0, "NeoTreeGitConflictCursorLine",  { fg = is_light and "#1e2030" or "#D0D2D8", bg = c.neotree_cursor_bg, bold = true })
+   hl(0, "NeoTreeGitAddedCursorLine",     { fg = c.neotree_cursor_line_fg, bg = c.neotree_cursor_bg, bold = true })
+    hl(0, "NeoTreeGitUntrackedCursorLine", { fg = c.neotree_cursor_line_fg, bg = c.neotree_cursor_bg, bold = true })
+    hl(0, "NeoTreeGitStagedCursorLine",    { fg = c.neotree_cursor_line_fg, bg = c.neotree_cursor_bg, bold = true })
+    hl(0, "NeoTreeGitModifiedCursorLine",  { fg = c.neotree_cursor_line_fg, bg = c.neotree_cursor_bg, bold = true })
+    hl(0, "NeoTreeGitRenamedCursorLine",   { fg = c.neotree_cursor_line_fg, bg = c.neotree_cursor_bg, bold = true })
+    hl(0, "NeoTreeGitUnstagedCursorLine",  { fg = c.neotree_cursor_line_fg, bg = c.neotree_cursor_bg, bold = true })
+    hl(0, "NeoTreeGitDeletedCursorLine",   { fg = c.neotree_cursor_line_fg, bg = c.neotree_cursor_bg, bold = true })
+    hl(0, "NeoTreeGitConflictCursorLine",  { fg = c.neotree_cursor_line_fg, bg = c.neotree_cursor_bg, bold = true })
 
-   if not is_light then
+   if c.neotree_fg then
      hl(0, "NeoTreeFileName",       { fg = c.neotree_fg })
      hl(0, "NeoTreeDirectoryName",  { fg = c.neotree_fg, bold = true })
    end
@@ -604,16 +574,14 @@ vim.api.nvim_create_autocmd("User", {
     local orig_set_hl = Snacks.util.set_hl
     Snacks.util.set_hl = function(groups, opts)
       if opts and opts.default then
-        local is_light = vim.o.background == "light"
-        local diff_add = is_light and "#DFF1E4" or "#1e3028"
-        local diff_del = is_light and "#F5DEDE" or "#361515"
+        local c = current_custom_hl_palette()
         local overrides = {
           DiffContext       = { bg = "NONE" },
           DiffContextLineNr = { bg = "NONE" },
-          DiffAdd           = { bg = diff_add },
-          DiffDelete        = { bg = diff_del },
-          DiffAddLineNr     = { bg = diff_add },
-          DiffDeleteLineNr  = { bg = diff_del },
+          DiffAdd           = { bg = c.diff_add },
+          DiffDelete        = { bg = c.diff_del },
+          DiffAddLineNr     = { bg = c.diff_add },
+          DiffDeleteLineNr  = { bg = c.diff_del },
         }
         for k, v in pairs(overrides) do
           if groups[k] ~= nil then
