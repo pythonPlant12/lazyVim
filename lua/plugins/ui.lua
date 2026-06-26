@@ -646,15 +646,15 @@ return {
       opts.default_component_configs = opts.default_component_configs or {}
       opts.default_component_configs.git_status = {
         symbols = {
-          added     = "●",
-          modified  = "●",
-          deleted   = "●",
-          renamed   = "●",
-          untracked = "●",
+          added     = "a",
+          modified  = "m",
+          deleted   = "d",
+          renamed   = "r",
+          untracked = "?",
           ignored   = "",
-          unstaged  = "●",
-          staged    = "●",
-          conflict  = "●",
+          unstaged  = "",
+          staged    = "s",
+          conflict  = "!",
         },
       }
 
