@@ -1346,19 +1346,19 @@ return {
 
       local function setup_git_hl()
         if vim.o.background == "light" then
-          vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = "#7A7880", bg = "NONE", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = "#6B3CC8", bg = "NONE", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = "#7CA686", bg = "NONE", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = "#A8983A", bg = "NONE", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = "#C87A3A", bg = "NONE", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = "#B85C5C", bg = "NONE", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = "#FFFFFF", bg = "#6B3CC8", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = "#FFFFFF", bg = "#6B3CC8", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = "#7CA686", bg = "#6B3CC8", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = "#A8983A", bg = "#6B3CC8", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = "#C87A3A", bg = "#6B3CC8", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = "#B85C5C", bg = "#6B3CC8", bold = true })
         else
-          vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = "#BCBEC4", bg = "NONE", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = "#cba6f7", bg = "NONE", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = "#a6e3a1", bg = "NONE", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = "#f9e2af", bg = "NONE", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = "#fab387", bg = "NONE", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = "#f38ba8", bg = "NONE", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = "#151619", bg = "#cba6f7", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = "#151619", bg = "#cba6f7", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = "#a6e3a1", bg = "#cba6f7", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = "#f9e2af", bg = "#cba6f7", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = "#fab387", bg = "#cba6f7", bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = "#f38ba8", bg = "#cba6f7", bold = true })
         end
       end
       setup_git_hl()
@@ -1797,7 +1797,8 @@ return {
             local existing_color_fn = styled_comp.color
             styled_comp.color = function()
               local c = type(existing_color_fn) == "function" and existing_color_fn() or {}
-              c.fg = vim.o.background == "light" and "#34523E" or "#EFF3F0"
+              c.fg = vim.o.background == "light" and "#FFFFFF" or "#151619"
+              c.bg = vim.o.background == "light" and "#2A6296" or "#9ccfd8"
               c.gui = (c.gui and c.gui .. ",bold" or "bold")
               return c
             end
