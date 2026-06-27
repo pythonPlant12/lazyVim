@@ -1222,7 +1222,7 @@ end
 local lazygit_cfg_dir = vim.fn.expand("~/Library/Application Support/lazygit")
 local function update_lazygit_theme(kind)
   local src
-  if kind == "dark" or kind == "light" then
+  if type(kind) == "string" and kind ~= "" then
     src = lazygit_cfg_dir .. "/config-" .. kind .. ".yml"
   end
   local dst = lazygit_cfg_dir .. "/config.yml"
@@ -1296,7 +1296,7 @@ local function apply_theme_mode(mode)
     if pcall(vim.cmd.colorscheme, scheme) then
       vim.g.theme_mode = background
       save_theme(scheme)
-      update_lazygit_theme(background)
+      update_lazygit_theme(scheme)
       return
     end
   end
@@ -1323,7 +1323,7 @@ local function apply_rose_pine(variant)
   vim.cmd.colorscheme(cs)
   vim.g.theme_mode = bg
   save_theme(cs)
-  update_lazygit_theme(nil)
+  update_lazygit_theme(bg == "light" and "rose-pine-light" or "rose-pine-dark")
 end
 
 local function apply_rose_pine_dark_dimmed()
@@ -1332,7 +1332,7 @@ local function apply_rose_pine_dark_dimmed()
   vim.cmd.colorscheme("rose-pine-dark-dimmed")
   vim.g.theme_mode = "dark"
   save_theme("rose-pine-dark-dimmed")
-  update_lazygit_theme(nil)
+  update_lazygit_theme("rose-pine-dark-dimmed")
 end
 
 local function apply_islands_rose_pine(variant)
@@ -1343,7 +1343,7 @@ local function apply_islands_rose_pine(variant)
   vim.cmd.colorscheme(cs)
   vim.g.theme_mode = bg
   save_theme(cs)
-  update_lazygit_theme(bg)
+  update_lazygit_theme(cs)
 end
 
 keymaps.set("n", "<leader>ut", function()

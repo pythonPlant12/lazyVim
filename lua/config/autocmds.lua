@@ -296,6 +296,7 @@ local function current_custom_hl_palette()
     snacks_prompt = color_from_hl("Special", "fg", normal_fg),
     snacks_delim = muted,
     snacks_selected = color_from_hl("Directory", "fg", normal_fg),
+    snacks_unselected = muted,
     snacks_comment = muted,
     snacks_search_bg = color_from_hl("Search", "bg", selection),
     indent_fg = color_from_hl("LineNr", "fg", muted),
@@ -498,7 +499,8 @@ local function apply_custom_hl()
     file = c.snacks_file, dir = c.snacks_dir, match = c.snacks_match,
     search_bg = c.snacks_search_bg, row = c.snacks_row, col = c.snacks_col,
     directory = c.snacks_directory, prompt = c.snacks_prompt,
-    delim = c.snacks_delim, selected = c.snacks_selected, comment = c.snacks_comment,
+    delim = c.snacks_delim, selected = c.snacks_selected, unselected = c.snacks_unselected or c.snacks_comment,
+    comment = c.snacks_comment,
     green = c.green, yellow = c.yellow, rose = c.rose, cyan = c.cyan,
   }
   vim.defer_fn(function()
@@ -513,6 +515,7 @@ local function apply_custom_hl()
     hl(0, "SnacksPickerPrompt",             { fg = picker_colors.prompt })
     hl(0, "SnacksPickerDelim",              { fg = picker_colors.delim })
     hl(0, "SnacksPickerSelected",           { fg = picker_colors.selected })
+    hl(0, "SnacksPickerUnselected",         { fg = picker_colors.unselected })
     hl(0, "SnacksPickerComment",            { fg = picker_colors.comment })
     hl(0, "SnacksPickerGitStatusAdded",     { fg = picker_colors.green })
     hl(0, "SnacksPickerGitStatusModified",  { fg = picker_colors.yellow })
