@@ -99,18 +99,46 @@ local function make_rev_buf(name, lines, ft)
   return buf
 end
 
+function M._open_two_buf_diff(left_name, left_lines, right_name, right_lines, ft)
+  vim.cmd("tabnew")
+
+  local left = make_rev_buf(left_name, left_lines, ft)
+  vim.api.nvim_win_set_buf(0, left)
+
+  vim.cmd("vsplit")
+  local right = make_rev_buf(right_name, right_lines, ft)
+  vim.api.nvim_win_set_buf(0, right)
+
+  vim.cmd("windo diffthis")
+  bind_q_in_tab()
+end
+
 function M.diff(path)
   if not path or path == "" then return end
 
   local abs = vim.fn.fnamemodify(path, ":p")
   if abs == "" then return end
 
-  vim.cmd("tabedit " .. vim.fn.fnameescape(abs))
+  local root = git_root_for(abs)
+  if not root then
+    vim.notify("Not a git repo: " .. abs, vim.log.levels.ERROR, { title = "Git Diff" })
+    return
+  end
 
-  vim.defer_fn(function()
-    require("gitsigns").diffthis()
-    vim.defer_fn(bind_q_in_tab, 50)
-  end, 50)
+  local relpath = abs:sub(#root + 2)
+  local ft = vim.filetype.match({ filename = relpath })
+
+  local before = git_show(root, "HEAD", relpath) or {}
+  local after
+  if vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":p") == abs then
+    after = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  elseif vim.fn.filereadable(abs) == 1 then
+    after = vim.fn.readfile(abs)
+  else
+    after = {}
+  end
+
+  M._open_two_buf_diff("HEAD:" .. relpath, before, "worktree:" .. relpath, after, ft)
 end
 
 function M.diff_commit(path, hash)

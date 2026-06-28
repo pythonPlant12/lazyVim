@@ -618,10 +618,24 @@ local function git_root_or_cwd()
   return (ok and root and root ~= "") and root or vim.fn.getcwd()
 end
 
-local function git_lines(args)
+local function current_file_git_root()
+  local path = vim.api.nvim_buf_get_name(0)
+  if path == "" then
+    return git_root_or_cwd()
+  end
+  local dir = vim.fn.fnamemodify(path, ":p:h")
+  local result = vim.system({ "git", "-C", dir, "rev-parse", "--show-toplevel" }, { text = true }):wait()
+  if result.code ~= 0 then
+    return git_root_or_cwd()
+  end
+  local root = vim.trim(result.stdout or "")
+  return root ~= "" and root or git_root_or_cwd()
+end
+
+local function git_lines(args, cwd)
   local cmd = { "git" }
   vim.list_extend(cmd, args)
-  local result = vim.system(cmd, { cwd = git_root_or_cwd(), text = true }):wait()
+  local result = vim.system(cmd, { cwd = cwd or git_root_or_cwd(), text = true }):wait()
   if result.code ~= 0 then
     local err = vim.trim(result.stderr or "")
     return nil, err ~= "" and err or "git command failed"
@@ -633,16 +647,16 @@ local function git_lines(args)
   return vim.split(out, "\n", { trimempty = true }), nil
 end
 
-local function current_branch()
-  local lines = git_lines({ "rev-parse", "--abbrev-ref", "HEAD" })
+local function current_branch(cwd)
+  local lines = git_lines({ "rev-parse", "--abbrev-ref", "HEAD" }, cwd)
   if type(lines) == "table" and lines[1] and lines[1] ~= "" then
     return lines[1]
   end
   return "HEAD"
 end
 
-local function list_branches(active_branch)
-  local lines, err = git_lines({ "for-each-ref", "--format=%(refname:short)", "refs/heads", "refs/remotes" })
+local function list_branches(active_branch, cwd)
+  local lines, err = git_lines({ "for-each-ref", "--format=%(refname:short)", "refs/heads", "refs/remotes" }, cwd)
   if not lines then
     return nil, err
   end
@@ -675,8 +689,8 @@ local function list_branches(active_branch)
   return items, nil
 end
 
-local function list_commits(ref, limit)
-  local lines, err = git_lines({ "log", ref, "--pretty=format:%h\t%s", ("--max-count=%d"):format(limit or 150) })
+local function list_commits(ref, limit, cwd)
+  local lines, err = git_lines({ "log", ref, "--pretty=format:%h\t%s", ("--max-count=%d"):format(limit or 150) }, cwd)
   if not lines then
     return nil, err
   end
@@ -692,8 +706,9 @@ local function list_commits(ref, limit)
 end
 
 local function pick_line_diff_base_and_preview()
-  local active = current_branch()
-  local branches, err = list_branches(active)
+  local cwd = current_file_git_root()
+  local active = current_branch(cwd)
+  local branches, err = list_branches(active, cwd)
   if not branches then
     vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = "Git Diff" })
     return
@@ -709,7 +724,7 @@ local function pick_line_diff_base_and_preview()
   }, function(branch_item)
     if not branch_item then return end
 
-    local commits, commits_err = list_commits(branch_item.ref, 150)
+    local commits, commits_err = list_commits(branch_item.ref, 150, cwd)
     if not commits then
       vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Diff" })
       return
@@ -750,8 +765,9 @@ local function open_file_diff_fullscreen(base)
 end
 
 local function pick_diff_base_and_open()
-  local active = current_branch()
-  local branches, err = list_branches(active)
+  local cwd = current_file_git_root()
+  local active = current_branch(cwd)
+  local branches, err = list_branches(active, cwd)
   if not branches then
     vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = "Git Diff" })
     return
@@ -767,7 +783,7 @@ local function pick_diff_base_and_open()
   }, function(branch_item)
     if not branch_item then return end
 
-    local commits, commits_err = list_commits(branch_item.ref, 150)
+    local commits, commits_err = list_commits(branch_item.ref, 150, cwd)
     if not commits then
       vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Diff" })
       return
@@ -788,12 +804,20 @@ local function pick_diff_base_and_open()
   end)
 end
 
-keymaps.set("n", "<C-g>fd", open_file_diff_fullscreen, { desc = "File diff" })
+keymaps.set("n", "<C-g>fd", function()
+  local path = vim.api.nvim_buf_get_name(0)
+  if path == "" then
+    vim.notify("No file in current buffer", vim.log.levels.ERROR, { title = "Git Diff" })
+    return
+  end
+  lazygit_edit.diff(path)
+end, { desc = "File diff" })
 keymaps.set("n", "<C-g>fD", pick_diff_base_and_open, { desc = "File diff against ref" })
 
 local function pick_ref_and_restore_file()
-  local active = current_branch()
-  local branches, err = list_branches(active)
+  local cwd = current_file_git_root()
+  local active = current_branch(cwd)
+  local branches, err = list_branches(active, cwd)
   if not branches then
     vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = "Git Restore" })
     return
@@ -809,7 +833,7 @@ local function pick_ref_and_restore_file()
   }, function(branch_item)
     if not branch_item then return end
 
-    local commits, commits_err = list_commits(branch_item.ref, 150)
+    local commits, commits_err = list_commits(branch_item.ref, 150, cwd)
     if not commits then
       vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Restore" })
       return
