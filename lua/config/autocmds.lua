@@ -248,7 +248,7 @@ local function apply_snacks_diff_hl()
   end
   local diff_add = theme.diff_add or bg("DiffAdd", "NONE")
   local diff_del = theme.diff_del or bg("DiffDelete", "NONE")
-  local diff_context = is_transparent_theme() and "NONE" or (theme.ref_bg or bg("Normal", "NONE"))
+  local diff_context = is_transparent_theme() and "NONE" or bg("Normal", "NONE")
   Snacks.util.set_hl({
     SnacksDiffAdd             = { bg = diff_add },
     SnacksDiffDelete          = { bg = diff_del },
@@ -446,6 +446,7 @@ local function current_custom_hl_palette()
     diff_del = color_from_hl("DiffDelete", "bg", cursorline),
     diff_change = color_from_hl("DiffChange", "bg", cursorline),
     diff_text = color_from_hl("DiffText", "bg", cursorline),
+    diff_context = vim.o.background == "light" and "#E5E5E5" or "#1e2a30",
     gadd_inline = color_from_hl("DiffAdd", "bg", cursorline),
     gdel_inline = color_from_hl("DiffDelete", "bg", cursorline),
     gchg_inline = color_from_hl("DiffChange", "bg", cursorline),
@@ -657,7 +658,7 @@ local function apply_custom_hl()
   hl(0, "DiffDelete", { bg = c.diff_del })
   hl(0, "DiffChange", { bg = c.diff_change })
   hl(0, "DiffText",   { bg = c.diff_text })
-  local snacks_diff_context = is_transparent_theme() and "NONE" or c.ref_bg
+  local snacks_diff_context = is_transparent_theme() and "NONE" or border_bg
   hl(0, "SnacksDiffContext",         { bg = snacks_diff_context })
   hl(0, "SnacksDiffContextLineNr",   { bg = snacks_diff_context })
   hl(0, "SnacksGhDiffContext",       { bg = snacks_diff_context })
@@ -820,7 +821,7 @@ vim.api.nvim_create_autocmd("User", {
     Snacks.util.set_hl = function(groups, opts)
       if opts and opts.default then
         local c = current_custom_hl_palette()
-        local context_bg = is_transparent_theme() and "NONE" or c.ref_bg
+        local context_bg = is_transparent_theme() and "NONE" or color_from_hl("Normal", "bg", c.diff_context or c.ref_bg)
         local overrides = {
           DiffContext       = { bg = context_bg },
           DiffContextLineNr = { bg = context_bg },

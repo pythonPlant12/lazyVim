@@ -876,6 +876,13 @@ return {
     opts = {
       words = { enabled = false },
       lazygit = {
+        win = {
+          width = 0,
+          height = 0,
+          row = 2,
+          col = 0,
+          border = "none",
+        },
         config = {
           os = {
             editPreset = "",

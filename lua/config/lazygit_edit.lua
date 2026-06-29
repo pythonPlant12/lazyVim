@@ -79,21 +79,30 @@ local function restore_origin(origin)
   end)
 end
 
-local function close_diff_tab(origin)
+local function close_diff_tab(origin, opts)
+  local ok_cursor, cursor = pcall(vim.api.nvim_win_get_cursor, 0)
+
   if #vim.api.nvim_list_tabpages() > 1 then
     vim.cmd("tabclose")
   else
     vim.cmd("diffoff!")
     vim.cmd("only")
   end
-  restore_origin(origin)
+
+  if opts and opts.target_path then
+    vim.schedule(function()
+      M.open_same_tab(opts.target_path, ok_cursor and cursor[1] or nil, ok_cursor and cursor[2] or nil)
+    end)
+  else
+    restore_origin(origin)
+  end
 end
 
-local function bind_q_in_tab(origin)
+local function bind_q_in_tab(origin, opts)
   local tabpage = vim.api.nvim_get_current_tabpage()
   for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
     local buf = vim.api.nvim_win_get_buf(win)
-    vim.keymap.set("n", "q", function() close_diff_tab(origin) end, { buffer = buf, silent = true })
+    vim.keymap.set("n", "q", function() close_diff_tab(origin, opts) end, { buffer = buf, silent = true })
   end
 end
 
@@ -127,7 +136,7 @@ local function make_rev_buf(name, lines, ft)
   return buf
 end
 
-function M._open_two_buf_diff(left_name, left_lines, right_name, right_lines, ft)
+function M._open_two_buf_diff(left_name, left_lines, right_name, right_lines, ft, opts)
   local origin = capture_origin()
   vim.cmd("tabnew")
 
@@ -139,7 +148,7 @@ function M._open_two_buf_diff(left_name, left_lines, right_name, right_lines, ft
   vim.api.nvim_win_set_buf(0, right)
 
   vim.cmd("windo diffthis")
-  bind_q_in_tab(origin)
+  bind_q_in_tab(origin, opts)
 end
 
 function M.diff(path)
@@ -167,7 +176,7 @@ function M.diff(path)
     after = {}
   end
 
-  M._open_two_buf_diff("HEAD:" .. relpath, before, "worktree:" .. relpath, after, ft)
+  M._open_two_buf_diff("HEAD:" .. relpath, before, "worktree:" .. relpath, after, ft, { target_path = abs })
 end
 
 function M.diff_commit(path, hash)
@@ -243,7 +252,20 @@ local function close_lazygit_window(win)
   end, 50)
 end
 
-function M.open_same_tab(path, line)
+local function restore_cursor_col(col)
+  if not col then return end
+  local function restore()
+    local ok_cursor, cursor = pcall(vim.api.nvim_win_get_cursor, 0)
+    if not ok_cursor then return end
+    local line_len = #(vim.api.nvim_get_current_line() or "")
+    pcall(vim.api.nvim_win_set_cursor, 0, { cursor[1], math.min(tonumber(col) or 0, line_len) })
+  end
+
+  restore()
+  vim.schedule(restore)
+end
+
+function M.open_same_tab(path, line, col)
   if not path or path == "" then return end
 
   local abs = vim.fn.fnamemodify(path, ":p")
@@ -269,10 +291,12 @@ function M.open_same_tab(path, line)
   if target and vim.api.nvim_win_is_valid(target) then
     vim.api.nvim_set_current_win(target)
     vim.cmd(edit_cmd)
+    restore_cursor_col(col)
   else
     close_lazygit_window(lazygit_win)
     vim.defer_fn(function()
       vim.cmd(edit_cmd)
+      restore_cursor_col(col)
     end, 60)
     return
   end

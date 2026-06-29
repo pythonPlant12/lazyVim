@@ -4,9 +4,11 @@ dofile(source)
 vim.g._islands_opaque_default = nil
 
 if type(vim.g.theme_custom_hl) == "table" then
-  vim.g.theme_custom_hl.name = "default-white"
-  vim.g.theme_custom_hl.string_fg = "#2F6F4E"
-  vim.g.theme_custom_hl.snacks_match = "#2366A6"
+  vim.g.theme_custom_hl = vim.tbl_extend("force", vim.g.theme_custom_hl, {
+    name = "default-white",
+    string_fg = "#2F6F4E",
+    snacks_match = "#2366A6",
+  })
 end
 vim.o.winblend = 0
 vim.o.pumblend = 0
