@@ -52,20 +52,48 @@ function M.jump_to_lazygit()
   return false
 end
 
-local function close_diff_tab()
+local function capture_origin()
+  local ok_cursor, cursor = pcall(vim.api.nvim_win_get_cursor, 0)
+  local ok_view, view = pcall(vim.fn.winsaveview)
+
+  return {
+    tab = vim.api.nvim_get_current_tabpage(),
+    win = vim.api.nvim_get_current_win(),
+    cursor = ok_cursor and cursor or nil,
+    view = ok_view and view or nil,
+  }
+end
+
+local function restore_origin(origin)
+  if not origin then return end
+
+  vim.schedule(function()
+    if origin.tab and vim.api.nvim_tabpage_is_valid(origin.tab) then
+      pcall(vim.api.nvim_set_current_tabpage, origin.tab)
+    end
+    if origin.win and vim.api.nvim_win_is_valid(origin.win) then
+      pcall(vim.api.nvim_set_current_win, origin.win)
+      if origin.view then pcall(vim.fn.winrestview, origin.view) end
+      if origin.cursor then pcall(vim.api.nvim_win_set_cursor, origin.win, origin.cursor) end
+    end
+  end)
+end
+
+local function close_diff_tab(origin)
   if #vim.api.nvim_list_tabpages() > 1 then
     vim.cmd("tabclose")
   else
     vim.cmd("diffoff!")
     vim.cmd("only")
   end
+  restore_origin(origin)
 end
 
-local function bind_q_in_tab()
+local function bind_q_in_tab(origin)
   local tabpage = vim.api.nvim_get_current_tabpage()
   for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
     local buf = vim.api.nvim_win_get_buf(win)
-    vim.keymap.set("n", "q", close_diff_tab, { buffer = buf, silent = true })
+    vim.keymap.set("n", "q", function() close_diff_tab(origin) end, { buffer = buf, silent = true })
   end
 end
 
@@ -100,6 +128,7 @@ local function make_rev_buf(name, lines, ft)
 end
 
 function M._open_two_buf_diff(left_name, left_lines, right_name, right_lines, ft)
+  local origin = capture_origin()
   vim.cmd("tabnew")
 
   local left = make_rev_buf(left_name, left_lines, ft)
@@ -110,7 +139,7 @@ function M._open_two_buf_diff(left_name, left_lines, right_name, right_lines, ft
   vim.api.nvim_win_set_buf(0, right)
 
   vim.cmd("windo diffthis")
-  bind_q_in_tab()
+  bind_q_in_tab(origin)
 end
 
 function M.diff(path)

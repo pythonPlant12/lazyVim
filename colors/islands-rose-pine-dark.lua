@@ -259,3 +259,37 @@ hl(0, "NeoTreeGitConflictFolderName",   { fg = "#B85C5C", bold = true })
 hl(0, "NeoTreeGitDeletedFolderName",    { fg = "#B85C5C", bold = true })
 hl(0, "NeoTreeGitIgnoredFolderName",    { fg = ui.muted,  bold = true })
 hl(0, "NeoTreeGitRenamedFolderName",    { fg = "#9B87C4", bold = true })
+
+vim.o.winblend = 10
+vim.o.pumblend = 10
+
+for _, group in ipairs({
+  "Normal",
+  "NormalNC",
+  "NormalFloat",
+  "FloatBorder",
+  "FloatTitle",
+  "FloatFooter",
+  "FloatShadow",
+  "FloatShadowThrough",
+  "SignColumn",
+  "FoldColumn",
+  "Folded",
+  "UfoFoldedBg",
+  "UfoFoldedEllipsis",
+  "LineNr",
+  "EndOfBuffer",
+  "WinSeparator",
+  "VertSplit",
+  "StatusLine",
+  "StatusLineNC",
+  "StatusLineTerm",
+  "StatusLineTermNC",
+  "TabLine",
+  "TabLineFill",
+  "Pmenu",
+}) do
+  local current = vim.api.nvim_get_hl(0, { name = group, link = false })
+  current.bg = "NONE"
+  hl(0, group, current)
+end

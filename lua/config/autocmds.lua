@@ -56,7 +56,49 @@ end
 
 local function is_transparent_theme()
   local cs = vim.g.colors_name or ""
-  return cs == "islands-dark" or cs == "islands-white" or cs == "islands-light" or cs:find("^catppuccin") ~= nil
+  return cs == "islands-dark"
+    or cs == "islands-white"
+    or cs == "islands-light"
+    or cs:find("^islands%-rose%-pine") ~= nil
+end
+
+local function apply_theme_blend()
+  local blend = is_transparent_theme() and 10 or 0
+  vim.o.winblend = blend
+  vim.o.pumblend = blend
+
+  if Snacks == nil or type(Snacks.config) ~= "table" then return end
+
+  local transparent = is_transparent_theme()
+  local function merge_style(name, style)
+    Snacks.config.styles = Snacks.config.styles or {}
+    Snacks.config.styles[name] = vim.tbl_deep_extend("force", Snacks.config.styles[name] or {}, style)
+  end
+
+  for _, name in ipairs({
+    "float",
+    "help",
+    "input",
+    "lazygit",
+    "notification",
+    "notification_history",
+    "scratch",
+    "snacks_image",
+    "terminal",
+  }) do
+    merge_style(name, {
+      backdrop = transparent and nil or false,
+      wo = { winblend = blend },
+    })
+  end
+
+  Snacks.config.picker = Snacks.config.picker or {}
+  Snacks.config.picker.win = Snacks.config.picker.win or {}
+  for _, name in ipairs({ "input", "list", "preview" }) do
+    Snacks.config.picker.win[name] = vim.tbl_deep_extend("force", Snacks.config.picker.win[name] or {}, {
+      wo = { winblend = blend },
+    })
+  end
 end
 
 local function is_default_theme()
@@ -159,7 +201,7 @@ local function apply_default_opaque_hl()
             "FloatBorder:TreesitterContextSeparator",
             "EndOfBuffer:TreesitterContext",
           }, ",")
-          vim.wo[win].winblend = 0
+          vim.wo[win].winblend = vim.o.winblend
         end)
       elseif ok_line_number and is_line_number then
         pcall(function()
@@ -170,7 +212,7 @@ local function apply_default_opaque_hl()
             "FloatBorder:TreesitterContextSeparator",
             "EndOfBuffer:TreesitterContextLineNumber",
           }, ",")
-          vim.wo[win].winblend = 0
+          vim.wo[win].winblend = vim.o.winblend
         end)
       elseif is_lazygit then
         pcall(function()
@@ -181,7 +223,7 @@ local function apply_default_opaque_hl()
             "FloatBorder:FloatBorder",
             "EndOfBuffer:NormalFloat",
           }, ",")
-          vim.wo[win].winblend = 0
+          vim.wo[win].winblend = vim.o.winblend
         end)
       end
     end
@@ -532,6 +574,8 @@ local function schedule_transparent_hl()
 end
 
 local function apply_custom_hl()
+  apply_theme_blend()
+
   local hl = vim.api.nvim_set_hl
   local normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
   local border_bg = (normal and normal.bg) and string.format("#%06x", normal.bg) or "#191A1C"
@@ -722,6 +766,7 @@ end
 vim.api.nvim_create_autocmd("ColorScheme", {
   group = vim.api.nvim_create_augroup("CustomHl", { clear = true }),
   callback = function()
+    apply_theme_blend()
     apply_custom_hl()
     apply_cursor_hl()
     schedule_plain_keyword_hl()
@@ -730,6 +775,7 @@ vim.api.nvim_create_autocmd("ColorScheme", {
     schedule_transparent_hl()
   end,
 })
+apply_theme_blend()
 apply_custom_hl()
 schedule_plain_keyword_hl()
 schedule_semantic_token_hl()

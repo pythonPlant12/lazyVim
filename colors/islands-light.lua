@@ -281,6 +281,9 @@ hl(0, "NeotestWinSelect",    { fg = palette.blue, bold = true })
 hl(0, "NeotestFocused",      { bold = true, underline = true })
 
 if not vim.g._islands_opaque_default then
+  vim.o.winblend = 10
+  vim.o.pumblend = 10
+
   local bgless_groups = {
     "Normal",
     "NormalNC",

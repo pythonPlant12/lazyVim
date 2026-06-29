@@ -8,6 +8,8 @@ if type(vim.g.theme_custom_hl) == "table" then
   vim.g.theme_custom_hl.string_fg = "#2F6F4E"
   vim.g.theme_custom_hl.snacks_match = "#2366A6"
 end
+vim.o.winblend = 0
+vim.o.pumblend = 0
 vim.g.colors_name = "default-white"
 
 local hl = vim.api.nvim_set_hl

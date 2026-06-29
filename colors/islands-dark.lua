@@ -257,6 +257,9 @@ hl(0, "NeoTreeGitIgnoredFolderName",    { fg = palette.muted, bold = true })
 hl(0, "NeoTreeGitRenamedFolderName",    { fg = "#9B87C4", bold = true })
 
 if not vim.g._islands_opaque_default then
+  vim.o.winblend = 10
+  vim.o.pumblend = 10
+
   local bgless_groups = {
     "Normal",
     "NormalNC",

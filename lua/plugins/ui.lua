@@ -1250,7 +1250,10 @@ return {
     opts = function(_, opts)
       local function is_transparent_lualine()
         local cs = vim.g.colors_name or ""
-        return cs == "islands-dark" or cs == "islands-white" or cs == "islands-light" or cs:find("^catppuccin") ~= nil
+        return cs == "islands-dark"
+          or cs == "islands-white"
+          or cs == "islands-light"
+          or cs:find("^islands%-rose%-pine") ~= nil
       end
       local function lualine_bg()
         if is_transparent_lualine() then return "NONE" end

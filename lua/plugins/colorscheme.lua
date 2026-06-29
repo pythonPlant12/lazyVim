@@ -41,6 +41,19 @@ do
   end
 end
 
+local function is_transparent_theme_name(name)
+  return name == "islands-dark"
+    or name == "islands-white"
+    or name == "islands-light"
+    or name:find("^islands%-rose%-pine") ~= nil
+end
+
+do
+  local blend = is_transparent_theme_name(cs) and 10 or 0
+  vim.o.winblend = blend
+  vim.o.pumblend = blend
+end
+
 return {
   {
     "LazyVim/LazyVim",
@@ -54,8 +67,39 @@ return {
     optional = true,
     opts = function(_, opts)
       opts = opts or {}
+      local transparent = is_transparent_theme_name(cs)
+      local blend = transparent and 10 or 0
+
       opts.styles = opts.styles or {}
-      opts.styles.transparency = false
+      local function merge_style(name, style)
+        opts.styles[name] = vim.tbl_deep_extend("force", opts.styles[name] or {}, style)
+      end
+
+      for _, name in ipairs({
+        "float",
+        "help",
+        "input",
+        "lazygit",
+        "notification",
+        "notification_history",
+        "scratch",
+        "snacks_image",
+        "terminal",
+      }) do
+        merge_style(name, {
+          backdrop = transparent and nil or false,
+          wo = { winblend = blend },
+        })
+      end
+
+      opts.picker = opts.picker or {}
+      opts.picker.win = opts.picker.win or {}
+      for _, name in ipairs({ "input", "list", "preview" }) do
+        opts.picker.win[name] = vim.tbl_deep_extend("force", opts.picker.win[name] or {}, {
+          wo = { winblend = blend },
+        })
+      end
+
       opts.scroll = opts.scroll or {}
       opts.scroll.enabled = false
       return opts
