@@ -68,7 +68,7 @@ vim.g.theme_custom_hl = {
   snacks_line_bg = palette.selection,
   snacks_file = "#cdd6f4",
   snacks_dir = "#7f849c",
-  snacks_match = "#fab387",
+  snacks_match = "#FFD6A3",
   snacks_row = "#94e2d5",
   snacks_col = "#7f849c",
   snacks_directory = "#89b4fa",
@@ -125,6 +125,11 @@ hl(0, "StatusLineNC", { fg = palette.muted, bg = palette.line })
 hl(0, "TabLine", { fg = palette.muted, bg = palette.line })
 hl(0, "TabLineSel", { fg = palette.fg_bright, bg = palette.line_alt, bold = true })
 hl(0, "TabLineFill", { fg = palette.muted, bg = palette.line })
+hl(0, "Folded", { fg = vim.g.theme_custom_hl.fold_fg, bg = vim.g.theme_custom_hl.fold_bg })
+hl(0, "FoldColumn", { fg = vim.g.theme_custom_hl.fold_fg, bg = vim.g.theme_custom_hl.fold_bg })
+hl(0, "UfoFoldedFg", { fg = vim.g.theme_custom_hl.fold_fg })
+hl(0, "UfoFoldedBg", { bg = vim.g.theme_custom_hl.fold_bg })
+hl(0, "UfoFoldedEllipsis", { fg = vim.g.theme_custom_hl.fold_fg, bg = vim.g.theme_custom_hl.fold_bg })
 
 -- Syntax
 hl(0, "Comment", { fg = palette.comment, italic = false })
@@ -250,3 +255,37 @@ hl(0, "NeoTreeGitConflictFolderName",   { fg = "#B85C5C", bold = true })
 hl(0, "NeoTreeGitDeletedFolderName",    { fg = "#B85C5C", bold = true })
 hl(0, "NeoTreeGitIgnoredFolderName",    { fg = palette.muted, bold = true })
 hl(0, "NeoTreeGitRenamedFolderName",    { fg = "#9B87C4", bold = true })
+
+if not vim.g._islands_opaque_default then
+  local bgless_groups = {
+    "Normal",
+    "NormalNC",
+    "NormalFloat",
+    "FloatBorder",
+    "FloatTitle",
+    "FloatFooter",
+    "FloatShadow",
+    "FloatShadowThrough",
+    "SignColumn",
+    "FoldColumn",
+    "Folded",
+    "UfoFoldedBg",
+    "UfoFoldedEllipsis",
+    "LineNr",
+    "EndOfBuffer",
+    "WinSeparator",
+    "VertSplit",
+    "StatusLine",
+    "StatusLineNC",
+    "StatusLineTerm",
+    "StatusLineTermNC",
+    "TabLine",
+    "TabLineFill",
+    "Pmenu",
+  }
+  for _, group in ipairs(bgless_groups) do
+    local current = vim.api.nvim_get_hl(0, { name = group, link = false })
+    current.bg = "NONE"
+    hl(0, group, current)
+  end
+end

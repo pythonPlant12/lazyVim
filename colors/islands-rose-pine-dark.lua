@@ -17,13 +17,13 @@ local ui = {
 
 local syn = {
   comment  = "#908caa",
-  string   = "#f6c177",
-  number   = "#f6c177",
+  string   = "#e0a84e",
+  number   = "#e0a84e",
   func     = "#ebbcba",
   keyword  = "#4da8c5",
   operator = "#908caa",
   type     = "#9ccfd8",
-  constant = "#f6c177",
+  constant = "#e0a84e",
   preproc  = "#c4a7e7",
   special  = "#9ccfd8",
   ident    = "#e0def4",
@@ -36,7 +36,7 @@ local syn = {
   foam     = "#9ccfd8",
   subtle   = "#908caa",
   text     = "#e0def4",
-  gold     = "#f6c177",
+  gold     = "#e0a84e",
   rose     = "#ebbcba",
   red      = "#eb6f92",
 }

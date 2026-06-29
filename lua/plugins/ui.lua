@@ -25,12 +25,27 @@ local picker_excludes = {
 }
 
 local language_icon_theme_colors = {
+  ["default-dark"] = {
+    typescript = "#4FA6E8",
+    javascript = "#F0D55C",
+    python = "#5DADE2",
+  },
+  ["default-white"] = {
+    typescript = "#256FB8",
+    javascript = "#B8860B",
+    python = "#2F6F9F",
+  },
   ["islands-dark"] = {
     typescript = "#4FA6E8",
     javascript = "#F0D55C",
     python = "#5DADE2",
   },
   ["islands-light"] = {
+    typescript = "#256FB8",
+    javascript = "#B8860B",
+    python = "#2F6F9F",
+  },
+  ["islands-white"] = {
     typescript = "#256FB8",
     javascript = "#B8860B",
     python = "#2F6F9F",
@@ -1233,21 +1248,30 @@ return {
     "nvim-lualine/lualine.nvim",
     event = "VeryLazy",
     opts = function(_, opts)
+      local function is_transparent_lualine()
+        local cs = vim.g.colors_name or ""
+        return cs == "islands-dark" or cs == "islands-white" or cs == "islands-light" or cs:find("^catppuccin") ~= nil
+      end
+      local function lualine_bg()
+        if is_transparent_lualine() then return "NONE" end
+        return vim.o.background == "light" and "#F3F3F3" or "#2B2D30"
+      end
+      local surface_bg = lualine_bg()
       local lualine_light = {
-        normal   = { a = { fg = "#2F496F", bg = "#D2E4F5", gui = "bold" }, b = { fg = "#4C4F69", bg = "NONE", gui = "bold" }, c = { fg = "#4C4F69", bg = "NONE" } },
-        insert   = { a = { fg = "#34523E", bg = "#D8E8DA", gui = "bold" }, b = { fg = "#4C4F69", bg = "NONE", gui = "bold" } },
-        visual   = { a = { fg = "#342F67", bg = "#DDD9F7", gui = "bold" }, b = { fg = "#4C4F69", bg = "NONE", gui = "bold" } },
-        replace  = { a = { fg = "#672D2D", bg = "#F5DADA", gui = "bold" }, b = { fg = "#4C4F69", bg = "NONE", gui = "bold" } },
-        command  = { a = { fg = "#5A3A1A", bg = "#F0E0C8", gui = "bold" }, b = { fg = "#4C4F69", bg = "NONE", gui = "bold" } },
-        inactive = { a = { fg = "#7A7880", bg = "NONE" }, b = { fg = "#7A7880", bg = "NONE" }, c = { fg = "#7A7880", bg = "NONE" } },
+        normal   = { a = { fg = "#2F496F", bg = "#D2E4F5", gui = "bold" }, b = { fg = "#4C4F69", bg = surface_bg, gui = "bold" }, c = { fg = "#4C4F69", bg = surface_bg } },
+        insert   = { a = { fg = "#34523E", bg = "#D8E8DA", gui = "bold" }, b = { fg = "#4C4F69", bg = surface_bg, gui = "bold" } },
+        visual   = { a = { fg = "#342F67", bg = "#DDD9F7", gui = "bold" }, b = { fg = "#4C4F69", bg = surface_bg, gui = "bold" } },
+        replace  = { a = { fg = "#672D2D", bg = "#F5DADA", gui = "bold" }, b = { fg = "#4C4F69", bg = surface_bg, gui = "bold" } },
+        command  = { a = { fg = "#5A3A1A", bg = "#F0E0C8", gui = "bold" }, b = { fg = "#4C4F69", bg = surface_bg, gui = "bold" } },
+        inactive = { a = { fg = "#7A7880", bg = surface_bg }, b = { fg = "#7A7880", bg = surface_bg }, c = { fg = "#7A7880", bg = surface_bg } },
       }
       local lualine_dark = {
-        normal   = { a = { fg = "#E8F0FA", bg = "#2F496F", gui = "bold" }, b = { fg = "#BCBEC4", bg = "NONE", gui = "bold" }, c = { fg = "#BCBEC4", bg = "NONE" } },
-        insert   = { a = { fg = "#EFF3F0", bg = "#34523E", gui = "bold" }, b = { fg = "#BCBEC4", bg = "NONE", gui = "bold" } },
-        visual   = { a = { fg = "#ECEBFB", bg = "#342F67", gui = "bold" }, b = { fg = "#BCBEC4", bg = "NONE", gui = "bold" } },
-        replace  = { a = { fg = "#FCF0F0", bg = "#672D2D", gui = "bold" }, b = { fg = "#BCBEC4", bg = "NONE", gui = "bold" } },
-        command  = { a = { fg = "#F5E8D0", bg = "#5A3A1A", gui = "bold" }, b = { fg = "#BCBEC4", bg = "NONE", gui = "bold" } },
-        inactive = { a = { fg = "#6F737A", bg = "NONE" }, b = { fg = "#6F737A", bg = "NONE" }, c = { fg = "#6F737A", bg = "NONE" } },
+        normal   = { a = { fg = "#E8F0FA", bg = "#2F496F", gui = "bold" }, b = { fg = "#BCBEC4", bg = surface_bg, gui = "bold" }, c = { fg = "#BCBEC4", bg = surface_bg } },
+        insert   = { a = { fg = "#EFF3F0", bg = "#34523E", gui = "bold" }, b = { fg = "#BCBEC4", bg = surface_bg, gui = "bold" } },
+        visual   = { a = { fg = "#ECEBFB", bg = "#342F67", gui = "bold" }, b = { fg = "#BCBEC4", bg = surface_bg, gui = "bold" } },
+        replace  = { a = { fg = "#FCF0F0", bg = "#672D2D", gui = "bold" }, b = { fg = "#BCBEC4", bg = surface_bg, gui = "bold" } },
+        command  = { a = { fg = "#F5E8D0", bg = "#5A3A1A", gui = "bold" }, b = { fg = "#BCBEC4", bg = surface_bg, gui = "bold" } },
+        inactive = { a = { fg = "#6F737A", bg = surface_bg }, b = { fg = "#6F737A", bg = surface_bg }, c = { fg = "#6F737A", bg = surface_bg } },
       }
       local _hint = vim.g._lualine_theme_hint or ""
       local mode_theme = _hint == "islands-light" and lualine_light or _hint == "islands-dark" and lualine_dark or (vim.o.background == "light" and lualine_light or lualine_dark)
@@ -1332,7 +1356,7 @@ return {
       refresh_git_all()
 
       local function setup_breadcrumb_hl()
-        local chip_bgs_hl = { "NONE", "NONE", "NONE" }
+        local chip_bgs_hl = { lualine_bg(), lualine_bg(), lualine_bg() }
         local breadcrumb_bg = chip_bgs_hl[2] or chip_bgs_hl[1]
         local breadcrumb_fg = vim.o.background == "light" and "#4C4F69" or "#CED0D6"
         local arrow_fg = vim.o.background == "light" and "#2F3147" or "#DCE0E8"
@@ -1345,20 +1369,25 @@ return {
       vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_breadcrumb_hl })
 
       local function setup_git_hl()
+        local hint = vim.g._lualine_theme_hint or ""
         if vim.o.background == "light" then
-          vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = "#FFFFFF", bg = "#6B3CC8", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = "#FFFFFF", bg = "#6B3CC8", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = "#7CA686", bg = "#6B3CC8", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = "#A8983A", bg = "#6B3CC8", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = "#C87A3A", bg = "#6B3CC8", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = "#B85C5C", bg = "#6B3CC8", bold = true })
+          local bg = hint == "islands-light" and "#DDD9F7" or "#6B3CC8"
+          local base_fg = hint == "islands-light" and "#342F67" or "#FFFFFF"
+          vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = base_fg, bg = bg, bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = base_fg, bg = bg, bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = hint == "islands-light" and "#3A7A52" or "#7CA686", bg = bg, bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = hint == "islands-light" and "#8A6B20" or "#A8983A", bg = bg, bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = hint == "islands-light" and "#8E5324" or "#C87A3A", bg = bg, bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = hint == "islands-light" and "#B54A5C" or "#B85C5C", bg = bg, bold = true })
         else
-          vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = "#151619", bg = "#cba6f7", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = "#151619", bg = "#cba6f7", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = "#a6e3a1", bg = "#cba6f7", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = "#f9e2af", bg = "#cba6f7", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = "#fab387", bg = "#cba6f7", bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = "#f38ba8", bg = "#cba6f7", bold = true })
+          local bg = hint == "islands-dark" and "#342F67" or "#cba6f7"
+          local base_fg = hint == "islands-dark" and "#ECEBFB" or "#151619"
+          vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = base_fg, bg = bg, bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = base_fg, bg = bg, bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = hint == "islands-dark" and "#7CA686" or "#a6e3a1", bg = bg, bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = hint == "islands-dark" and "#D5B778" or "#f9e2af", bg = bg, bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = hint == "islands-dark" and "#CF8E6D" or "#fab387", bg = bg, bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = hint == "islands-dark" and "#F75464" or "#f38ba8", bg = bg, bold = true })
         end
       end
       setup_git_hl()
@@ -1380,13 +1409,13 @@ return {
         cfg.options = cfg.options or {}
         cfg.options.theme = theme
         lualine.setup(cfg)
-        vim.api.nvim_set_hl(0, "StatusLine",   { fg = vim.o.background == "light" and "#4C4F69" or "#BCBEC4", bg = "NONE" })
-        vim.api.nvim_set_hl(0, "StatusLineNC", { fg = vim.o.background == "light" and "#7A7880" or "#6F737A", bg = "NONE" })
+        vim.api.nvim_set_hl(0, "StatusLine",   { fg = vim.o.background == "light" and "#4C4F69" or "#BCBEC4", bg = lualine_bg() })
+        vim.api.nvim_set_hl(0, "StatusLineNC", { fg = vim.o.background == "light" and "#7A7880" or "#6F737A", bg = lualine_bg() })
       end
       vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_lualine_theme_hl })
       vim.defer_fn(function()
-        vim.api.nvim_set_hl(0, "StatusLine",   { fg = vim.o.background == "light" and "#4C4F69" or "#BCBEC4", bg = "NONE" })
-        vim.api.nvim_set_hl(0, "StatusLineNC", { fg = vim.o.background == "light" and "#7A7880" or "#6F737A", bg = "NONE" })
+        vim.api.nvim_set_hl(0, "StatusLine",   { fg = vim.o.background == "light" and "#4C4F69" or "#BCBEC4", bg = lualine_bg() })
+        vim.api.nvim_set_hl(0, "StatusLineNC", { fg = vim.o.background == "light" and "#7A7880" or "#6F737A", bg = lualine_bg() })
       end, 50)
 
       opts.sections.lualine_b = {
@@ -1797,8 +1826,12 @@ return {
             local existing_color_fn = styled_comp.color
             styled_comp.color = function()
               local c = type(existing_color_fn) == "function" and existing_color_fn() or {}
-              c.fg = vim.o.background == "light" and "#FFFFFF" or "#151619"
-              c.bg = vim.o.background == "light" and "#2A6296" or "#9ccfd8"
+              local cs = vim.g.colors_name or ""
+              local is_light = vim.o.background == "light"
+              local is_default_white = cs == "default-white"
+              local is_islands_white = cs == "islands-white" or cs == "islands-light"
+              c.fg = is_light and ((is_default_white or is_islands_white) and "#2F496F" or "#FFFFFF") or "#151619"
+              c.bg = is_light and ((is_default_white or is_islands_white) and "#D2E4F5" or "#2A6296") or "#9ccfd8"
               c.gui = (c.gui and c.gui .. ",bold" or "bold")
               return c
             end

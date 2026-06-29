@@ -1244,7 +1244,21 @@ local function save_theme(value)
 end
 
 local lazygit_cfg_dir = vim.fn.expand("~/Library/Application Support/lazygit")
+local function lazygit_theme_name(kind)
+  if kind == "default-white" then
+    return "light"
+  end
+  if kind == "default-dark" then
+    return "dark"
+  end
+  if kind == "islands-white" then
+    return "islands-light"
+  end
+  return kind
+end
+
 local function update_lazygit_theme(kind)
+  kind = lazygit_theme_name(kind)
   local src
   if type(kind) == "string" and kind ~= "" then
     src = lazygit_cfg_dir .. "/config-" .. kind .. ".yml"
@@ -1307,16 +1321,35 @@ git:
   end
 end
 
+local function lualine_theme_hint(scheme, background)
+  if scheme == "default-white" or scheme == "islands-white" or scheme == "islands-light" then
+    return "islands-light"
+  end
+  if scheme == "default-dark" or scheme == "islands-dark" then
+    return "islands-dark"
+  end
+  return scheme:find("^islands") and ("islands-" .. background) or "auto"
+end
+
+local function apply_scheme(scheme, background)
+  vim.o.background = background
+  vim.g._lualine_theme_hint = lualine_theme_hint(scheme, background)
+  vim.cmd.colorscheme(scheme)
+  vim.g.theme_mode = background
+  save_theme(scheme)
+  update_lazygit_theme(scheme)
+end
+
 local function apply_theme_mode(mode)
   local background = mode == "light" and "light" or "dark"
   vim.o.background = background
 
   local schemes = background == "dark"
-      and { "islands-dark", "solarized-osaka", "habamax" }
-    or { "islands-light", "solarized-osaka", "morning", "habamax" }
+      and { "default-dark", "solarized-osaka", "habamax" }
+    or { "default-white", "solarized-osaka", "morning", "habamax" }
 
   for _, scheme in ipairs(schemes) do
-    vim.g._lualine_theme_hint = scheme:find("^islands") and ("islands-" .. background) or "auto"
+    vim.g._lualine_theme_hint = lualine_theme_hint(scheme, background)
     if pcall(vim.cmd.colorscheme, scheme) then
       vim.g.theme_mode = background
       save_theme(scheme)
@@ -1326,6 +1359,11 @@ local function apply_theme_mode(mode)
   end
 
   vim.notify("No colorscheme available for " .. background .. " mode", vim.log.levels.ERROR, { title = "Theme" })
+end
+
+local function apply_islands_theme(variant)
+  local bg = variant == "white" and "light" or "dark"
+  apply_scheme("islands-" .. variant, bg)
 end
 
 local function apply_catppuccin(flavour)
@@ -1373,7 +1411,9 @@ end
 keymaps.set("n", "<leader>ut", function()
   local items = {
     { label = "Default Dark Theme",        action = function() apply_theme_mode("dark") end },
-    { label = "Default Light Theme",       action = function() apply_theme_mode("light") end },
+    { label = "Default White Theme",       action = function() apply_theme_mode("light") end },
+    { label = "Islands Dark Theme",        action = function() apply_islands_theme("dark") end },
+    { label = "Islands White Theme",       action = function() apply_islands_theme("white") end },
     { label = "Catppuccin Mocha (dark)",   action = function() apply_catppuccin("mocha") end },
     { label = "Catppuccin Macchiato",      action = function() apply_catppuccin("macchiato") end },
     { label = "Catppuccin Frappé",         action = function() apply_catppuccin("frappe") end },

@@ -54,6 +54,149 @@ local function is_islands_or_catppuccin()
   return cs:find("^islands") ~= nil or cs:find("^catppuccin") ~= nil
 end
 
+local function is_transparent_theme()
+  local cs = vim.g.colors_name or ""
+  return cs == "islands-dark" or cs == "islands-white" or cs == "islands-light" or cs:find("^catppuccin") ~= nil
+end
+
+local function is_default_theme()
+  local cs = vim.g.colors_name or ""
+  return cs == "default-dark" or cs == "default-white"
+end
+
+local function apply_default_opaque_hl()
+  if not is_default_theme() then return end
+
+  local hl = vim.api.nvim_set_hl
+  local normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
+  local normal_bg = (normal and normal.bg) and string.format("#%06x", normal.bg) or (vim.o.background == "light" and "#FFFFFF" or "#151619")
+  local normal_fg = (normal and normal.fg) and string.format("#%06x", normal.fg) or (vim.o.background == "light" and "#4C4F69" or "#BCBEC4")
+  local c = type(vim.g.theme_custom_hl) == "table" and vim.g.theme_custom_hl or {}
+  local context_bg = c.context_bg or (vim.o.background == "light" and "#E5E5E5" or "#313244")
+  local border = c.border or normal_fg
+
+  local function with_bg(group, group_bg, group_fg)
+    local current = vim.api.nvim_get_hl(0, { name = group, link = false }) or {}
+    current.bg = group_bg
+    if group_fg then current.fg = group_fg end
+    current.link = nil
+    hl(0, group, current)
+  end
+
+  for _, group in ipairs({
+    "NormalFloat",
+    "FloatTitle",
+    "FloatFooter",
+    "Pmenu",
+    "NoicePopup",
+    "NoicePopupmenu",
+    "NoiceCmdlinePopup",
+    "WhichKey",
+    "WhichKeyNormal",
+    "BlinkCmpMenu",
+    "BlinkCmpDoc",
+    "BlinkCmpSignatureHelp",
+    "Terminal",
+    "SnacksPickerBox",
+    "SnacksPickerInput",
+    "SnacksPickerList",
+    "SnacksPickerPreview",
+    "SnacksPickerTitle",
+    "SnacksPickerFooter",
+    "SnacksInputNormal",
+    "SnacksInputTitle",
+  }) do
+    with_bg(group, normal_bg, normal_fg)
+  end
+
+  for _, group in ipairs({
+    "FloatBorder",
+    "PmenuBorder",
+    "NoicePopupBorder",
+    "NoiceCmdlinePopupBorder",
+    "NoiceCmdlinePopupTitle",
+    "WhichKeyBorder",
+    "BlinkCmpMenuBorder",
+    "BlinkCmpDocBorder",
+    "BlinkCmpDocSeparator",
+    "BlinkCmpSignatureHelpBorder",
+    "SnacksPickerBorder",
+    "SnacksInputBorder",
+    "TreesitterContextSeparator",
+  }) do
+    with_bg(group, normal_bg, border)
+  end
+
+  for _, group in ipairs({
+    "TreesitterContext",
+    "TreesitterContextLineNumber",
+    "TreesitterContextBottom",
+    "TreesitterContextLineNumberBottom",
+  }) do
+    with_bg(group, context_bg, normal_fg)
+  end
+
+  -- nvim-treesitter-context opens noautocmd floating windows and maps only
+  -- NormalFloat by default, so normal window autocommands can miss them.
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_is_valid(win) then
+      local ok_context, is_context = pcall(function() return vim.w[win].treesitter_context end)
+      local ok_line_number, is_line_number = pcall(function() return vim.w[win].treesitter_context_line_number end)
+      local ok_terminal, terminal = pcall(function()
+        local buf = vim.api.nvim_win_get_buf(win)
+        return vim.b[buf].snacks_terminal
+      end)
+      local is_lazygit = ok_terminal
+        and type(terminal) == "table"
+        and ((type(terminal.cmd) == "table" and terminal.cmd[1] == "lazygit")
+          or (type(terminal.cmd) == "string" and terminal.cmd:find("lazygit", 1, true) ~= nil))
+      if ok_context and is_context then
+        pcall(function()
+          vim.wo[win].winhl = table.concat({
+            "Normal:TreesitterContext",
+            "NormalNC:TreesitterContext",
+            "NormalFloat:TreesitterContext",
+            "FloatBorder:TreesitterContextSeparator",
+            "EndOfBuffer:TreesitterContext",
+          }, ",")
+          vim.wo[win].winblend = 0
+        end)
+      elseif ok_line_number and is_line_number then
+        pcall(function()
+          vim.wo[win].winhl = table.concat({
+            "Normal:TreesitterContextLineNumber",
+            "NormalNC:TreesitterContextLineNumber",
+            "NormalFloat:TreesitterContextLineNumber",
+            "FloatBorder:TreesitterContextSeparator",
+            "EndOfBuffer:TreesitterContextLineNumber",
+          }, ",")
+          vim.wo[win].winblend = 0
+        end)
+      elseif is_lazygit then
+        pcall(function()
+          vim.wo[win].winhl = table.concat({
+            "Normal:NormalFloat",
+            "NormalNC:NormalFloat",
+            "NormalFloat:NormalFloat",
+            "FloatBorder:FloatBorder",
+            "EndOfBuffer:NormalFloat",
+          }, ",")
+          vim.wo[win].winblend = 0
+        end)
+      end
+    end
+  end
+end
+
+local function schedule_default_opaque_hl()
+  if not is_default_theme() then return end
+
+  apply_default_opaque_hl()
+  vim.schedule(apply_default_opaque_hl)
+  vim.defer_fn(apply_default_opaque_hl, 20)
+  vim.defer_fn(apply_default_opaque_hl, 100)
+end
+
 local function apply_snacks_diff_hl()
   if Snacks == nil then return end
   local theme = type(vim.g.theme_custom_hl) == "table" and vim.g.theme_custom_hl.name == vim.g.colors_name and vim.g.theme_custom_hl or {}
@@ -63,17 +206,18 @@ local function apply_snacks_diff_hl()
   end
   local diff_add = theme.diff_add or bg("DiffAdd", "NONE")
   local diff_del = theme.diff_del or bg("DiffDelete", "NONE")
+  local diff_context = is_transparent_theme() and "NONE" or (theme.ref_bg or bg("Normal", "NONE"))
   Snacks.util.set_hl({
     SnacksDiffAdd             = { bg = diff_add },
     SnacksDiffDelete          = { bg = diff_del },
-    SnacksDiffContext         = { bg = "NONE" },
-    SnacksDiffContextLineNr   = { bg = "NONE" },
+    SnacksDiffContext         = { bg = diff_context },
+    SnacksDiffContextLineNr   = { bg = diff_context },
     SnacksDiffAddLineNr       = { bg = diff_add },
     SnacksDiffDeleteLineNr    = { bg = diff_del },
     SnacksGhDiffAdd           = { bg = diff_add },
     SnacksGhDiffDelete        = { bg = diff_del },
-    SnacksGhDiffContext       = { bg = "NONE" },
-    SnacksGhDiffContextLineNr = { bg = "NONE" },
+    SnacksGhDiffContext       = { bg = diff_context },
+    SnacksGhDiffContextLineNr = { bg = diff_context },
     SnacksGhDiffAddLineNr     = { bg = diff_add },
     SnacksGhDiffDeleteLineNr  = { bg = diff_del },
   })
@@ -246,6 +390,7 @@ local function current_custom_hl_palette()
   local muted = color_from_hl("Comment", "fg", normal_fg)
   local selection = color_from_hl("Visual", "bg", normal_bg)
   local cursorline = color_from_hl("CursorLine", "bg", normal_bg)
+  local picker_match = vim.o.background == "light" and "#2366A6" or "#FFD6A3"
 
   return {
     border = color_from_hl("FloatBorder", "fg", muted),
@@ -289,7 +434,7 @@ local function current_custom_hl_palette()
     snacks_line_bg = selection,
     snacks_file = normal_fg,
     snacks_dir = muted,
-    snacks_match = color_from_hl("Search", "bg", selection),
+    snacks_match = picker_match,
     snacks_row = color_from_hl("DiagnosticInfo", "fg", normal_fg),
     snacks_col = muted,
     snacks_directory = color_from_hl("Directory", "fg", normal_fg),
@@ -309,6 +454,8 @@ local function current_custom_hl_palette()
 end
 
 local function apply_transparent_hl()
+  if not is_transparent_theme() then return end
+
   local hl = vim.api.nvim_set_hl
   local bgless_groups = {
     "Normal",
@@ -335,6 +482,11 @@ local function apply_transparent_hl()
     "TabLine",
     "TabLineFill",
     "Pmenu",
+    "TreesitterContext",
+    "TreesitterContextLineNumber",
+    "TreesitterContextBottom",
+    "TreesitterContextLineNumberBottom",
+    "TreesitterContextSeparator",
     "SnacksPickerBorder",
     "SnacksPickerBox",
     "SnacksPickerInput",
@@ -362,6 +514,7 @@ local function apply_transparent_hl()
     "BlinkCmpSignatureHelp",
     "BlinkCmpSignatureHelpBorder",
     "PmenuBorder",
+    "Terminal",
   }
 
   for _, group in ipairs(bgless_groups) do
@@ -372,6 +525,8 @@ local function apply_transparent_hl()
 end
 
 local function schedule_transparent_hl()
+  if not is_transparent_theme() then return end
+
   apply_transparent_hl()
   vim.defer_fn(apply_transparent_hl, 50)
 end
@@ -431,7 +586,15 @@ local function apply_custom_hl()
   hl(0, "FloatBorder",               { fg = c.border, bg = border_bg })
   hl(0, "PmenuBorder",               { fg = c.border, bg = border_bg })
   hl(0, "SnacksPickerBorder",        { fg = c.border, bg = border_bg })
+  hl(0, "SnacksPickerBox",           { fg = normal_fg, bg = border_bg })
+  hl(0, "SnacksPickerInput",         { fg = normal_fg, bg = border_bg })
+  hl(0, "SnacksPickerList",          { fg = normal_fg, bg = border_bg })
+  hl(0, "SnacksPickerPreview",       { fg = normal_fg, bg = border_bg })
+  hl(0, "SnacksPickerTitle",         { fg = normal_fg, bg = border_bg, bold = true })
+  hl(0, "SnacksPickerFooter",        { fg = c.muted_text or c.snacks_comment, bg = border_bg })
+  hl(0, "SnacksInputNormal",         { fg = normal_fg, bg = border_bg })
   hl(0, "SnacksInputBorder",         { fg = c.border, bg = border_bg })
+  hl(0, "SnacksInputTitle",          { fg = normal_fg, bg = border_bg, bold = true })
   hl(0, "NoiceCmdlinePopupBorder",   { fg = c.border, bg = border_bg })
   hl(0, "WhichKeyBorder",            { fg = c.border, bg = border_bg })
   hl(0, "Visual",                    { bg = c.select_bg })
@@ -450,6 +613,11 @@ local function apply_custom_hl()
   hl(0, "DiffDelete", { bg = c.diff_del })
   hl(0, "DiffChange", { bg = c.diff_change })
   hl(0, "DiffText",   { bg = c.diff_text })
+  local snacks_diff_context = is_transparent_theme() and "NONE" or c.ref_bg
+  hl(0, "SnacksDiffContext",         { bg = snacks_diff_context })
+  hl(0, "SnacksDiffContextLineNr",   { bg = snacks_diff_context })
+  hl(0, "SnacksGhDiffContext",       { bg = snacks_diff_context })
+  hl(0, "SnacksGhDiffContextLineNr", { bg = snacks_diff_context })
 
   vim.schedule(apply_snacks_diff_hl)
   apply_cursor_hl()
@@ -503,6 +671,7 @@ local function apply_custom_hl()
     comment = c.snacks_comment,
     green = c.green, yellow = c.yellow, rose = c.rose, cyan = c.cyan,
   }
+  hl(0, "SnacksPickerMatch", { fg = picker_colors.match, bold = true })
   vim.defer_fn(function()
     hl(0, "SnacksPickerListCursorLine",     { fg = picker_colors.line_fg,    bg = picker_colors.line_bg })
     hl(0, "SnacksPickerFile",               { fg = picker_colors.file,       bold = true })
@@ -533,19 +702,21 @@ local function apply_custom_hl()
   hl(0, "SnacksIndent",      { fg = c.indent_fg })
   hl(0, "SnacksIndentScope", { fg = c.indent_scope_fg, bold = false })
 
-  hl(0, "TreesitterContext",           { bg = c.context_bg })
-  hl(0, "TreesitterContextLineNumber", { bg = c.context_bg })
+  hl(0, "TreesitterContext",           { fg = normal_fg, bg = c.context_bg })
+  hl(0, "TreesitterContextLineNumber", { fg = c.muted_text or c.fold_fg, bg = c.context_bg })
   hl(0, "TreesitterContextBottom",     { bg = c.context_bg, underline = false })
 
   hl(0, "Folded",            { fg = c.fold_fg, bg = c.fold_bg })
-  hl(0, "FoldColumn",        { fg = c.fold_fg, bg = "NONE" })
+  hl(0, "FoldColumn",        { fg = c.fold_fg, bg = c.fold_bg })
   hl(0, "UfoFoldedFg",       { fg = c.fold_fg })
   hl(0, "UfoFoldedBg",       { bg = c.fold_bg })
   hl(0, "UfoFoldedEllipsis", { fg = c.fold_fg, bg = c.fold_bg })
 
   hl(0, "CursorLine",   { bg = c.context_bg })
   hl(0, "CursorLineNr", { fg = normal_fg, bg = c.context_bg, bold = true })
-  apply_transparent_hl()
+  if is_transparent_theme() then
+    apply_transparent_hl()
+  end
 end
 
 vim.api.nvim_create_autocmd("ColorScheme", {
@@ -555,20 +726,42 @@ vim.api.nvim_create_autocmd("ColorScheme", {
     apply_cursor_hl()
     schedule_plain_keyword_hl()
     schedule_semantic_token_hl()
+    schedule_default_opaque_hl()
     schedule_transparent_hl()
   end,
 })
 apply_custom_hl()
 schedule_plain_keyword_hl()
 schedule_semantic_token_hl()
+schedule_default_opaque_hl()
 schedule_transparent_hl()
 
-vim.api.nvim_create_autocmd({ "FileType", "BufEnter", "LspAttach" }, {
+vim.api.nvim_create_autocmd({ "FileType", "BufEnter", "TermOpen", "LspAttach" }, {
   group = vim.api.nvim_create_augroup("PlainKeywordHl", { clear = true }),
   callback = function()
     schedule_plain_keyword_hl()
     schedule_semantic_token_hl()
+    schedule_default_opaque_hl()
   end,
+})
+
+vim.api.nvim_create_autocmd({ "WinEnter", "BufWinEnter" }, {
+  group = vim.api.nvim_create_augroup("DefaultOpaqueHl", { clear = true }),
+  callback = schedule_default_opaque_hl,
+})
+
+vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI", "WinScrolled" }, {
+  group = vim.api.nvim_create_augroup("DefaultOpaqueDynamicHl", { clear = true }),
+  callback = function()
+    if not is_default_theme() then return end
+    vim.schedule(apply_default_opaque_hl)
+  end,
+})
+
+vim.api.nvim_create_autocmd("User", {
+  pattern = { "VeryLazy", "LazyLoad" },
+  group = vim.api.nvim_create_augroup("DefaultOpaquePluginHl", { clear = true }),
+  callback = schedule_default_opaque_hl,
 })
 
 vim.api.nvim_create_autocmd("User", {
@@ -581,9 +774,10 @@ vim.api.nvim_create_autocmd("User", {
     Snacks.util.set_hl = function(groups, opts)
       if opts and opts.default then
         local c = current_custom_hl_palette()
+        local context_bg = is_transparent_theme() and "NONE" or c.ref_bg
         local overrides = {
-          DiffContext       = { bg = "NONE" },
-          DiffContextLineNr = { bg = "NONE" },
+          DiffContext       = { bg = context_bg },
+          DiffContextLineNr = { bg = context_bg },
           DiffAdd           = { bg = c.diff_add },
           DiffDelete        = { bg = c.diff_del },
           DiffAddLineNr     = { bg = c.diff_add },
@@ -722,9 +916,17 @@ local function apply_html_hl()
   align_vue_script_hl()
   vim.defer_fn(align_vue_script_hl, 50)
 
-  hl(0, "@string",                  { fg = green })
-  hl(0, "@string.html",             { fg = green })
-  hl(0, "@string.vue",              { fg = green })
+  local palette = current_custom_hl_palette()
+  local string_fg = palette.string_fg or green
+  if palette.string_fg then
+    hl(0, "String",                 { fg = string_fg })
+    hl(0, "Character",              { fg = string_fg })
+    hl(0, "htmlString",             { fg = string_fg })
+    hl(0, "htmlValue",              { fg = string_fg })
+  end
+  hl(0, "@string",                  { fg = string_fg })
+  hl(0, "@string.html",             { fg = string_fg })
+  hl(0, "@string.vue",              { fg = string_fg })
 
   hl(0, "jinjaTagBlock",            { fg = blue })
   hl(0, "jinjaVarBlock",            { fg = blue })

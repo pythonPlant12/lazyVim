@@ -68,7 +68,7 @@ vim.g.theme_custom_hl = {
   snacks_line_bg = palette.selection,
   snacks_file = "#3E464F",
   snacks_dir = "#5E6874",
-  snacks_match = palette.blue,
+  snacks_match = "#2366A6",
   snacks_row = "#3C7E8F",
   snacks_col = "#6B7582",
   snacks_directory = "#2E6EA8",
@@ -122,6 +122,11 @@ hl(0, "StatusLineNC", { fg = palette.muted, bg = palette.line })
 hl(0, "TabLine", { fg = palette.muted, bg = palette.line })
 hl(0, "TabLineSel", { fg = palette.fg_bright, bg = palette.line_alt, bold = true })
 hl(0, "TabLineFill", { fg = palette.muted, bg = palette.line })
+hl(0, "Folded", { fg = vim.g.theme_custom_hl.fold_fg, bg = vim.g.theme_custom_hl.fold_bg })
+hl(0, "FoldColumn", { fg = vim.g.theme_custom_hl.fold_fg, bg = vim.g.theme_custom_hl.fold_bg })
+hl(0, "UfoFoldedFg", { fg = vim.g.theme_custom_hl.fold_fg })
+hl(0, "UfoFoldedBg", { bg = vim.g.theme_custom_hl.fold_bg })
+hl(0, "UfoFoldedEllipsis", { fg = vim.g.theme_custom_hl.fold_fg, bg = vim.g.theme_custom_hl.fold_bg })
 
 hl(0, "Comment", { fg = palette.comment, italic = false })
 hl(0, "String", { fg = palette.string_color })
@@ -274,3 +279,37 @@ hl(0, "NeotestIndent",       { fg = palette.border })
 hl(0, "NeotestExpandMarker", { fg = palette.muted })
 hl(0, "NeotestWinSelect",    { fg = palette.blue, bold = true })
 hl(0, "NeotestFocused",      { bold = true, underline = true })
+
+if not vim.g._islands_opaque_default then
+  local bgless_groups = {
+    "Normal",
+    "NormalNC",
+    "NormalFloat",
+    "FloatBorder",
+    "FloatTitle",
+    "FloatFooter",
+    "FloatShadow",
+    "FloatShadowThrough",
+    "SignColumn",
+    "FoldColumn",
+    "Folded",
+    "UfoFoldedBg",
+    "UfoFoldedEllipsis",
+    "LineNr",
+    "EndOfBuffer",
+    "WinSeparator",
+    "VertSplit",
+    "StatusLine",
+    "StatusLineNC",
+    "StatusLineTerm",
+    "StatusLineTermNC",
+    "TabLine",
+    "TabLineFill",
+    "Pmenu",
+  }
+  for _, group in ipairs(bgless_groups) do
+    local current = vim.api.nvim_get_hl(0, { name = group, link = false })
+    current.bg = "NONE"
+    hl(0, group, current)
+  end
+end

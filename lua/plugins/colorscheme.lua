@@ -19,14 +19,26 @@ end
 
 if not cs then
   local appearance = vim.fn.system("defaults read -g AppleInterfaceStyle 2>/dev/null"):gsub("%s+", "")
-  cs = appearance == "Dark" and "islands-dark" or "islands-light"
+  cs = appearance == "Dark" and "default-dark" or "default-white"
 end
 
 do
-  local light_schemes = { ["islands-light"] = true, ["islands-rose-pine-light"] = true, ["rose-pine-dawn"] = true }
+  local light_schemes = {
+    ["default-white"] = true,
+    ["islands-white"] = true,
+    ["islands-light"] = true,
+    ["islands-rose-pine-light"] = true,
+    ["rose-pine-dawn"] = true,
+  }
   local is_light = light_schemes[cs] or (cs == "catppuccin" and catppuccin_flavour == "latte")
   vim.o.background = is_light and "light" or "dark"
-  vim.g._lualine_theme_hint = cs:find("^islands") and ("islands-" .. (is_light and "light" or "dark")) or "auto"
+  if cs == "default-white" or cs == "islands-white" or cs == "islands-light" then
+    vim.g._lualine_theme_hint = "islands-light"
+  elseif cs == "default-dark" or cs == "islands-dark" then
+    vim.g._lualine_theme_hint = "islands-dark"
+  else
+    vim.g._lualine_theme_hint = cs:find("^islands") and ("islands-" .. (is_light and "light" or "dark")) or "auto"
+  end
 end
 
 return {
