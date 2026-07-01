@@ -59,7 +59,7 @@ def main() -> int:
 
     server = os.environ["NVIM"]
     lua_function = "open" if open_in_tab else "open_same_tab"
-    lua = f"require('config.lazygit_edit').{lua_function}(_A[1], _A[2])"
+    lua = f"require('git.lazygit_edit').{lua_function}(_A[1], _A[2])"
     arg2 = "v:null" if line is None else str(line)
     expr = f"luaeval({json.dumps(lua)}, [{json.dumps(path)}, {arg2}])"
 

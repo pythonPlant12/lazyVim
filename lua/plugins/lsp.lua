@@ -1,6 +1,6 @@
 ---@diagnostic disable: undefined-global
 
-local resolver = require("config.lsp_resolver")
+local resolver = require("utils.lsp_resolver")
 
 local function max_popup_size()
   return math.floor(vim.o.columns * 0.5), math.floor(vim.o.lines * 0.3)

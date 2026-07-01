@@ -1,5 +1,6 @@
 local uv = vim.uv
 
+-- Resolve project roots, virtualenvs, and ESLint config locations for LSP modules.
 local M = {}
 
 local function normalize(path)

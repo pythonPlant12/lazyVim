@@ -1,3 +1,4 @@
+-- Centralize Python LSP settings shared by keymaps and backend LSP setup.
 local M = {}
 
 local state_file = vim.fn.stdpath("state") .. "/python-lsp-settings.json"

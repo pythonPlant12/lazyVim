@@ -1,3 +1,4 @@
+-- Centralize TypeScript/Vue LSP settings shared by keymaps and frontend LSP setup.
 local M = {}
 
 local state_file = vim.fn.stdpath("state") .. "/typescript-lsp-settings.json"

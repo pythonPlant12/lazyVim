@@ -1,3 +1,4 @@
+-- Keep Snacks grep filter state and toggle actions reusable across UI mappings.
 local M = {}
 
 local PERSISTENT_EXCLUDES = {

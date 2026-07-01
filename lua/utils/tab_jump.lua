@@ -1,3 +1,4 @@
+-- Share tab-aware buffer and path jumps between keymaps and picker actions.
 local M = {}
 
 local uv = vim.uv or vim.loop

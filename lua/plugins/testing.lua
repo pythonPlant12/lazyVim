@@ -1,4 +1,4 @@
-local resolver = require("config.lsp_resolver")
+local resolver = require("utils.lsp_resolver")
 
 local vitest_root_markers_global = {
   "vitest.config.ts",

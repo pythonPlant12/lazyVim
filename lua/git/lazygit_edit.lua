@@ -1,5 +1,6 @@
 ---@diagnostic disable: undefined-global, unused-local, unused-function
 
+-- Jump between Neovim buffers and the LazyGit terminal/edit integration.
 local M = {}
 
 local _open_tab_next = false

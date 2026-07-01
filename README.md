@@ -13,7 +13,7 @@ Implementation locations:
 - `lua/plugins/lsp.lua` (generic LSP behavior + `:CheckLsp` command)
 - `lua/plugins/lsp-frontend.lua` (JS/TS/Vue + ESLint)
 - `lua/plugins/lsp-backend.lua` (Python + Ruff + Pyright/BasedPyright)
-- `lua/config/lsp_resolver.lua` (shared root and fallback logic)
+- `lua/utils/lsp_resolver.lua` (shared root and fallback logic)
 
 ## How root resolution works
 

@@ -1,8 +1,8 @@
 ---@diagnostic disable: undefined-global
 
-local resolver = require("config.lsp_resolver")
-local python_lsp_settings = require("config.python_lsp_settings")
-local stub_generator = require("config.stub_generator")
+local resolver = require("utils.lsp_resolver")
+local python_lsp_settings = require("lsp.python_settings")
+local stub_generator = require("lsp.stub_generator")
 stub_generator.setup()
 
 local function add_unique_path(paths, path)

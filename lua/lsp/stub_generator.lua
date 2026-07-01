@@ -1,3 +1,4 @@
+-- Generate Python stubs from diagnostics when the language keymaps request it.
 local M = {}
 
 local function read_file(path)

@@ -1,5 +1,5 @@
-local resolver = require("config.lsp_resolver")
-local typescript_lsp_settings = require("config.typescript_lsp_settings")
+local resolver = require("utils.lsp_resolver")
+local typescript_lsp_settings = require("lsp.typescript_settings")
 
 local function normalize(path)
   if not path or path == "" then

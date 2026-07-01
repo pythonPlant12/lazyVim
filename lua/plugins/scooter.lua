@@ -117,7 +117,7 @@ return {
       })
     end,
     keys = function()
-      local grug_far_reuse = require("config.grug_far_reuse")
+      local grug_far_reuse = require("utils.grug_far_reuse")
 
       local function escape_path(p)
         return p:gsub(" ", "\\ ")

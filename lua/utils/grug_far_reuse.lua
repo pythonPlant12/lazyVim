@@ -1,5 +1,6 @@
 ---@diagnostic disable: undefined-global
 
+-- Reuse one grug-far instance per tab so repeated searches focus existing windows.
 local M = {}
 
 local function instance_name(tabpage)
