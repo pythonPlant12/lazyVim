@@ -24,11 +24,14 @@ keymaps.set("n", "<C-a>", "gg<S-v>G")
 local function smart_jump(motion)
   tab_jump.jump(motion)
 end
+
 keymaps.set("n", "<leader>i", function() smart_jump("<C-o>") end, opts)
 keymaps.set("n", "<leader>o", function() smart_jump("<C-i>") end, opts)
+
 keymaps.set("n", "<C-o>", function() smart_jump("<C-o>") end, opts)
 
-keymaps.set("n", "zc", "za", opts)
+keymaps.set("n", "zc", "za", { desc = "Toggle fold" })
+keymaps.set("v", "zs", "zf", { desc = "Fold selection" })
 
 -- New tab
 keymaps.set("n", "te", "tabedit")
@@ -284,7 +287,6 @@ keymaps.set({ "n", "v" }, "B", function()
 end, { desc = "Go to beginning of line (toggle ^/0)" })
 keymaps.set("n", "W", "$", { desc = "Go to end of line" })
 keymaps.set("v", "W", "$", { desc = "Go to end of line" })
-keymaps.set("n", "zc", "za", opts)
 
 -- Hover (show definition/error)
 keymaps.set("n", "<leader>k", function()

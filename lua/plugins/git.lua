@@ -1,5 +1,26 @@
 return {
   {
+    "mbbill/undotree",
+    cmd = "UndotreeToggle",
+    init = function()
+      vim.g.undotree_WindowLayout = 3
+      vim.g.undotree_SetFocusWhenToggle = 1
+      vim.g.undotree_SplitWidth = 36
+
+      vim.cmd([[
+        function! g:Undotree_CustomMap() abort
+          augroup UserUndotreeAutoPreview
+            autocmd! * <buffer>
+            autocmd CursorMoved <buffer> if exists('t:undotree') | silent! call t:undotree.ActionEnter() | endif
+          augroup END
+        endfunction
+      ]])
+    end,
+    keys = {
+      { "<leader>U", "<cmd>UndotreeToggle<cr>", desc = "Toggle Undotree" },
+    },
+  },
+  {
     "lewis6991/gitsigns.nvim",
     init = function()
       local function apply_blame_hl()
