@@ -5,6 +5,7 @@ return {
     "HiPhish/rainbow-delimiters.nvim",
     event = "VeryLazy",
     init = function()
+      -- Muted delimiter colors help nesting without overpowering the theme.
       vim.g.rainbow_delimiters = {
         strategy = {
           [""] = "rainbow-delimiters.strategy.global",
@@ -13,6 +14,7 @@ return {
         query = {
           [""] = "rainbow-delimiters",
         },
+        -- HTML/Vue templates already have dense syntax colors, so skip rainbow there.
         blacklist = { "html", "vue" },
         highlight = {
           "RainbowDelimiterBlueMuted",

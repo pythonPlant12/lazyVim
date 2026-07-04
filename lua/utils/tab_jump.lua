@@ -33,6 +33,7 @@ local function ordered_tabs(prefer_other_tabs)
   return ordered
 end
 
+-- Skip floats and picker preview windows; only jump to real editing windows.
 local function find_visible(match, opts)
   for _, tab in ipairs(ordered_tabs(opts and opts.prefer_other_tabs)) do
     for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
@@ -47,6 +48,7 @@ local function find_visible(match, opts)
   end
 end
 
+-- After cross-tab jump, restore the temporary buffer shown in the old window.
 local function restore_window_buf(bufnr, restore)
   if not restore or not restore.win or not restore.buf then
     return
@@ -109,6 +111,7 @@ function M.goto_visible_path(path, opts)
   return goto_visible(tab, win, bufnr, opts)
 end
 
+-- Prefer already-visible buffers before opening another copy of the same path.
 function M.edit_or_goto_path(path, opts)
   if M.goto_visible_path(path, opts) then
     return true
@@ -122,6 +125,7 @@ function M.edit_or_goto_path(path, opts)
   return true
 end
 
+-- Wrap jumplist motions so they land on visible buffers in other tabs when possible.
 function M.jump(motion)
   local pre_buf = vim.api.nvim_get_current_buf()
   local pre_win = vim.api.nvim_get_current_win()

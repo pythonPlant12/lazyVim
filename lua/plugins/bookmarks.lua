@@ -1,6 +1,7 @@
 ---@diagnostic disable: undefined-global
 
 local function current_git_root()
+  -- Repository scope lets destructive bookmark actions avoid unrelated projects.
   local path = vim.api.nvim_buf_get_name(0)
   local start_dir = path ~= "" and vim.fn.fnamemodify(path, ":p:h") or vim.fn.getcwd()
   local root = vim.fn.systemlist({ "git", "-C", start_dir, "rev-parse", "--show-toplevel" })[1]
@@ -24,6 +25,7 @@ local function path_in_root(path, root)
 end
 
 local function delete_repo_bookmarks()
+  -- Bulk-delete only bookmarks whose file path belongs to the current git root.
   local root = current_git_root()
   if not root then
     vim.notify("Not inside a git repository", vim.log.levels.WARN, { title = "Bookmarks" })
@@ -102,6 +104,7 @@ return {
       end
 
       local function bookmark_entry_display(bookmark, bookmarks)
+        -- Align title, filename, and location columns for a scannable picker list.
         local max_title = 20
         local max_file = 18
         local max_path = 24
@@ -147,6 +150,7 @@ return {
           entry_display = bookmark_entry_display,
         },
         signs = {
+          -- Use explicit sign colors because the plugin does not follow theme palettes.
           mark = {
             color = is_light and "#7B5EA7" or "#9D85C9",
             line_bg = is_light and "#EDE6F5" or "#2E2540",

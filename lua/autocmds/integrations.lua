@@ -1,6 +1,7 @@
 vim.api.nvim_create_autocmd("BufEnter", {
   group = vim.api.nvim_create_augroup("NeoTreeBookmarkToggle", { clear = true }),
   callback = function(ev)
+    -- Neo-tree nodes are not file buffers, so bookmarking there is ambiguous.
     if vim.bo[ev.buf].filetype ~= "neo-tree" then return end
     vim.keymap.set("n", "<C-b>b", function()
       vim.notify("Bookmarks cannot be added from neo-tree", vim.log.levels.WARN, { title = "Bookmarks" })
@@ -9,6 +10,7 @@ vim.api.nvim_create_autocmd("BufEnter", {
 })
 
 local function bind_lazygit_tab_nav(buf)
+  -- Let terminal-mode LazyGit switch Neovim tabs without leaving the terminal stuck.
   if not vim.api.nvim_buf_is_valid(buf) or vim.bo[buf].filetype ~= "snacks_terminal" then
     return false
   end
@@ -59,6 +61,7 @@ local function bind_lazygit_tab_nav(buf)
 end
 
 local function bind_lazygit_tab_nav_deferred(buf)
+  -- Snacks terminal metadata can appear after TermOpen, so retry shortly.
   if bind_lazygit_tab_nav(buf) then
     return
   end

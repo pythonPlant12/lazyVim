@@ -4,6 +4,7 @@ return {
   {
     "RRethy/vim-illuminate",
     event = { "BufReadPost", "BufNewFile" },
+    -- Highlight references under cursor, but delay/disable noisy filetypes to avoid movement lag.
     opts = {
       delay = 300,
       large_file_cutoff = 2000,
@@ -22,6 +23,7 @@ return {
     config = function(_, opts)
       require("illuminate").configure(opts)
 
+      -- Reapply custom reference highlights after theme changes.
       local function set_illuminate_hl()
         local bg = vim.o.background == "light" and "#E6E6E6" or "#3A3A4A"
         vim.api.nvim_set_hl(0, "IlluminatedWordText", { bg = bg, underline = false })

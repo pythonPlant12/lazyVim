@@ -1,6 +1,7 @@
 local resolver = require("utils.lsp_resolver")
 local typescript_lsp_settings = require("lsp.typescript_settings")
 
+-- Frontend LSP setup: vtsls handles JS/TS/Vue, vue_ls handles Vue-specific features.
 local function normalize(path)
   if not path or path == "" then
     return nil
@@ -12,6 +13,7 @@ local function exists(path)
   return path and vim.uv.fs_stat(path) ~= nil
 end
 
+-- vtsls needs Vue's TS plugin path; support Mason v2, registry installs, and global npm.
 local function vue_language_server_path()
   local mason_v2 = normalize(vim.fn.stdpath("data") .. "/mason/packages/vue-language-server/node_modules/@vue/language-server")
   if mason_v2 and exists(mason_v2) then
@@ -62,6 +64,7 @@ return {
       opts.servers = opts.servers or {}
       opts.setup = opts.setup or {}
 
+      -- Avoid duplicate TS diagnostics/completions; vtsls is the single TS server.
       opts.servers.ts_ls = { enabled = false }
       opts.servers.tsserver = { enabled = false }
 
@@ -119,6 +122,7 @@ return {
           if vim.bo[bufnr].filetype == "html" then
             client.server_capabilities.documentHighlightProvider = false
           end
+          -- Vue semantic tokens are noisy with custom highlights; keep incremental tokens only.
           local semantic = client.server_capabilities.semanticTokensProvider
           if semantic and semantic.full ~= nil then
             semantic.full = vim.bo[bufnr].filetype ~= "vue"
@@ -140,6 +144,7 @@ return {
       local prev_eslint = opts.servers.eslint or {}
       local prev_eslint_on_init = prev_eslint.on_init
 
+      -- Prefer project ESLint config; fall back to one global config unless disabled.
       opts.servers.eslint = vim.tbl_deep_extend("force", prev_eslint, {
         root_dir = function(bufnr, on_dir)
           if resolver.eslint_has_project_config(bufnr) then
@@ -192,6 +197,7 @@ return {
         },
       })
 
+      -- Mirror TypeScript settings into JavaScript so vtsls behaves consistently.
       opts.setup.vtsls = opts.setup.vtsls
         or function(_, server_opts)
           server_opts.settings = server_opts.settings or {}

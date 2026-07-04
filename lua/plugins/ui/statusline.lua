@@ -4,6 +4,7 @@ return {
     "nvim-lualine/lualine.nvim",
     event = "VeryLazy",
     opts = function(_, opts)
+      -- Match lualine's surface to transparent/opaque theme behavior.
       local function is_transparent_lualine()
         local cs = vim.g.colors_name or ""
         return cs == "islands-dark"
@@ -38,6 +39,7 @@ return {
         theme = mode_theme,
         section_separators = { left = "", right = "" },
         component_separators = { left = "", right = "" },
+        -- Avoid CursorMoved refreshes; diagnostics/LSP/git events keep this fresh enough.
         refresh = {
           statusline = 99999,
           tabline = 99999,
@@ -62,7 +64,7 @@ return {
         { "mode", separator = { left = "\u{E0B6}", right = "\u{E0B4}" }, padding = { left = 1, right = 1 } },
       }
       opts.sections.lualine_x = {}
-      -- Git ahead/behind async refresh
+      -- Git counters update asynchronously so the statusline never blocks on git commands.
       vim.g._git_ahead = vim.g._git_ahead or 0
       vim.g._git_behind = vim.g._git_behind or 0
       vim.g._git_untracked = vim.g._git_untracked or 0
@@ -131,6 +133,7 @@ return {
       vim.api.nvim_create_autocmd({ "BufEnter", "FocusGained", "BufWritePost" }, { group = grp, callback = refresh_git_all })
       refresh_git_all()
 
+      -- Custom chip highlights are reapplied because colorschemes reset them.
       local function setup_breadcrumb_hl()
         local chip_bgs_hl = { lualine_bg(), lualine_bg(), lualine_bg() }
         local breadcrumb_bg = chip_bgs_hl[2] or chip_bgs_hl[1]
@@ -254,6 +257,7 @@ return {
       setup_diag_hl()
       vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_diag_hl })
 
+      -- Remove LazyVim defaults before adding custom diagnostics/LSP/tool chips.
       local new_c = {}
       for i, comp in ipairs(opts.sections.lualine_c or {}) do
         if i == 1 then goto skip end
@@ -281,6 +285,7 @@ return {
         end
       end
 
+      -- Compact diagnostics pill, hidden when the current buffer has no diagnostics.
       table.insert(opts.sections.lualine_x, 1, {
         function()
           local d = vim.diagnostic.count(0)
@@ -312,6 +317,7 @@ return {
         padding = { left = 1, right = 1 },
       })
 
+      -- Status chips render attached tools with stable colors per theme.
       local lsp_icons = {
         vtsls          = "󰛦 ",
         ts_ls          = "󰛦 ",
@@ -395,6 +401,7 @@ return {
       setup_lsp_hl()
       vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_lsp_hl })
 
+      -- One refresh path keeps all statusline highlights in sync after theme/layout changes.
       local function refresh_statusline_colors(full)
         setup_breadcrumb_hl()
         setup_git_hl()
@@ -445,6 +452,7 @@ return {
         end,
       })
 
+      -- Show attached language servers, excluding standalone ESLint/Copilot chips below.
       table.insert(opts.sections.lualine_x, {
         function()
           local clients = vim.lsp.get_clients({ bufnr = 0 })
@@ -478,6 +486,7 @@ return {
         end,
       })
 
+      -- Copilot gets a separate status chip so progress/off states are visible.
       table.insert(opts.sections.lualine_x, {
         function()
           local icon = " "
@@ -504,6 +513,7 @@ return {
         end,
       })
 
+      -- Format chip mirrors the global autoformat toggle.
       table.insert(opts.sections.lualine_x, {
         function()
           local fmt_active = vim.g.autoformat == nil or vim.g.autoformat
@@ -519,6 +529,7 @@ return {
         end,
       })
 
+      -- ESLint chip shows both attachment and autosave-fix state.
       table.insert(opts.sections.lualine_x, {
         function()
           local eslint_attached = #vim.lsp.get_clients({ name = "eslint", bufnr = 0 }) > 0
@@ -542,6 +553,7 @@ return {
       opts.sections.lualine_z = {}
       opts.sections.lualine_y = {}
 
+      -- Path/breadcrumb components are wrapped into rounded chips and truncated safely.
       local function chip_bgs()
         return vim.o.background == "light"
           and { "#D5D0CA", "#D5D0CA", "#D5D0CA" }

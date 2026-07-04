@@ -3,6 +3,7 @@
 -- Configure UI-facing plugins: pickers, explorer, statusline, notifications, and borders.
 local tab_jump = require("utils.tab_jump")
 
+-- Remove LazyVim's default LazyGit key from picker specs; custom Git maps own it.
 local function remove_gl_key(_, keys)
   return vim.tbl_filter(function(k)
     local lhs = type(k) == "string" and k or k[1]
@@ -24,6 +25,7 @@ local picker_excludes = {
   "**/shelved.patch",
 }
 
+-- Grep starts literal/case-insensitive; this toggles smart/camel-case searching.
 local function grep_case_mode_args(args, camel_case)
   local filtered = {}
   for _, arg in ipairs(args or {}) do
@@ -55,6 +57,7 @@ local function toggle_grep_camel_case(picker)
   )
 end
 
+-- Picker opens are async, so position after Snacks resolves the target location.
 local function apply_item_pos(item)
   if not item then
     return
@@ -85,6 +88,7 @@ local function apply_item_pos(item)
   end)
 end
 
+-- Shift-Enter opens the current picker item in a new tab without closing the picker.
 local function open_in_tab(picker, item)
   if not item then
     return
@@ -118,6 +122,7 @@ local function open_in_tab(picker, item)
   picker.opts.auto_close = nil
 end
 
+-- LSP locations use tab-aware open to avoid duplicate buffers across tabs.
 local function confirm_lsp_location(picker, item)
   if not item then
     return
@@ -161,6 +166,7 @@ end
 
 local uv = vim.uv or vim.loop
 
+-- Video previews render a cached thumbnail through ffmpeg for Snacks image preview.
 local video_ext = {
   mp4 = true,
   mov = true,
@@ -239,6 +245,7 @@ local function snacks_file_preview_with_video(ctx)
   return true
 end
 
+-- fzf-lua file actions share the same tab-aware open behavior as Snacks.
 local function fzf_file_switch_or_edit(selected, opts)
   if not (selected and selected[1]) then
     return
@@ -294,6 +301,7 @@ return {
       local actions = require("telescope.actions")
       opts.defaults = opts.defaults or {}
       opts.defaults.mappings = opts.defaults.mappings or {}
+      -- Normal-mode j/k follow this config's inverted vertical movement.
       opts.defaults.mappings.n = vim.tbl_extend("force", opts.defaults.mappings.n or {}, {
         j = actions.move_selection_previous,
         k = actions.move_selection_next,
@@ -307,6 +315,7 @@ return {
       fzf_colors = true,
       actions = {
         files = {
+          -- Enter jumps to an already-visible file instead of always editing a duplicate.
           ["enter"] = fzf_file_switch_or_edit,
         },
       },

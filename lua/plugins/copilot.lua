@@ -2,6 +2,7 @@ return {
   "zbirenbaum/copilot.lua",
   opts = {
     copilot_node_command = (function()
+      -- Copilot needs modern Node; scan nvm directly so shell init is not required.
       local nvm_dir = vim.fn.expand("~/.nvm/versions/node")
       local best_major, best_minor, best_patch = 0, 0, 0
       local best_path = nil

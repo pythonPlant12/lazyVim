@@ -1,3 +1,4 @@
+-- Multiple-cursor editing helpers and an active-cursor keymap layer.
 return {
   {
     "jake-stewart/multicursor.nvim",
@@ -35,6 +36,7 @@ return {
       set("x", "<leader>mm", mc.matchCursors, { desc = "MC: Match within selection" })
       set("x", "<leader>m/", mc.splitCursors, { desc = "MC: Split selection by regex" })
 
+      -- Layer mappings only apply while multicursor mode owns the keys.
       mc.addKeymapLayer(function(layer_set)
         layer_set({ "n", "x" }, "<M-Left>", mc.prevCursor, { desc = "MC: Previous cursor" })
         layer_set({ "n", "x" }, "<M-Right>", mc.nextCursor, { desc = "MC: Next cursor" })
@@ -48,6 +50,7 @@ return {
         end, { desc = "MC: Clear cursors" })
       end)
 
+      -- Keep cursor/match visuals readable across colorschemes.
       vim.api.nvim_set_hl(0, "MultiCursorCursor", { reverse = true })
       vim.api.nvim_set_hl(0, "MultiCursorVisual", { link = "Visual" })
       vim.api.nvim_set_hl(0, "MultiCursorSign", { link = "SignColumn" })

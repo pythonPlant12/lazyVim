@@ -2,7 +2,7 @@ local keymaps = vim.keymap
 local opts = { noremap = true, silent = true }
 local lazygit_edit = require("git.lazygit_edit")
 
--- Git (<C-g>)
+-- Git (<C-g>): custom workflows around LazyGit, Snacks pickers, and gitsigns.
 keymaps.set("n", "<C-g>g", function()
   if lazygit_edit.jump_to_lazygit() then
     return
@@ -22,6 +22,7 @@ local function git_root_or_cwd()
   return (ok and root and root ~= "") and root or vim.fn.getcwd()
 end
 
+-- Resolve from the current file so nested repositories do not fall back to cwd.
 local function current_file_git_root()
   local path = vim.api.nvim_buf_get_name(0)
   if path == "" then
@@ -59,6 +60,7 @@ local function current_branch(cwd)
   return "HEAD"
 end
 
+-- Keep the current branch first, then local refs, then remote refs.
 local function list_branches(active_branch, cwd)
   local lines, err = git_lines({ "for-each-ref", "--format=%(refname:short)", "refs/heads", "refs/remotes" }, cwd)
   if not lines then
@@ -109,6 +111,7 @@ local function list_commits(ref, limit, cwd)
   return items, nil
 end
 
+-- Pick a ref, set gitsigns' diff base, and preview the current hunk inline.
 local function pick_line_diff_base_and_preview()
   local cwd = current_file_git_root()
   local active = current_branch(cwd)
@@ -152,6 +155,7 @@ end
 
 keymaps.set("n", "<C-g>lD", pick_line_diff_base_and_preview, { desc = "Line diff against ref" })
 
+-- Treat gitsigns diff as a temporary fullscreen view; q restores the layout.
 local function open_file_diff_fullscreen(base)
   local orig_win = vim.api.nvim_get_current_win()
   require("gitsigns").diffthis(base)
@@ -218,6 +222,7 @@ keymaps.set("n", "<C-g>fd", function()
 end, { desc = "File diff" })
 keymaps.set("n", "<C-g>fD", pick_diff_base_and_open, { desc = "File diff against ref" })
 
+-- Restore only the current file from the selected commit/ref.
 local function pick_ref_and_restore_file()
   local cwd = current_file_git_root()
   local active = current_branch(cwd)
@@ -283,6 +288,7 @@ keymaps.set("n", "<C-g>fr", function() require("gitsigns").reset_buffer() end, {
 
 local ns_inline = vim.api.nvim_create_namespace("gitsigns_preview_inline")
 
+-- n/N switch to hunk navigation only while a diff/inline preview is active.
 local function has_inline_preview()
   local bufnr = vim.api.nvim_get_current_buf()
   return #vim.api.nvim_buf_get_extmarks(bufnr, ns_inline, 0, -1, { limit = 1 }) > 0

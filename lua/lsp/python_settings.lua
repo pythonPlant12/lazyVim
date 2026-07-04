@@ -3,6 +3,7 @@ local M = {}
 
 local state_file = vim.fn.stdpath("state") .. "/python-lsp-settings.json"
 
+-- Defaults are the baseline; UI toggles persist only overrides in the state file.
 local defaults = {
   basedpyright = {
     basedpyright = {
@@ -113,6 +114,7 @@ function M.default_server_settings(server_name)
   return deepcopy(defaults[server_name] or { [M.server_root(server_name)] = {} })
 end
 
+-- Merge persisted overrides over defaults each time settings are applied.
 function M.server_settings(server_name)
   local default_settings = M.default_server_settings(server_name)
   local user_state = deepcopy(load_state()[server_name] or {})
@@ -132,6 +134,7 @@ function M.set_value(server_name, path, value)
   return M.server_settings(server_name)
 end
 
+-- Push runtime setting changes to already-attached Python clients.
 function M.apply_to_client(client, server_name)
   local settings = M.server_settings(server_name)
   client.settings = vim.tbl_deep_extend("force", client.settings or {}, settings)

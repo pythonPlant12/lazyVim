@@ -1,5 +1,6 @@
 local keymaps = vim.keymap
 
+-- Visual search uses a temporary yank but restores the unnamed register after.
 local function set_exact_visual_search(text)
   if not text or text == "" then
     return false
@@ -15,6 +16,7 @@ local function set_exact_visual_search(text)
   return true
 end
 
+-- Prefix grammar before ':': re = regex, c = case-sensitive, w = whole-word.
 local function parse_search_query(input)
   if not input or input == "" then
     return nil

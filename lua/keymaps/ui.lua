@@ -1,6 +1,7 @@
 local keymaps = vim.keymap
 local opts = { noremap = true, silent = true }
 
+-- UI, theme, bookmark, and toggle keymaps live here; editing motions are separate.
 keymaps.set("n", "<leader>rv", function()
   return ":IncRename " .. vim.fn.expand("<cword>")
 end, { desc = "Rename variable", expr = true })
@@ -15,6 +16,7 @@ Snacks.toggle({
 }):map("<leader>cFe")
 keymaps.set("n", "<C-b>", "<Nop>", opts)
 
+-- Bookmark prompts can change focus; capture the source window before asking for a name.
 local function toggle_bookmark_at_source()
   local source_win = vim.api.nvim_get_current_win()
   local source_buf = vim.api.nvim_win_get_buf(source_win)
@@ -88,6 +90,7 @@ vim.schedule(function()
   require("which-key").add({ { "<leader>cF", group = "format" } })
 end)
 
+-- Replace LazyVim git defaults and reserve <leader>gl for line jumps.
 vim.api.nvim_create_autocmd("User", {
   pattern = "VeryLazy",
   once = true,
@@ -146,6 +149,7 @@ keymaps.set("i", "<A-BS>", "<C-w>", { desc = "Delete previous word" })
 keymaps.set("i", "<M-Del>", "<C-w>", { desc = "Delete previous word" })
 keymaps.set("i", "<A-Del>", "<C-w>", { desc = "Delete previous word" })
 
+-- Reuse Comment.nvim motions so Ctrl-/ variants behave the same across terminals.
 local function comment_line()
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("gcc", true, false, true), "m", false)
 end
@@ -176,6 +180,7 @@ keymaps.set("n", "gl", function()
   pcall(vim.cmd, "normal! zv")
 end, { desc = "Go to line" })
 
+-- Theme selection persists to state and mirrors the matching LazyGit theme.
 local theme_state_file = vim.fn.stdpath("state") .. "/theme"
 
 local function save_theme(value)
@@ -400,6 +405,7 @@ keymaps.set("n", "<leader>ut", function()
   end)
 end, { desc = "Select default theme" })
 
+-- Toggle diagnostic virtual text without changing signs, severity, or float behavior.
 Snacks.toggle({
   name = "Inline Diagnostics",
   get = function()
@@ -414,6 +420,7 @@ Snacks.toggle({
   end,
 }):map("<leader>ui")
 
+-- Apply the persisted inlay-hint toggle to current and future LSP buffers.
 local function apply_inlay_hints(enabled, bufnr)
   if not vim.lsp.inlay_hint then
     return
@@ -478,6 +485,7 @@ vim.keymap.set("n", "<leader>ue", function()
   require("neo-tree.command").execute({ toggle = true, reveal = true, dir = LazyVim.root() })
 end, { desc = "Reveal file in tree" })
 
+-- Toggle Neo-tree without stealing focus if the tree is already visible in this tab.
 vim.keymap.set("n", "<leader>e", function()
   local cur_win = vim.api.nvim_get_current_win()
   local neotree_win = nil

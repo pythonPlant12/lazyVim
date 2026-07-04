@@ -8,6 +8,7 @@
 vim.api.nvim_create_autocmd("WinEnter", {
   group = vim.api.nvim_create_augroup("FloatNoCursorLine", { clear = true }),
   callback = function()
+    -- Cursorline is useful in edit windows but noisy inside floats/tool panes.
     local cfg = vim.api.nvim_win_get_config(0)
     if cfg.relative ~= "" then
       vim.wo.cursorline = false
@@ -20,4 +21,3 @@ vim.api.nvim_create_autocmd("WinEnter", {
     end
   end,
 })
-

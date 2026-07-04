@@ -3,6 +3,7 @@
 -- Jump between Neovim buffers and the LazyGit terminal/edit integration.
 local M = {}
 
+-- One-shot flag: next LazyGit edit opens in a new Neovim tab.
 local _open_tab_next = false
 
 function M.set_open_tab_next()
@@ -20,6 +21,7 @@ local function is_lazygit_buf(buf)
     or (type(cmd) == "string" and cmd:find("lazygit", 1, true) ~= nil)
 end
 
+-- Ask LazyGit to edit the selected file; open_same_tab consumes the tab flag.
 function M.open_tab_next_and_edit()
   _open_tab_next = true
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
@@ -53,6 +55,7 @@ function M.jump_to_lazygit()
   return false
 end
 
+-- Diff tabs remember the origin so q can restore your previous view.
 local function capture_origin()
   local ok_cursor, cursor = pcall(vim.api.nvim_win_get_cursor, 0)
   local ok_view, view = pcall(vim.fn.winsaveview)
@@ -125,6 +128,7 @@ local function git_root_for(path)
   return result[1]
 end
 
+-- Git revisions are readonly scratch buffers, not files on disk.
 local function make_rev_buf(name, lines, ft)
   local buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_name(buf, name)
@@ -137,6 +141,7 @@ local function make_rev_buf(name, lines, ft)
   return buf
 end
 
+-- Create a temporary two-pane diff tab and bind q to close/restore.
 function M._open_two_buf_diff(left_name, left_lines, right_name, right_lines, ft, opts)
   local origin = capture_origin()
   vim.cmd("tabnew")
@@ -223,6 +228,7 @@ function M.open(path, line)
   end
 end
 
+-- Same-tab opens reuse a real editing window and avoid terminal/float windows.
 local function normal_window_in_current_tab()
   for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
     local cfg = vim.api.nvim_win_get_config(win)
@@ -266,6 +272,7 @@ local function restore_cursor_col(col)
   vim.schedule(restore)
 end
 
+-- LazyGit edit hook opens in this tab unless the one-shot tab flag is set.
 function M.open_same_tab(path, line, col)
   if not path or path == "" then return end
 

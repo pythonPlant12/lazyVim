@@ -2,6 +2,7 @@
 
 local uv = vim.uv
 
+-- Formatting setup prefers project-local tools and adds a custom static class wrapper.
 local function normalize(path)
   if not path or path == "" then
     return nil
@@ -70,6 +71,7 @@ local function active_venv()
   return nil
 end
 
+-- Prefer ruff from the project or active virtualenv before falling back to PATH/Mason.
 local function ruff_command(_, ctx)
   local root = vim.fs.root(ctx.dirname, {
     "pyproject.toml",
@@ -154,6 +156,7 @@ local function wrap_class_tokens(tokens, indent, width)
   return wrapped
 end
 
+-- Only wrap static class="..." values; dynamic/template expressions are skipped below.
 local function static_class_attr(line, start)
   local attr_start, eq_end = line:find("class%s*=", start)
   while attr_start do
@@ -279,6 +282,7 @@ local function wrap_static_class_line(line, ctx, state, ft)
   return lines
 end
 
+-- Formatter callback rewrites long static class attributes while preserving other lines.
 local function format_static_html_vue_classes(_, ctx, lines, callback)
   local formatted = {}
   local changed = false

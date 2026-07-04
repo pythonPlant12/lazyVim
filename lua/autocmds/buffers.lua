@@ -1,4 +1,5 @@
 do
+  -- Small buffer history powers the custom alternate-buffer picker/navigation.
   vim.g.buf_history = vim.g.buf_history or {}
 
   local function push_buf_history(bufnr)

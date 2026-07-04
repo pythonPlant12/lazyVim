@@ -1,3 +1,4 @@
+-- Language icons use explicit colors so file chips stay readable across themes.
 local language_icon_theme_colors = {
   ["default-dark"] = { typescript = "#4FA6E8", javascript = "#F0D55C", python = "#5DADE2" },
   ["default-white"] = { typescript = "#256FB8", javascript = "#B8860B", python = "#2F6F9F" },
@@ -24,6 +25,7 @@ local function language_icon_colors()
 end
 
 local function apply_language_icon_hl()
+  -- Reapply after colorscheme changes because MiniIcons highlight groups are global.
   local colors = language_icon_colors()
   vim.api.nvim_set_hl(0, "MiniIconsLanguageTypeScript", { fg = colors.typescript })
   vim.api.nvim_set_hl(0, "MiniIconsLanguageJavaScript", { fg = colors.javascript })
@@ -31,6 +33,7 @@ local function apply_language_icon_hl()
 end
 
 local function language_icon_extension_overrides()
+  -- MiniIcons defaults are adjusted for common TS/JS/Python variants.
   return {
     ts = { glyph = "󰛦", hl = "MiniIconsLanguageTypeScript" },
     tsx = { glyph = "", hl = "MiniIconsLanguageTypeScript" },
@@ -50,6 +53,7 @@ return {
     "LazyVim/LazyVim",
     opts = {
       icons = {
+        -- Kind icons are shared by completion, breadcrumbs, and diagnostics UI.
         kinds = {
           Text          = "󰉿 ",
           Method        = "󰆧 ",

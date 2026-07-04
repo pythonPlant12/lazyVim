@@ -1,6 +1,7 @@
 ---@diagnostic disable: undefined-global
 
 local function focus_window_for_location(grug_buf, filename)
+  -- After opening a result, focus the existing file window instead of grug-far.
   if not filename or filename == "" then
     return
   end
@@ -67,6 +68,7 @@ return {
         close       = { n = "<localleader>C" },
       },
       prefills = { flags = "--fixed-strings" },
+      -- Result folding hides context while editing replacements.
       folding = { enabled = false },
     },
     config = function(_, opts)
@@ -87,6 +89,7 @@ return {
       vim.api.nvim_create_autocmd("FileType", {
         pattern = "grug-far",
         callback = function(ev)
+          -- Keep the search panel narrow enough to leave code visible.
           local width = math.max(40, math.floor(vim.o.columns * 0.25))
           pcall(vim.api.nvim_win_set_width, vim.fn.bufwinid(ev.buf), width)
 
@@ -97,6 +100,7 @@ return {
 
           vim.schedule(function()
             if vim.api.nvim_buf_is_valid(ev.buf) then
+              -- Replace Enter after grug-far installs defaults so fallback still works.
               local enter_fallback = nil
               for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(ev.buf, "n")) do
                 if mapping.lhs == "<CR>" or mapping.lhs:lower() == "<enter>" then
@@ -124,10 +128,12 @@ return {
       end
 
       local function open_grug(opts)
+        -- Reuse one grug-far instance per tab instead of stacking panels.
         return grug_far_reuse.open_for_buffer(vim.api.nvim_get_current_buf(), opts)
       end
 
       local function grug_visual(extra_prefills)
+        -- Single-word visual searches default to whole-word matching.
         local s = vim.fn.getpos("'<")
         local e = vim.fn.getpos("'>")
         local sr, er = s[2], e[2]

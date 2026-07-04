@@ -2,6 +2,7 @@
 -- Default options that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/options.lua
 -- Add any additional options here
 
+-- Core editing defaults: keep navigation predictable and avoid swapfile clutter.
 vim.o.swapfile = false
 vim.opt.scrolloff=8
 
@@ -32,10 +33,12 @@ vim.o.pumheight = 20
 vim.o.pumblend = 10
 vim.o.winblend = 10
 
+-- Global toggles consumed by LazyVim/conform/custom ESLint and picker helpers.
 vim.g.autoformat = false
 vim.g.eslint_autosave = false
 vim.g.lazyvim_picker = "snacks"
 
+-- Detect Django/Jinja template HTML so syntax, Treesitter, and LSP attach correctly.
 local function normalize_template_path(path)
   if not path or path == "" then
     return ""

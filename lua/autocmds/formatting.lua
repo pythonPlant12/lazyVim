@@ -2,6 +2,7 @@ vim.api.nvim_create_autocmd("BufWritePre", {
   group = vim.api.nvim_create_augroup("EslintAutoFix", { clear = true }),
   pattern = { "*.js", "*.jsx", "*.ts", "*.tsx", "*.vue", "*.mjs", "*.cjs" },
   callback = function()
+    -- ESLint-on-save is controlled by the UI toggle and only runs if attached.
     if vim.g.eslint_autosave == false then return end
     local clients = vim.lsp.get_clients({ name = "eslint", bufnr = 0 })
     if #clients > 0 then

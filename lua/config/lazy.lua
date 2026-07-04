@@ -7,6 +7,7 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(vim.env.LAZY or lazypath)
 
+-- Custom format/autofix toggles handle ESLint; basedpyright is the primary Python LSP.
 vim.g.lazyvim_eslint_auto_format = false
 vim.g.lazyvim_python_lsp = "basedpyright"
 
@@ -16,7 +17,7 @@ require("lazy").setup({
     { "LazyVim/LazyVim", import = "lazyvim.plugins", opts = {
       colorscheme = "solarized-osaka",
     } },
-    -- import any extras modules here
+    -- LazyVim extras enable only the language/features used by this config.
     { import = "lazyvim.plugins.extras.formatting.prettier" },
     { import = "lazyvim.plugins.extras.util.mini-hipatterns" },
     { import = "lazyvim.plugins.extras.ai.copilot" },

@@ -1,6 +1,7 @@
 ---@diagnostic disable: undefined-global
 
 local function disable_template_document_highlight(client, bufnr)
+  -- Template buffers get noisy document highlights from html/css/emmet servers.
   local ft = vim.bo[bufnr].filetype
   if ft == "html" or ft == "htmldjango" or ft == "jinja" or ft == "jinja2" then
     client.server_capabilities.documentHighlightProvider = false
@@ -24,6 +25,7 @@ return {
     opts = function(_, opts)
       opts = opts or {}
       opts.servers = opts.servers or {}
+      -- Django templates share most HTML tooling but use their own filetype.
       local html_filetypes = { "html", "htmldjango" }
 
       opts.servers.html = vim.tbl_deep_extend("force", opts.servers.html or {}, {

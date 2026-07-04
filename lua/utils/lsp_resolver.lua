@@ -119,6 +119,7 @@ local function python_bin_dir_name()
 end
 
 M.frontend_markers = {
+  -- Markers are intentionally broad so monorepo subprojects get local roots.
   vtsls = {
     "tsconfig.json",
     "jsconfig.json",
@@ -144,6 +145,7 @@ M.frontend_markers = {
 }
 
 M.python_project_markers = {
+  -- Python roots prefer tool config over the editor cwd when available.
   "pyproject.toml",
   "ruff.toml",
   ".ruff.toml",
@@ -168,6 +170,7 @@ M.python_venv_config_markers = {
 M.python_venv_dirs = { ".venv", "venv", ".env" }
 
 function M.workspace_root()
+  -- Treat the current working directory as the workspace boundary for all searches.
   return normalize(vim.fn.getcwd()) or normalize(vim.env.HOME) or "/"
 end
 
@@ -190,6 +193,7 @@ function M.nearest_root_by_markers(bufnr, markers)
 end
 
 function M.eslint_root(bufnr)
+  -- Prefer the nearest real ESLint config, then package roots with ignore files.
   local ignore_files = { ".gitignore", ".eslintignore" }
   local fname = vim.api.nvim_buf_get_name(bufnr)
   local file_dir = dir_of(fname)
@@ -235,6 +239,7 @@ function M.eslint_has_project_config(bufnr)
 end
 
 function M.active_venv_dir()
+  -- Shell-provided environments are used only when no project venv is found.
   local venv = normalize(vim.env.VIRTUAL_ENV)
   if venv and is_dir(venv) then
     return venv
@@ -247,6 +252,7 @@ function M.active_venv_dir()
 end
 
 function M.python_venv_for_root(root)
+  -- Project-local venvs win over shell/global environments.
   local nroot = normalize(root)
   if nroot then
     for _, name in ipairs(M.python_venv_dirs) do
@@ -280,6 +286,7 @@ function M.python_exec_from_venv(venv_dir, executable)
 end
 
 function M.python_root_info(bufnr)
+  -- Ruff/Python LSP roots fall back to cwd so loose files still get tooling.
   local fname = type(bufnr) == "string" and bufnr or vim.api.nvim_buf_get_name(bufnr)
   local file_dir = dir_of(fname)
   local root = M.workspace_root()

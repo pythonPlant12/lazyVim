@@ -3,6 +3,7 @@ return {
     "mbbill/undotree",
     cmd = "UndotreeToggle",
     init = function()
+      -- Layout 3 keeps the tree and diff preview side-by-side.
       vim.g.undotree_WindowLayout = 3
       vim.g.undotree_SetFocusWhenToggle = 1
       vim.g.undotree_SplitWidth = 36
@@ -11,6 +12,7 @@ return {
         function! g:Undotree_CustomMap() abort
           augroup UserUndotreeAutoPreview
             autocmd! * <buffer>
+            " Preview the selected undo state while moving inside Undotree.
             autocmd CursorMoved <buffer> if exists('t:undotree') | silent! call t:undotree.ActionEnter() | endif
           augroup END
         endfunction
@@ -23,6 +25,7 @@ return {
   {
     "lewis6991/gitsigns.nvim",
     init = function()
+      -- Keep blame/inlay hint colors aligned with the active theme palette.
       local function apply_blame_hl()
         local theme = type(vim.g.theme_custom_hl) == "table" and vim.g.theme_custom_hl.name == vim.g.colors_name and vim.g.theme_custom_hl or {}
         local blame_fg = theme.blame_fg
@@ -37,6 +40,7 @@ return {
       current_line_blame = true,
       on_attach = function(bufnr)
         vim.schedule(function()
+          -- Remove LazyVim's default hunk maps; custom git maps live under <C-g>.
           local leader_g_maps = {
             "<leader>ghs", "<leader>ghr", "<leader>ghS", "<leader>ghu",
             "<leader>ghR", "<leader>ghp", "<leader>ghb", "<leader>ghB",

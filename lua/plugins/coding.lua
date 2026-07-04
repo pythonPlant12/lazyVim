@@ -1,11 +1,13 @@
 ---@diagnostic disable: undefined-global
 
 return {
+  -- Inline rename command for LSP symbols.
   {
     "smjonas/inc-rename.nvim",
     cmd = "IncRename",
     config = true,
   },
+  -- Surround mappings are loaded lazily but keep visual `as` available.
   {
     "tpope/vim-surround",
     event = "VeryLazy",
@@ -13,6 +15,7 @@ return {
       vim.keymap.set("x", "as", "<Plug>VSurround", { remap = true, silent = true, desc = "Add surround" })
     end,
   },
+  -- Shows the containing function/class at the top while scrolling deep code.
   {
     "nvim-treesitter/nvim-treesitter-context",
     event = "VeryLazy",
@@ -34,7 +37,7 @@ return {
       opts.sources = opts.sources or {}
       opts.sources.transform_items = function(_, items)
         for _, item in ipairs(items) do
-          -- Icons are now shown and will use BlinkCmpKind* highlights
+          -- Treat interfaces like classes so completion icons use the desired highlight.
           if item.kind == 4 then
             item.kind = 7
           end
@@ -42,7 +45,7 @@ return {
         return items
       end
 
-      --
+      -- Tab moves through the completion menu first, then snippets/AI/fallback.
       opts.keymap["<Tab>"] = {
         function(cmp)
           if cmp.is_menu_visible() then

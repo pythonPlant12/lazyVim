@@ -12,6 +12,7 @@ return {
     "zbirenbaum/copilot.lua",
   },
   opts = {
+    -- Avante uses OpenAI with Snacks-backed selectors to match the rest of the UI.
     provider = "openai",
     providers = {
       openai = {

@@ -14,6 +14,7 @@ return {
         indicator = { style = "none" },
         diagnostics = false,
       })
+      -- Bufferline acts as a tabline, so derive colors from the active theme manually.
       local function palette()
         local name = vim.g.colors_name or ""
         if name == "rose-pine-dark-dimmed" then
@@ -82,6 +83,7 @@ return {
             return
           end
 
+          -- Add one space after the current line number for a less cramped gutter.
           statuscolumn._current_lnum_left_offset = true
           local original_get = statuscolumn.get
           statuscolumn.get = function()
@@ -165,6 +167,7 @@ return {
     },
     opts = {
       words = { enabled = false },
+      -- LazyGit edit actions route through scripts/lazygit-edit to open files in Neovim.
       lazygit = {
         win = {
           width = 0,
@@ -183,6 +186,7 @@ return {
           },
         },
       },
+      -- Enable inline image/PDF previews for docs and picker preview panes.
       image = {
         enabled = true,
         formats = {
@@ -212,6 +216,7 @@ return {
         },
       },
       picker = {
+        -- File-like pickers share preview/open behavior and project-wide excludes.
         sources = {
           buffers = {
             confirm = function(picker, item)
@@ -250,6 +255,7 @@ return {
           explorer = {
             preview = snacks_file_preview_with_video,
           },
+          -- Grep starts literal and case-insensitive; local toggles opt into regex/case/word.
           grep = {
             hidden = false,
             ignored = true,
@@ -358,6 +364,7 @@ return {
             end,
           },
         },
+        -- Custom confirm opens paths tab-aware and generates thumbnails for videos.
         actions = {
           toggle_camel_case = toggle_grep_camel_case,
           toggle_case = function(picker)
@@ -404,6 +411,7 @@ return {
             apply_item_pos(item)
           end,
         },
+        -- Shift-Enter opens picker results in a new tab.
         win = {
           input = {
             keys = {

@@ -7,6 +7,7 @@ return {
   build = "make tiktoken",
   cmd = "CopilotChat",
   config = function(_, opts)
+    -- Lazy-load chat UI only when explicitly opened.
     require("CopilotChat").setup(opts)
   end,
   keys = {

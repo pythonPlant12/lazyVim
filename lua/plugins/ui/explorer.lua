@@ -1,7 +1,7 @@
 local grug_far_reuse = require("utils.grug_far_reuse")
 
 return {
-  -- neo-tree: always show hidden files
+  -- Neo-tree is tab-aware and reveals the current file with hidden files visible.
   {
     "nvim-neo-tree/neo-tree.nvim",
     keys = {
@@ -11,6 +11,7 @@ return {
           local manager = require("neo-tree.sources.manager")
           local state = manager.get_state("filesystem", nil, nil)
           if state then
+            -- Neo-tree keeps one state object; clear stale windows from other tabs first.
             local cur_tab_wins = vim.api.nvim_tabpage_list_wins(0)
             if state.winid and not vim.tbl_contains(cur_tab_wins, state.winid) then
               state.winid = nil
@@ -27,6 +28,7 @@ return {
           local manager = require("neo-tree.sources.manager")
           local state = manager.get_state("filesystem", nil, nil)
           if state then
+            -- Same stale-state guard as <leader>e for the alternate explorer key.
             local cur_tab_wins = vim.api.nvim_tabpage_list_wins(0)
             if state.winid and not vim.tbl_contains(cur_tab_wins, state.winid) then
               state.winid = nil
@@ -40,6 +42,7 @@ return {
     },
     opts = function(_, opts)
 
+      -- Detail toggle temporarily lowers renderer width thresholds, then restores originals.
       local detail_components = {
         file_size = true,
         type = true,
@@ -141,6 +144,7 @@ return {
         vim.fn.setreg("+", abs)
         vim.notify(abs, vim.log.levels.INFO, { title = "Yanked absolute path" })
       end
+      -- Delete bookmarks for selected file or every file under selected directory.
       opts.window.mappings["<C-b>d"] = function(state)
         local node = state.tree:get_node()
         if not node then return end
@@ -193,6 +197,7 @@ return {
 
       opts.filesystem = opts.filesystem or {}
       opts.filesystem.commands = opts.filesystem.commands or {}
+      -- Keep hidden/gitignored files visible; searching/filtering is handled elsewhere.
       opts.filesystem.filtered_items = {
         visible = true,
         hide_dotfiles = false,
@@ -202,6 +207,7 @@ return {
       opts.filesystem.bind_to_cwd = false
       opts.filesystem.window = opts.filesystem.window or {}
       opts.filesystem.window.mappings = opts.filesystem.window.mappings or {}
+      -- Run grug-far scoped to the selected file/directory from Neo-tree.
       opts.filesystem.commands.grug_far_search_node = function(state)
         local node = state.tree:get_node()
         if not node or node.type == "message" then

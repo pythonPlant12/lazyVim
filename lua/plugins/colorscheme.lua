@@ -1,3 +1,4 @@
+-- Theme selection is persisted in state so <leader>ut survives restarts.
 local state_file = vim.fn.stdpath("state") .. "/theme"
 local f = io.open(state_file, "r")
 local cs
@@ -17,11 +18,13 @@ if f then
   end
 end
 
+-- No saved theme: match the macOS light/dark appearance.
 if not cs then
   local appearance = vim.fn.system("defaults read -g AppleInterfaceStyle 2>/dev/null"):gsub("%s+", "")
   cs = appearance == "Dark" and "default-dark" or "default-white"
 end
 
+-- Set background/lualine hint before UI plugins derive their palettes.
 do
   local light_schemes = {
     ["default-white"] = true,
@@ -41,6 +44,7 @@ do
   end
 end
 
+-- Transparent themes need blended popups; opaque themes should stay solid.
 local function is_transparent_theme_name(name)
   return name == "islands-dark"
     or name == "islands-white"
@@ -70,6 +74,7 @@ return {
       local transparent = is_transparent_theme_name(cs)
       local blend = transparent and 10 or 0
 
+      -- Keep Snacks float/picker opacity aligned with the active theme.
       opts.styles = opts.styles or {}
       local function merge_style(name, style)
         opts.styles[name] = vim.tbl_deep_extend("force", opts.styles[name] or {}, style)
@@ -101,6 +106,7 @@ return {
       end
 
       opts.scroll = opts.scroll or {}
+      -- Disable animated scroll to keep cursor movement smooth.
       opts.scroll.enabled = false
       return opts
     end,

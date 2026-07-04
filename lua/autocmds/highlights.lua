@@ -1,3 +1,4 @@
+-- Theme helpers keep custom highlights scoped to themes that need overrides.
 local function is_islands_or_catppuccin()
   local cs = vim.g.colors_name or ""
   -- exclude rose-pine variants (islands-rose-pine-light/dark have their own colorscheme files)
@@ -13,6 +14,7 @@ local function is_transparent_theme()
     or cs:find("^islands%-rose%-pine") ~= nil
 end
 
+-- Transparent themes keep floats blended; opaque themes force normal backgrounds.
 local function apply_theme_blend()
   local blend = is_transparent_theme() and 10 or 0
   vim.o.winblend = blend
@@ -57,6 +59,7 @@ local function is_default_theme()
   return cs == "default-dark" or cs == "default-white"
 end
 
+-- Default themes need explicit opaque UI backgrounds for floats, pickers, and context windows.
 local function apply_default_opaque_hl()
   if not is_default_theme() then return end
 
@@ -181,6 +184,7 @@ local function apply_default_opaque_hl()
   end
 end
 
+-- Reapply on startup/theme/window events, not cursor movement, to avoid motion lag.
 local function schedule_default_opaque_hl()
   if not is_default_theme() then return end
 
@@ -190,6 +194,7 @@ local function schedule_default_opaque_hl()
   vim.defer_fn(apply_default_opaque_hl, 100)
 end
 
+-- Snacks computes diff groups lazily; patch them after it is available.
 local function apply_snacks_diff_hl()
   if Snacks == nil then return end
   local theme = type(vim.g.theme_custom_hl) == "table" and vim.g.theme_custom_hl.name == vim.g.colors_name and vim.g.theme_custom_hl or {}
@@ -216,6 +221,7 @@ local function apply_snacks_diff_hl()
   })
 end
 
+-- Keep keywords visually plain across Treesitter and LSP semantic token groups.
 local plain_keyword_groups = {
   "@conditional",
   "@keyword",
@@ -281,6 +287,7 @@ local function schedule_plain_keyword_hl()
   end
 end
 
+-- Normalize semantic token colors so LSP overlays do not fight Treesitter colors.
 local function apply_semantic_token_hl()
   local function fg(name)
     local group = vim.api.nvim_get_hl(0, { name = name, link = false })
@@ -373,6 +380,7 @@ local function color_from_hl(group, key, fallback)
   return value and string.format("#%06x", value) or fallback
 end
 
+-- Pull colors from the active colorscheme unless a theme provided a custom palette.
 local function current_custom_hl_palette()
   if type(vim.g.theme_custom_hl) == "table" and vim.g.theme_custom_hl.name == vim.g.colors_name then
     return vim.g.theme_custom_hl
@@ -448,6 +456,7 @@ local function current_custom_hl_palette()
   }
 end
 
+-- Transparent variants clear backgrounds that plugins often reintroduce later.
 local function apply_transparent_hl()
   if not is_transparent_theme() then return end
 
@@ -526,6 +535,7 @@ local function schedule_transparent_hl()
   vim.defer_fn(apply_transparent_hl, 50)
 end
 
+-- Central place for custom UI colors shared by completion, pickers, Git, folds, and Neo-tree.
 local function apply_custom_hl()
   apply_theme_blend()
 
@@ -717,6 +727,7 @@ local function apply_custom_hl()
   end
 end
 
+-- Colorschemes reset highlight groups, so reapply all custom layers afterward.
 vim.api.nvim_create_autocmd("ColorScheme", {
   group = vim.api.nvim_create_augroup("CustomHl", { clear = true }),
   callback = function()
@@ -736,6 +747,7 @@ schedule_semantic_token_hl()
 schedule_default_opaque_hl()
 schedule_transparent_hl()
 
+-- Some plugins create highlights after load/attach; delayed reapplies keep them aligned.
 vim.api.nvim_create_autocmd({ "FileType", "BufEnter", "TermOpen", "LspAttach" }, {
   group = vim.api.nvim_create_augroup("PlainKeywordHl", { clear = true }),
   callback = function()
@@ -745,11 +757,13 @@ vim.api.nvim_create_autocmd({ "FileType", "BufEnter", "TermOpen", "LspAttach" },
   end,
 })
 
+-- Window events catch context/lazygit floating windows without doing work on every move.
 vim.api.nvim_create_autocmd({ "WinEnter", "BufWinEnter" }, {
   group = vim.api.nvim_create_augroup("DefaultOpaqueHl", { clear = true }),
   callback = schedule_default_opaque_hl,
 })
 
+-- Patch Snacks' default diff highlight setup so picker diffs match the active theme.
 vim.api.nvim_create_autocmd("User", {
   pattern = { "VeryLazy", "LazyLoad" },
   group = vim.api.nvim_create_augroup("DefaultOpaquePluginHl", { clear = true }),
@@ -786,6 +800,7 @@ vim.api.nvim_create_autocmd("User", {
   end,
 })
 
+-- Lazy.nvim has its own buffer highlights; align them with the active light/dark mode.
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "lazy",
   group = vim.api.nvim_create_augroup("LazyHl", { clear = true }),
@@ -803,6 +818,7 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
+-- Reuse the Search group for grug-far result matches after colorscheme changes.
 local function apply_grugfar_hl()
   local search = vim.api.nvim_get_hl(0, { name = "Search", link = false })
   vim.api.nvim_set_hl(0, "GrugFarResultsMatch", { bg = search.bg, fg = search.fg, bold = search.bold })
@@ -813,6 +829,7 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 })
 apply_grugfar_hl()
 
+-- Align HTML/Vue/Jinja syntax and semantic tokens with the main theme palette.
 local function apply_html_hl()
   if not is_islands_or_catppuccin() then return end
   local hl = vim.api.nvim_set_hl

@@ -1,6 +1,7 @@
 -- Centralize TypeScript/Vue LSP settings shared by keymaps and frontend LSP setup.
 local M = {}
 
+-- State is per project root so disabling type checks in one repo stays local.
 local state_file = vim.fn.stdpath("state") .. "/typescript-lsp-settings.json"
 local default_type_check_level = "project"
 local managed_clients = { vtsls = true, vue_ls = true }
@@ -120,6 +121,7 @@ function M.apply_to_client(client)
   return settings
 end
 
+-- When type checking is off, filter diagnostics at publish time and clear stale ones.
 local function filter_diagnostics(client, diagnostics)
   if not M.is_managed_client(client) or M.type_check_enabled(client_root(client)) then
     return diagnostics
@@ -166,6 +168,7 @@ function M.clients_for_root(root)
   end, vim.lsp.get_clients())
 end
 
+-- Re-ask enabled clients for diagnostics; disabled clients get their namespace reset.
 function M.apply_to_root(root)
   local enabled = M.type_check_enabled(root)
   for _, client in ipairs(M.clients_for_root(root)) do

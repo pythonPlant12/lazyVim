@@ -2,10 +2,12 @@
 
 local resolver = require("utils.lsp_resolver")
 
+-- Shared LSP UX: popup sizing, root diagnostics, and inlay-hint safety guards.
 local function max_popup_size()
   return math.floor(vim.o.columns * 0.5), math.floor(vim.o.lines * 0.3)
 end
 
+-- :CheckLsp reports the roots/executables this config resolved for the current buffer.
 local function command_check_lsp()
   local bufnr = vim.api.nvim_get_current_buf()
   local file = vim.api.nvim_buf_get_name(bufnr)
@@ -64,6 +66,7 @@ local function command_check_lsp()
   vim.notify(table.concat(lines, "\n"), vim.log.levels.INFO, { title = "CheckLsp" })
 end
 
+-- Guard against stale/out-of-range inlay hints from servers after fast buffer edits.
 local function install_inlay_hint_guard()
   if not vim.lsp.inlay_hint or vim.g.inlay_hint_guard_installed then
     return

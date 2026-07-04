@@ -20,7 +20,7 @@ keymaps.set("n", "-", "C-x")
 -- Select all
 keymaps.set("n", "<C-a>", "gg<S-v>G")
 
--- Jumplist
+-- Jumplist navigation jumps to already-visible buffers in other tabs when possible.
 local function smart_jump(motion)
   tab_jump.jump(motion)
 end
@@ -44,6 +44,7 @@ keymaps.set("n", "sv", ":vsplit<Return>", opts)
 
 local resize_mode_active = false
 
+-- Resize mode installs temporary global maps, then restores inverted j/k on exit.
 local function exit_resize_mode()
   if not resize_mode_active then return end
   resize_mode_active = false
@@ -118,6 +119,7 @@ keymaps.set("v", "s", '"_s', opts)
 keymaps.set("v", "p", '"_dP', opts)
 keymaps.set("v", "P", '"_dP', opts)
 
+-- Custom B/W delete/change motions respect the remapped line-start/end behavior.
 local function delete_range(start_row, start_col, end_row, end_col, enter_insert)
   vim.api.nvim_buf_set_text(0, start_row, start_col, end_row, end_col, { "" })
   vim.api.nvim_win_set_cursor(0, { start_row + 1, start_col })
@@ -188,6 +190,7 @@ local function node_type_matches(kind, node_type)
   return kind == "function" and function_types[node_type] or kind == "class" and class_types[node_type]
 end
 
+-- Prefer Treesitter for containing function/class edits, with LSP as fallback below.
 local function treesitter_containing_range(kind)
   local ok, node = pcall(vim.treesitter.get_node)
   if not ok or not node then return nil end
@@ -318,6 +321,7 @@ keymaps.set("n", "<leader>fP", function()
   vim.notify("Copied: " .. abs, vim.log.levels.INFO, { title = "Path" })
 end, { desc = "Copy absolute path" })
 
+-- Neo-tree buffers expose a selected node path instead of a normal file buffer path.
 local function path_under_cursor_or_buffer()
   if vim.bo.filetype == "neo-tree" then
     local ok, state = pcall(function()
@@ -468,6 +472,7 @@ local function smart_buf_goto(bufnr)
   vim.api.nvim_set_current_buf(bufnr)
 end
 
+-- Buffer history comes from autocmds/buffers.lua and stays tab-aware via tab_jump.
 local function goto_alt_buf()
   local cur = vim.api.nvim_get_current_buf()
 

@@ -1,10 +1,11 @@
--- Language > Python keymaps
+-- Language keymaps: Python, TypeScript, indentation, diagnostics, and LSP toggles.
 
 local keymaps = vim.keymap
 local python_lsp_settings = require("lsp.python_settings")
 local typescript_lsp_settings = require("lsp.typescript_settings")
 
 local function get_pyright_client()
+  -- basedpyright is preferred, but pyright fallback keeps helpers usable.
   for _, name in ipairs({ "basedpyright", "pyright" }) do
     local clients = vim.lsp.get_clients({ bufnr = 0, name = name })
     if #clients > 0 then return clients[1], name end
@@ -37,6 +38,7 @@ local function with_python_client(fn)
 end
 
 local function apply_python_server_value(client, server_name, path, value)
+  -- Runtime Python LSP setting changes are also persisted by python_settings.
   python_lsp_settings.set_value(server_name, path, value)
   return python_lsp_settings.apply_to_client(client, server_name)
 end
@@ -129,6 +131,7 @@ local function walk_ancestors(callback)
 end
 
 local function read_project_type_checking_mode(server_name)
+  -- Project config wins over defaults when no per-user override exists.
   return walk_ancestors(function(dir)
     local content = read_config_file(dir .. "/pyrightconfig.json")
     if content then
@@ -145,6 +148,7 @@ local function read_project_type_checking_mode(server_name)
 end
 
 local function read_python_indent_config(dir)
+  -- Match Python indentation to Ruff/pyproject when present.
   for _, name in ipairs({ "ruff.toml", ".ruff.toml" }) do
     local content = read_config_file(dir .. "/" .. name)
     if content then
@@ -184,6 +188,7 @@ local function strip_json_comments(text)
 end
 
 local function read_js_indent_config(dir)
+  -- Match JS/TS indentation to Biome, Prettier, or package.json config.
   for _, name in ipairs({ "biome.json", "biome.jsonc" }) do
     local raw = read_config_file(dir .. "/" .. name)
     if raw then
@@ -220,6 +225,7 @@ local function read_js_indent_config(dir)
 end
 
 local function read_html_indent_config(dir)
+  -- HTML/template indentation follows the same frontend formatter configs.
   for _, name in ipairs({ "biome.json", "biome.jsonc" }) do
     local raw = read_config_file(dir .. "/" .. name)
     if raw then
@@ -277,6 +283,7 @@ local function get_typescript_clients()
 end
 
 local function with_typescript_project_clients(fn)
+  -- Apply TypeScript toggles once per root, even with both vtsls and vue_ls attached.
   if not js_filetypes[vim.bo.filetype] then
     vim.notify("Not a TypeScript/Vue buffer", vim.log.levels.WARN, { title = "TypeScript" })
     return
@@ -309,6 +316,7 @@ local html_filetypes = {
 local auto_indent_filetypes = vim.tbl_extend("force", { python = true }, js_filetypes, html_filetypes)
 
 local function read_project_indent()
+  -- Prefer formatter config, then fall back to detecting indentation from the buffer.
   local ft = vim.bo.filetype
   local reader
   if ft == "python" then
@@ -323,6 +331,7 @@ local function read_project_indent()
 end
 
 local function detect_indent()
+  -- Lightweight fallback: infer the most common small indentation delta.
   local lines = vim.api.nvim_buf_get_lines(0, 0, math.min(200, vim.api.nvim_buf_line_count(0)), false)
   local counts = {}
   local prev_indent = 0
@@ -346,6 +355,7 @@ local function detect_indent()
 end
 
 keymaps.set("n", "<leader>Lpt", function()
+  -- Python type-check level can override project config without editing files.
   with_python_client(function(client, name)
     local modes = { "off", "basic", "standard", "strict" }
     if name == "basedpyright" then
@@ -371,6 +381,7 @@ keymaps.set("n", "<leader>Lpt", function()
 end, { desc = "Type check level" })
 
 keymaps.set("n", "<leader>LTt", function()
+  -- TypeScript type-checking is a per-project-root runtime setting.
   with_typescript_project_clients(function(roots)
     local first_level = typescript_lsp_settings.type_check_level(roots[1])
     local same_level = true
@@ -425,6 +436,7 @@ keymaps.set("n", "<leader>Lpb", function()
 end, { desc = "Python write baseline" })
 
 local function python_snacks_toggle(path, name, lhs)
+  -- Snack toggles share the same persistence path as manual selectors.
   Snacks.toggle({
     name = name,
     get = function()
@@ -449,6 +461,7 @@ python_snacks_toggle({ "analysis", "inlayHints", "functionReturnTypes" },       
 python_snacks_toggle({ "analysis", "inlayHints", "genericTypes" },              "Generic type hints",          "<leader>Lpg")
 
 keymaps.set("n", "<leader>LpV", function()
+  -- Python environment picker updates basedpyright and restarts ty if needed.
   local resolver = require("utils.lsp_resolver")
   local uv = vim.uv
   local root = resolver.workspace_root() or vim.fn.getcwd()
@@ -544,6 +557,7 @@ keymaps.set("n", "<leader>LpV", function()
 end, { desc = "Select Python virtual environment" })
 
 keymaps.set("n", "<leader>LpL", function()
+  -- basedpyright is primary; ty can be toggled as diagnostics-only companion.
   local bufnr = vim.api.nvim_get_current_buf()
   if vim.bo[bufnr].filetype ~= "python" then
     vim.notify("Not a Python buffer", vim.log.levels.WARN, { title = "Python LSP" })
@@ -597,6 +611,7 @@ keymaps.set("n", "<leader>Lpd", function()
 end, { desc = "Diagnostic mode" })
 
 keymaps.set("n", "<leader>Lsi", function()
+  -- Manual indent override is buffer-local; auto uses project config/detection.
   local ft = vim.bo.filetype
   if not auto_indent_filetypes[ft] then
     vim.notify("Not a supported filetype: " .. ft, vim.log.levels.WARN, { title = "Indent" })
@@ -633,6 +648,7 @@ keymaps.set("n", "<leader>Lsi", function()
 end, { desc = "Indentation width" })
 
 keymaps.set("n", "<leader>LI", function()
+  -- One popup collects root, LSP, indentation, and Python setting diagnostics.
   local bufnr = vim.api.nvim_get_current_buf()
   local file = vim.api.nvim_buf_get_name(bufnr)
   local ft = vim.bo.filetype
@@ -700,6 +716,7 @@ keymaps.set("n", "<leader>LI", function()
 end, { desc = "Language info" })
 
 local function apply_auto_indent()
+  -- Apply formatter-derived indentation on filetype detection unless manually overridden.
   if not auto_indent_filetypes[vim.bo.filetype] then return end
   if vim.b.indent_width_override then return end
   local width = read_project_indent() or detect_indent()
@@ -717,6 +734,7 @@ if auto_indent_filetypes[vim.bo.filetype] then apply_auto_indent() end
 
 pcall(vim.keymap.del, "n", "<leader>L")
 
+-- Trouble-based diagnostic views share the same compact key family.
 vim.keymap.set("n", "<leader>If", function()
   require("trouble").toggle({ mode = "diagnostics", filter = { buf = 0 } })
 end, { desc = "File diagnostics" })
@@ -752,6 +770,7 @@ vim.schedule(function()
 end)
 
 keymaps.set("n", "<leader>Lps", function()
+  -- Generate local .pyi stubs for missing symbols reported by basedpyright.
   require("lsp.stub_generator").add_stub_for_diagnostic()
 end, { desc = "Add stub for diagnostic" })
 
@@ -761,6 +780,7 @@ keymaps.set("n", "<leader>Lnr", function()
 end, { desc = "Restart Noice" })
 
 keymaps.set("n", "<leader>Lje", function()
+  -- Global ESLint fallback is useful for loose JS files, but opt-out per cwd.
   local resolver = require("utils.lsp_resolver")
   local bufnr = vim.api.nvim_get_current_buf()
 

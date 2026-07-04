@@ -27,10 +27,12 @@ function M.extract_missing_attr(message)
 end
 
 function M.extract_optional_member_attr(message)
+  -- Optional-member diagnostics are real nil-safety issues, not missing stubs.
   return message:match('"([%w_]+)" is not a known attribute of "None"')
 end
 
 local function extract_module_from_import(bufnr, attr)
+  -- Infer the target module from nearby imports before asking for manual input.
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, 50, false)
   for _, line in ipairs(lines) do
     local mod = line:match("from%s+([%w%.]+)%s+import.*" .. attr)
@@ -48,6 +50,7 @@ local function extract_module_from_import(bufnr, attr)
 end
 
 local function find_stub_file(module_path)
+  -- Custom stubs live under config/stubs and mirror Python module paths.
   local stub_root = vim.fn.stdpath("config") .. "/stubs"
   local rel = module_path:gsub("%.", "/")
   local candidates = {
@@ -65,6 +68,7 @@ local function module_to_import(module_path)
 end
 
 local function introspect_symbol(module_path, attr, venv_python)
+  -- Use the project Python to preserve installed packages and runtime signatures.
   local script = string.format([[
 import sys, inspect, typing
 try:
@@ -167,6 +171,7 @@ local function find_venv_python(root_dir)
 end
 
 local function introspect_class(module_path, class_name, venv_python)
+  -- Class stubs include inherited annotations and public methods when available.
   local script = string.format([[
 import sys, inspect, typing
 from typing import Any, Optional
@@ -272,6 +277,7 @@ function M.add_stub_for_class(class_name, bufnr)
 end
 
 function M.add_stub_for_diagnostic()
+  -- Entry point used by keymaps: diagnostic first, class-under-cursor fallback.
   local bufnr = vim.api.nvim_get_current_buf()
   local cursor = vim.api.nvim_win_get_cursor(0)
   local line = cursor[1] - 1
@@ -327,6 +333,7 @@ function M.add_stub_for_diagnostic()
 end
 
 function M._finish_add_stub(attr, module_path, bufnr)
+  -- Notify basedpyright so the new .pyi is picked up without restarting LSP.
   local root_dir = vim.fn.getcwd()
   local python = find_venv_python(root_dir)
   local stub_file = find_stub_file(module_path)

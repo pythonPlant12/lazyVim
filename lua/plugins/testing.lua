@@ -1,5 +1,6 @@
 local resolver = require("utils.lsp_resolver")
 
+-- Root markers let "run all" pick the right adapter for mixed JS/Python projects.
 local vitest_root_markers_global = {
   "vitest.config.ts",
   "vitest.config.js",
@@ -34,6 +35,7 @@ local function normalize_slashes(path)
   return (path or ""):gsub("\\", "/")
 end
 
+-- Only route e2e-style spec/test files to Playwright; unit tests stay with Vitest.
 local function is_playwright_test_path(path)
   local normalized = normalize_slashes(path)
   if normalized == "" then
@@ -63,6 +65,7 @@ for _, marker in ipairs(resolver.python_project_markers or {}) do
   python_test_markers_global[#python_test_markers_global + 1] = marker
 end
 
+-- Run-all chooses the root for the active file's test framework.
 local function current_test_root_for_active_buffer()
   local bufnr = vim.api.nvim_get_current_buf()
   local path = vim.api.nvim_buf_get_name(bufnr)
@@ -257,6 +260,7 @@ return {
         return nearest_root_fs(path, playwright_root_markers)
       end
 
+      -- Prefer project package manager/local binaries so tests run like repo scripts.
       local function package_manager_for_root(root)
         local package_json = root .. "/package.json"
         local ok_pkg, pkg_data = pcall(vim.fn.readfile, package_json)
@@ -314,6 +318,7 @@ return {
         })[1]
       end
 
+      -- Walk upward for local node binaries in monorepos before falling back to PATH.
       local function find_node_binary(start_dir, executable)
         local current = normalize_slashes(start_dir):gsub("/+$", "")
         local workspace = normalize_slashes(vim.uv.cwd() or ""):gsub("/+$", "")
@@ -371,6 +376,7 @@ return {
         return nil
       end
 
+      -- Cache the last Playwright test so adapter callbacks can resolve config/cwd later.
       local function playwright_test_file(path)
         if type(path) ~= "string" then
           return false
@@ -422,6 +428,7 @@ return {
         return "playwright"
       end
 
+      -- Python tests use the project venv when available, then system Python.
       local function python_exec_for_root(root)
         local venv = resolver.python_venv_for_root(root)
         local from_venv = resolver.python_exec_from_venv(venv, "python")
@@ -466,6 +473,7 @@ return {
         return type(path) == "string" and path:match("%.py$") ~= nil
       end
 
+      -- Respect package script --config before falling back to discovered Vite/Vitest files.
       local function package_vitest_config(path)
         local root = vitest_root(path)
         local package_json = root .. "/package.json"
@@ -540,6 +548,7 @@ return {
         return vim.fn.getcwd()
       end
 
+      -- Adapter filters keep Playwright e2e specs out of Vitest results.
       opts.adapters = opts.adapters or {}
       opts.adapters["neotest-vitest"] = vim.tbl_deep_extend("force", opts.adapters["neotest-vitest"] or {}, {
         vitestCommand = function(path)
@@ -612,6 +621,7 @@ return {
           local resolved_root = root and root ~= "" and root or python_test_root(vim.api.nvim_buf_get_name(0))
           return python_exec_for_root(resolved_root)
         end,
+        -- Pick pytest/django/unittest based on modules installed in the selected Python.
         runner = function(python_command)
           if python_has_module(python_command, "pytest") then
             return "pytest"

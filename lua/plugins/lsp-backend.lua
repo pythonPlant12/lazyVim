@@ -5,6 +5,7 @@ local python_lsp_settings = require("lsp.python_settings")
 local stub_generator = require("lsp.stub_generator")
 stub_generator.setup()
 
+-- Backend LSP setup: basedpyright is primary, ruff formats/lints, ty is optional diagnostics.
 local function add_unique_path(paths, path)
   if not path or path == "" or vim.fn.isdirectory(path) ~= 1 then
     return
@@ -28,6 +29,7 @@ local function python_user_site()
   return output[1]
 end
 
+-- Make basedpyright aware of bundled, custom, and django stub packages.
 local function apply_stub_paths(_, config)
   local stub_paths = {}
   local ms_stubs = vim.fn.stdpath("data") .. "/lazy/python-type-stubs"
@@ -66,6 +68,7 @@ local function merge_before_init(server_opts, hook)
   end
 end
 
+-- Prefer a project virtualenv so analysis matches the interpreter used by the project.
 local function apply_python_path_from_venv(_, config)
   local venv = resolver.python_venv_for_root(config.root_dir)
   local py_exec = resolver.python_exec_from_venv(venv, "python")
@@ -79,6 +82,7 @@ local function apply_python_path_from_venv(_, config)
   })
 end
 
+-- Run the project's ruff binary when present; otherwise Mason/PATH ruff is used.
 local function apply_ruff_cmd_from_venv(_, config)
   local venv = resolver.python_venv_for_root(config.root_dir)
   local ruff = resolver.python_exec_from_venv(venv, "ruff")
@@ -160,6 +164,7 @@ return {
         end,
       })
 
+      -- ty is diagnostics-only and manual, so it can run beside basedpyright without conflicts.
       opts.servers.ty = vim.tbl_deep_extend("force", opts.servers.ty or {}, {
         autostart = false,
         root_dir = function(fname)

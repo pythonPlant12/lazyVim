@@ -1,6 +1,7 @@
 -- Keep Snacks grep filter state and toggle actions reusable across UI mappings.
 local M = {}
 
+-- Always ignore heavy/generated folders even when callers add extra filters.
 local PERSISTENT_EXCLUDES = {
   "node_modules/**",
   "venv/**",
@@ -15,6 +16,7 @@ local PERSISTENT_EXCLUDES = {
   "**/shelved.patch",
 }
 
+-- Toggle actions mutate the active picker args and immediately rerun grep.
 local toggle_actions = {
   toggle_word = function(picker)
     local args = picker.opts.args or {}
@@ -96,6 +98,7 @@ local function split_filter_tokens(raw)
   return tokens
 end
 
+-- Directory filters expand to /** so ripgrep receives a recursive glob.
 local function normalize_grep_glob(token, cwd)
   local glob = vim.trim(token or "")
   if glob == "" then
@@ -172,6 +175,7 @@ local function build_extension_globs(raw)
   return globs
 end
 
+-- Extension picker is built from git-tracked files to keep choices relevant.
 local function collect_extension_items(cwd)
   local counts = {}
   local lines = vim.fn.systemlist({ "git", "-C", cwd, "ls-files" })
@@ -241,6 +245,7 @@ local function input_path_filters(prompt, on_done)
   end)
 end
 
+-- Combine persistent excludes with prompt-specific excludes without duplicates.
 local function merge_excludes(extra)
   local seen = {}
   local out = {}
@@ -269,6 +274,7 @@ local function run_grep(opts)
   snacks.picker.grep(opts)
 end
 
+-- Prompt flow supports include, exclude, extension-only, or unfiltered grep.
 function M.cwd_with_filter_mode()
   local cwd = vim.fn.getcwd()
   local mode_items = {
