@@ -45,6 +45,21 @@ return {
         return items
       end
 
+      opts.completion = opts.completion or {}
+      opts.completion.menu = opts.completion.menu or {}
+      opts.completion.menu.draw = opts.completion.menu.draw or {}
+      opts.completion.menu.draw.columns = {
+        { "kind_icon" },
+        { "label", "label_description", gap = 1 },
+        { "kind" },
+      }
+      opts.completion.menu.draw.components = opts.completion.menu.draw.components or {}
+      opts.completion.menu.draw.components.kind = vim.tbl_deep_extend("force", opts.completion.menu.draw.components.kind or {}, {
+        ellipsis = false,
+        text = function(ctx) return ctx.kind end,
+        highlight = function(ctx) return ctx.kind_hl end,
+      })
+
       -- Tab moves through the completion menu first, then snippets/AI/fallback.
       opts.keymap["<Tab>"] = {
         function(cmp)

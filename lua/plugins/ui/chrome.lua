@@ -1,5 +1,9 @@
 local tab_jump = require("utils.tab_jump")
 
+-- Some long-running picker callbacks may still resolve this as a Lua global until
+-- Snacks is reloaded. Keep a compatibility alias for those stale closures.
+_G.tab_jump = tab_jump
+
 local picker_excludes = {
   "node_modules/**",
   "venv/**",
