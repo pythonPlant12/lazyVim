@@ -244,16 +244,12 @@ return {
                 },
               },
             },
-            preview = snacks_file_preview_with_video,
           },
           git_files = {
-            preview = snacks_file_preview_with_video,
           },
           recent = {
-            preview = snacks_file_preview_with_video,
           },
           explorer = {
-            preview = snacks_file_preview_with_video,
           },
           -- Grep starts literal and case-insensitive; local toggles opt into regex/case/word.
           grep = {
@@ -364,7 +360,7 @@ return {
             end,
           },
         },
-        -- Custom confirm opens paths tab-aware and generates thumbnails for videos.
+        -- Custom confirm opens paths tab-aware.
         actions = {
           toggle_camel_case = toggle_grep_camel_case,
           toggle_case = function(picker)
@@ -379,20 +375,6 @@ return {
             picker:close()
 
             local path = Snacks.picker.util.path(item)
-            if path and is_video_path(path) then
-              local thumb = generate_video_thumbnail(path)
-              if thumb then
-                local bufnr = vim.fn.bufnr(path)
-                if bufnr == -1 then
-                  bufnr = vim.api.nvim_create_buf(true, false)
-                  vim.api.nvim_buf_set_name(bufnr, path)
-                end
-                vim.bo[bufnr].buflisted = true
-                vim.api.nvim_set_current_buf(bufnr)
-                Snacks.image.buf.attach(bufnr, { src = thumb })
-                return
-              end
-            end
 
             if path then
               local ok, err = tab_jump.edit_or_goto_path(path)
