@@ -68,6 +68,7 @@ vim.g.theme_custom_hl = {
   neotree_cursor_bg = "#2F496F",
   neotree_cursor_line_fg = "#D0D2D8",
   neotree_fg = "#D0D2D8",
+  neotree_active_indent = syn.foam,
   param = syn.iris,
   vbuiltin = syn.rose,
   ctor = syn.type,
@@ -205,6 +206,7 @@ hl(0, "NeoTreeRootName",        { fg = syn.gold,     bold = true })
 hl(0, "NeoTreeFileName",        { fg = ui.fg })
 hl(0, "NeoTreeFileNameOpened",  { fg = ui.fg_bright })
 hl(0, "NeoTreeIndentMarker",    { fg = ui.border })
+hl(0, "NeoTreeActiveIndentMarker", { fg = palette.neotree_active_indent, bold = true })
 hl(0, "NeoTreeNormal",          { fg = ui.fg,        bg = ui.bg })
 hl(0, "NeoTreeNormalNC",        { fg = ui.fg,        bg = ui.bg })
 

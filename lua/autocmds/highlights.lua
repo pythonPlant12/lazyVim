@@ -411,6 +411,7 @@ local function current_custom_hl_palette()
     neotree_cursor_bg = selection,
     neotree_cursor_line_fg = normal_fg,
     neotree_fg = normal_fg,
+    neotree_active_indent = color_from_hl("Directory", "fg", normal_fg),
     param = color_from_hl("@variable.parameter", "fg", normal_fg),
     vbuiltin = color_from_hl("@variable.builtin", "fg", normal_fg),
     ctor = color_from_hl("Type", "fg", normal_fg),
@@ -652,6 +653,7 @@ local function apply_custom_hl()
     hl(0, "NeoTreeGitUnstagedCursorLine",  { fg = c.neotree_cursor_line_fg, bg = c.neotree_cursor_bg, bold = true })
     hl(0, "NeoTreeGitDeletedCursorLine",   { fg = c.neotree_cursor_line_fg, bg = c.neotree_cursor_bg, bold = true })
     hl(0, "NeoTreeGitConflictCursorLine",  { fg = c.neotree_cursor_line_fg, bg = c.neotree_cursor_bg, bold = true })
+    hl(0, "NeoTreeActiveIndentMarker",     { fg = c.neotree_active_indent, bold = true })
 
    if c.neotree_fg then
      hl(0, "NeoTreeFileName",       { fg = c.neotree_fg })
@@ -746,14 +748,6 @@ vim.api.nvim_create_autocmd({ "FileType", "BufEnter", "TermOpen", "LspAttach" },
 vim.api.nvim_create_autocmd({ "WinEnter", "BufWinEnter" }, {
   group = vim.api.nvim_create_augroup("DefaultOpaqueHl", { clear = true }),
   callback = schedule_default_opaque_hl,
-})
-
-vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI", "WinScrolled" }, {
-  group = vim.api.nvim_create_augroup("DefaultOpaqueDynamicHl", { clear = true }),
-  callback = function()
-    if not is_default_theme() then return end
-    vim.schedule(apply_default_opaque_hl)
-  end,
 })
 
 vim.api.nvim_create_autocmd("User", {

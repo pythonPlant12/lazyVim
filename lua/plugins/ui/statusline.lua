@@ -38,7 +38,24 @@ return {
         theme = mode_theme,
         section_separators = { left = "", right = "" },
         component_separators = { left = "", right = "" },
-        refresh = { statusline = 99999, tabline = 99999, winbar = 99999 },
+        refresh = {
+          statusline = 99999,
+          tabline = 99999,
+          winbar = 99999,
+          events = {
+            "WinEnter",
+            "BufEnter",
+            "BufWritePost",
+            "SessionLoadPost",
+            "FileChangedShellPost",
+            "VimResized",
+            "Filetype",
+            "DiagnosticChanged",
+            "LspAttach",
+            "LspDetach",
+            "ModeChanged",
+          },
+        },
       })
       opts.sections = opts.sections or {}
       opts.sections.lualine_a = {

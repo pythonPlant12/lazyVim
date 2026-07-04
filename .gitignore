@@ -30,6 +30,8 @@ data
 
 # pipeline step execution state (machine-local, Practice 1; added automatically)
 .state/
+# GSD project planning for this personal Neovim config is local-only.
+.planning/
 
 # BEGIN idream-managed agent workspace
 # local files and generated output
