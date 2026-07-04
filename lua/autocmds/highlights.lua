@@ -68,13 +68,17 @@ local function apply_default_opaque_hl()
   local normal_bg = (normal and normal.bg) and string.format("#%06x", normal.bg) or (vim.o.background == "light" and "#FFFFFF" or "#151619")
   local normal_fg = (normal and normal.fg) and string.format("#%06x", normal.fg) or (vim.o.background == "light" and "#4C4F69" or "#BCBEC4")
   local c = type(vim.g.theme_custom_hl) == "table" and vim.g.theme_custom_hl or {}
-  local context_bg = c.context_bg or (vim.o.background == "light" and "#E5E5E5" or "#313244")
+  local context_bg = c.treesitter_context_bg or c.context_bg or (vim.o.background == "light" and "#F3F3F3" or "#313244")
   local border = c.border or normal_fg
 
   local function with_bg(group, group_bg, group_fg)
     local current = vim.api.nvim_get_hl(0, { name = group, link = false }) or {}
     current.bg = group_bg
-    if group_fg then current.fg = group_fg end
+    if group_fg == false then
+      current.fg = nil
+    elseif group_fg then
+      current.fg = group_fg
+    end
     current.link = nil
     hl(0, group, current)
   end
@@ -129,7 +133,7 @@ local function apply_default_opaque_hl()
     "TreesitterContextBottom",
     "TreesitterContextLineNumberBottom",
   }) do
-    with_bg(group, context_bg, normal_fg)
+    with_bg(group, context_bg, group:find("LineNumber") and normal_fg or false)
   end
 
   -- nvim-treesitter-context opens noautocmd floating windows and maps only
@@ -450,6 +454,7 @@ local function current_custom_hl_palette()
     indent_fg = color_from_hl("LineNr", "fg", muted),
     indent_scope_fg = muted,
     context_bg = cursorline,
+    treesitter_context_bg = vim.o.background == "light" and "#F3F3F3" or cursorline,
     fold_bg = cursorline,
     fold_fg = muted,
     blame_fg = color_from_hl("GitSignsCurrentLineBlame", "fg", muted),
@@ -710,9 +715,10 @@ local function apply_custom_hl()
   hl(0, "SnacksIndent",      { fg = c.indent_fg })
   hl(0, "SnacksIndentScope", { fg = c.indent_scope_fg, bold = false })
 
-  hl(0, "TreesitterContext",           { fg = normal_fg, bg = c.context_bg })
-  hl(0, "TreesitterContextLineNumber", { fg = c.muted_text or c.fold_fg, bg = c.context_bg })
-  hl(0, "TreesitterContextBottom",     { bg = c.context_bg, underline = false })
+  local treesitter_context_bg = c.treesitter_context_bg or c.context_bg
+  hl(0, "TreesitterContext",           { bg = treesitter_context_bg })
+  hl(0, "TreesitterContextLineNumber", { fg = c.muted_text or c.fold_fg, bg = treesitter_context_bg })
+  hl(0, "TreesitterContextBottom",     { bg = treesitter_context_bg, underline = false })
 
   hl(0, "Folded",            { fg = c.fold_fg, bg = c.fold_bg })
   hl(0, "FoldColumn",        { fg = c.fold_fg, bg = c.fold_bg })

@@ -61,7 +61,33 @@ return {
       })
       opts.sections = opts.sections or {}
       opts.sections.lualine_a = {
-        { "mode", separator = { left = "\u{E0B6}", right = "\u{E0B4}" }, padding = { left = 1, right = 1 } },
+        {
+          "mode",
+          fmt = function(mode)
+            if vim.g.multicursor_build_mode then return "MC BUILD" end
+
+            local mc = package.loaded["multicursor-nvim"]
+            if mc and mc.hasCursors and mc.hasCursors() then return "MULTICURSOR" end
+
+            return mode
+          end,
+          color = function()
+            if vim.g.multicursor_build_mode then
+              return vim.o.background == "light"
+                  and { fg = "#4F3800", bg = "#F4D58D", gui = "bold" }
+                or { fg = "#211600", bg = "#F2C14E", gui = "bold" }
+            end
+
+            local mc = package.loaded["multicursor-nvim"]
+            if mc and mc.hasCursors and mc.hasCursors() then
+              return vim.o.background == "light"
+                  and { fg = "#1B4D4A", bg = "#BFE7E3", gui = "bold" }
+                or { fg = "#081F1D", bg = "#7AD7CD", gui = "bold" }
+            end
+          end,
+          separator = { left = "\u{E0B6}", right = "\u{E0B4}" },
+          padding = { left = 1, right = 1 },
+        },
       }
       opts.sections.lualine_x = {}
       -- Git counters update asynchronously so the statusline never blocks on git commands.

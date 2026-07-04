@@ -19,13 +19,17 @@ local string_fg = vim.g.theme_custom_hl and vim.g.theme_custom_hl.string_fg or "
 local fg = "#4C4F69"
 local bg = "#FFFFFF"
 local panel_bg = "#FFFFFF"
-local context_bg = vim.g.theme_custom_hl and vim.g.theme_custom_hl.context_bg or "#E5E5E5"
+local context_bg = vim.g.theme_custom_hl and (vim.g.theme_custom_hl.treesitter_context_bg or vim.g.theme_custom_hl.context_bg) or "#F3F3F3"
 local border = vim.g.theme_custom_hl and vim.g.theme_custom_hl.border or "#8F98A8"
 
 local function with_bg(group, group_bg, group_fg)
   local current = vim.api.nvim_get_hl(0, { name = group, link = false }) or {}
   current.bg = group_bg
-  if group_fg then current.fg = group_fg end
+  if group_fg == false then
+    current.fg = nil
+  elseif group_fg then
+    current.fg = group_fg
+  end
   current.link = nil
   hl(0, group, current)
 end
@@ -88,5 +92,5 @@ for _, group in ipairs({
   "TreesitterContextBottom",
   "TreesitterContextLineNumberBottom",
 }) do
-  with_bg(group, context_bg, fg)
+  with_bg(group, context_bg, group:find("LineNumber") and fg or false)
 end

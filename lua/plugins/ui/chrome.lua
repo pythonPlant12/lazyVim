@@ -235,7 +235,7 @@ return {
             return
           end
 
-          -- Add one space after the current line number for a less cramped gutter.
+          -- Add spacing after the bold current line number so it aligns with the gutter.
           statuscolumn._current_lnum_left_offset = true
           local original_get = statuscolumn.get
           statuscolumn.get = function()
@@ -258,7 +258,7 @@ return {
               return ret
             end
 
-            return ret:sub(1, end_col) .. " " .. ret:sub(end_col + 1)
+            return ret:sub(1, end_col) .. "  " .. ret:sub(end_col + 1)
           end
         end,
       })
@@ -549,11 +549,15 @@ return {
         win = {
           input = {
             keys = {
+              ["j"] = { "list_up", mode = { "n" } },
+              ["k"] = { "list_down", mode = { "n" } },
               ["<S-CR>"] = { "tab_open", mode = { "i", "n" } },
             },
           },
           list = {
             keys = {
+              ["j"] = "list_up",
+              ["k"] = "list_down",
               ["<S-CR>"] = "tab_open",
             },
           },
@@ -623,6 +627,10 @@ return {
   {
     "folke/trouble.nvim",
     opts = {
+      keys = {
+        j = "prev",
+        k = "next",
+      },
       win = {
         border = "rounded",
       },

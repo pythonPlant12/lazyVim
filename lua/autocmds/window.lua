@@ -21,3 +21,12 @@ vim.api.nvim_create_autocmd("WinEnter", {
     end
   end,
 })
+
+vim.api.nvim_create_autocmd("FileType", {
+  group = vim.api.nvim_create_augroup("InvertedListNavigation", { clear = true }),
+  pattern = "qf",
+  callback = function(event)
+    vim.keymap.set("n", "j", "k", { buffer = event.buf, silent = true, desc = "List up" })
+    vim.keymap.set("n", "k", "j", { buffer = event.buf, silent = true, desc = "List down" })
+  end,
+})

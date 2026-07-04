@@ -21,6 +21,19 @@ return {
       local set = vim.keymap.set
       local build_mode = { active = false, bufnr = nil }
 
+      local function refresh_statusline()
+        vim.schedule(function()
+          local ok, lualine = pcall(require, "lualine")
+          if ok then lualine.refresh({ place = { "statusline" } }) end
+        end)
+      end
+
+      local function match_toggle_cursor(direction)
+        mc.matchSkipCursor(direction)
+        mc.toggleCursor()
+        refresh_statusline()
+      end
+
       local function stop_build_mode()
         if not build_mode.active then
           return
@@ -29,9 +42,10 @@ return {
         local bufnr = build_mode.bufnr
         build_mode.active = false
         build_mode.bufnr = nil
+        vim.g.multicursor_build_mode = false
 
         if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
-          for _, lhs in ipairs({ "c", "n", "q", "<Esc>" }) do
+          for _, lhs in ipairs({ "c", "n", "N", "q", "<Esc>" }) do
             pcall(vim.keymap.del, "n", lhs, { buffer = bufnr })
           end
         end
@@ -40,6 +54,7 @@ return {
           mc.enableCursors()
         end
 
+        refresh_statusline()
         vim.notify("Multicursor build mode off", vim.log.levels.INFO, { title = "Multicursor" })
       end
 
@@ -52,14 +67,20 @@ return {
         local bufnr = vim.api.nvim_get_current_buf()
         build_mode.active = true
         build_mode.bufnr = bufnr
+        vim.g.multicursor_build_mode = true
 
         local opts = { buffer = bufnr, nowait = true, silent = true }
-        set("n", "c", mc.toggleCursor, vim.tbl_extend("force", opts, { desc = "MC build: Toggle cursor here" }))
-        set("n", "n", function() mc.matchAddCursor(1) end, vim.tbl_extend("force", opts, { desc = "MC build: Add next match" }))
+        set("n", "c", function()
+          mc.toggleCursor()
+          refresh_statusline()
+        end, vim.tbl_extend("force", opts, { desc = "MC build: Toggle cursor here" }))
+        set("n", "n", function() match_toggle_cursor(1) end, vim.tbl_extend("force", opts, { desc = "MC build: Toggle next match" }))
+        set("n", "N", function() match_toggle_cursor(-1) end, vim.tbl_extend("force", opts, { desc = "MC build: Toggle previous match" }))
         set("n", "q", stop_build_mode, vim.tbl_extend("force", opts, { desc = "MC build: Finish" }))
         set("n", "<Esc>", stop_build_mode, vim.tbl_extend("force", opts, { desc = "MC build: Finish" }))
 
-        vim.notify("Multicursor build mode: c toggle, n next match, q/<Esc> finish", vim.log.levels.INFO, {
+        refresh_statusline()
+        vim.notify("Multicursor build mode: c toggle, n/N next/prev toggle, q/<Esc> finish", vim.log.levels.INFO, {
           title = "Multicursor",
         })
       end
@@ -70,6 +91,7 @@ return {
         else
           mc.clearCursors()
         end
+        refresh_statusline()
       end
 
       set({ "n", "x" }, "<C-n>", function() mc.matchAddCursor(1) end, { desc = "MC: Add next match" })
