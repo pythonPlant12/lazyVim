@@ -65,7 +65,7 @@ return {
         {
           "mode",
           fmt = function(mode)
-            if vim.g.multicursor_build_mode then return "MC BUILD" end
+            if vim.g.multicursor_build_mode then return "M CURSOR" end
             if vim.g.window_resize_mode then return "RESIZE WINDOW" end
 
             if vim.g.multicursor_mode_active then return "MULTI SELECT" end
