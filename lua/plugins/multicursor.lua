@@ -21,17 +21,34 @@ return {
       local set = vim.keymap.set
       local build_mode = { active = false, bufnr = nil }
 
+      local function sync_multicursor_status()
+        local has_cursors = false
+        if not build_mode.active then
+          local ok, value = pcall(mc.hasCursors)
+          has_cursors = ok and value or false
+        end
+        vim.g.multicursor_mode_active = has_cursors
+      end
+
       local function refresh_statusline()
         vim.schedule(function()
+          sync_multicursor_status()
           local ok, lualine = pcall(require, "lualine")
           if ok then lualine.refresh({ place = { "statusline" } }) end
         end)
+        vim.defer_fn(function()
+          sync_multicursor_status()
+          local ok, lualine = pcall(require, "lualine")
+          if ok then lualine.refresh({ place = { "statusline" } }) end
+        end, 25)
       end
 
       local function match_toggle_cursor(direction)
         mc.matchSkipCursor(direction)
-        mc.toggleCursor()
-        refresh_statusline()
+        vim.schedule(function()
+          mc.toggleCursor()
+          refresh_statusline()
+        end)
       end
 
       local function stop_build_mode()
@@ -68,6 +85,7 @@ return {
         build_mode.active = true
         build_mode.bufnr = bufnr
         vim.g.multicursor_build_mode = true
+        vim.g.multicursor_mode_active = false
 
         local opts = { buffer = bufnr, nowait = true, silent = true }
         set("n", "c", function()
@@ -90,6 +108,8 @@ return {
           mc.enableCursors()
         else
           mc.clearCursors()
+          vim.g.multicursor_build_mode = false
+          vim.g.multicursor_mode_active = false
         end
         refresh_statusline()
       end

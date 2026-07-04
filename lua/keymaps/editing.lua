@@ -44,10 +44,18 @@ keymaps.set("n", "sv", ":vsplit<Return>", opts)
 
 local resize_mode_active = false
 
+local function refresh_statusline()
+  vim.schedule(function()
+    local ok, lualine = pcall(require, "lualine")
+    if ok then lualine.refresh({ place = { "statusline" } }) end
+  end)
+end
+
 -- Resize mode installs temporary global maps, then restores inverted j/k on exit.
 local function exit_resize_mode()
   if not resize_mode_active then return end
   resize_mode_active = false
+  vim.g.window_resize_mode = false
   local resize_keys = { "h", "l", "j", "k", "<Left>", "<Right>", "<Up>", "<Down>", "<Esc>", "q", "=" }
   for _, k in ipairs(resize_keys) do
     pcall(vim.keymap.del, "n", k, { buffer = false })
@@ -55,11 +63,13 @@ local function exit_resize_mode()
   vim.keymap.set("n", "j", "k", { silent = true })
   vim.keymap.set("n", "k", "j", { silent = true })
   vim.api.nvim_echo({}, false, {})
+  refresh_statusline()
 end
 
 local function enter_resize_mode()
   if resize_mode_active then return end
   resize_mode_active = true
+  vim.g.window_resize_mode = true
   local step = 3
   local map = vim.keymap.set
   local o = { nowait = true, silent = true }
@@ -83,6 +93,7 @@ local function enter_resize_mode()
   map("n", "=",       function() vim.cmd("wincmd =") end, o)
 
   vim.api.nvim_echo({ { "-- RESIZE -- (h/l/j/k, <Esc> to exit)", "ModeMsg" } }, false, {})
+  refresh_statusline()
 end
 
 keymaps.set("n", "<C-w>r", enter_resize_mode, { desc = "Enter resize mode" })

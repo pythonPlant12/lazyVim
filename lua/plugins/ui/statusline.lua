@@ -60,14 +60,15 @@ return {
         },
       })
       opts.sections = opts.sections or {}
+      local mode_colors = mode_theme
       opts.sections.lualine_a = {
         {
           "mode",
           fmt = function(mode)
             if vim.g.multicursor_build_mode then return "MC BUILD" end
+            if vim.g.window_resize_mode then return "RESIZE WINDOW" end
 
-            local mc = package.loaded["multicursor-nvim"]
-            if mc and mc.hasCursors and mc.hasCursors() then return "MULTICURSOR" end
+            if vim.g.multicursor_mode_active then return "MULTI SELECT" end
 
             return mode
           end,
@@ -78,12 +79,22 @@ return {
                 or { fg = "#211600", bg = "#F2C14E", gui = "bold" }
             end
 
-            local mc = package.loaded["multicursor-nvim"]
-            if mc and mc.hasCursors and mc.hasCursors() then
+            if vim.g.window_resize_mode then
+              return vim.o.background == "light"
+                  and { fg = "#5A2E00", bg = "#F1C7A6", gui = "bold" }
+                or { fg = "#271000", bg = "#E6985A", gui = "bold" }
+            end
+
+            if vim.g.multicursor_mode_active then
               return vim.o.background == "light"
                   and { fg = "#1B4D4A", bg = "#BFE7E3", gui = "bold" }
                 or { fg = "#081F1D", bg = "#7AD7CD", gui = "bold" }
             end
+
+            local mode = vim.fn.mode(1)
+            if mode:sub(1, 1) == "i" then return mode_colors.insert.a end
+            if mode == "v" or mode == "V" or mode == "\22" then return mode_colors.visual.a end
+            return mode_colors.normal.a
           end,
           separator = { left = "\u{E0B6}", right = "\u{E0B4}" },
           padding = { left = 1, right = 1 },
