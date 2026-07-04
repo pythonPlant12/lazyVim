@@ -127,6 +127,7 @@ return {
       vim.list_extend(opts.ensure_installed, {
         "stylua",
         "selene",
+        "bash-language-server",
         "shellcheck",
         "shfmt",
       })
@@ -142,6 +143,9 @@ return {
       opts.servers = opts.servers or {}
       opts.servers["*"] = opts.servers["*"] or {}
       opts.servers["*"].keys = opts.servers["*"].keys or {}
+      opts.servers.bashls = vim.tbl_deep_extend("force", opts.servers.bashls or {}, {
+        filetypes = { "sh", "bash", "zsh" },
+      })
       opts.diagnostics = opts.diagnostics or {}
       opts.diagnostics.signs = false
       opts.folds = { enabled = false }

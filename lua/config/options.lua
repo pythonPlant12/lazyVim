@@ -33,6 +33,10 @@ vim.o.pumheight = 20
 vim.o.pumblend = 10
 vim.o.winblend = 10
 
+local spell_dir = vim.fn.stdpath("config") .. "/spell"
+vim.fn.mkdir(spell_dir, "p")
+vim.opt.spellfile = spell_dir .. "/en.utf-8.add"
+
 -- Global toggles consumed by LazyVim/conform/custom ESLint and picker helpers.
 vim.g.autoformat = false
 vim.g.eslint_autosave = false

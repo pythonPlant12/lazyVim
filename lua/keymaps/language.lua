@@ -647,6 +647,48 @@ keymaps.set("n", "<leader>Lsi", function()
   end)
 end, { desc = "Indentation width" })
 
+local function spell_word_action(action, command)
+  local word = vim.fn.expand("<cword>")
+  vim.cmd("normal! " .. command)
+  if word ~= "" then
+    vim.notify(action .. ": " .. word, vim.log.levels.INFO, { title = "Spell" })
+  end
+end
+
+keymaps.set("n", "<leader>Lsa", function()
+  spell_word_action("Added word", "zg")
+end, { desc = "Spell add word" })
+
+keymaps.set("n", "<leader>Lsr", function()
+  spell_word_action("Removed word", "zug")
+end, { desc = "Spell remove word" })
+
+keymaps.set("n", "<leader>Lsw", function()
+  spell_word_action("Marked wrong", "zw")
+end, { desc = "Spell mark wrong" })
+
+keymaps.set("n", "<leader>Lst", function()
+  vim.opt_local.spell = not vim.wo.spell
+  vim.notify("spell = " .. tostring(vim.wo.spell), vim.log.levels.INFO, { title = "Spell" })
+end, { desc = "Toggle spell check" })
+
+vim.api.nvim_create_user_command("SpellAddWord", function()
+  spell_word_action("Added word", "zg")
+end, { desc = "Add word under cursor to spell vocabulary" })
+
+vim.api.nvim_create_user_command("SpellRemoveWord", function()
+  spell_word_action("Removed word", "zug")
+end, { desc = "Remove word under cursor from spell vocabulary" })
+
+vim.api.nvim_create_user_command("SpellMarkWrong", function()
+  spell_word_action("Marked wrong", "zw")
+end, { desc = "Mark word under cursor as misspelled" })
+
+vim.api.nvim_create_user_command("SpellToggle", function()
+  vim.opt_local.spell = not vim.wo.spell
+  vim.notify("spell = " .. tostring(vim.wo.spell), vim.log.levels.INFO, { title = "Spell" })
+end, { desc = "Toggle spell checking in current buffer" })
+
 keymaps.set("n", "<leader>LI", function()
   -- One popup collects root, LSP, indentation, and Python setting diagnostics.
   local bufnr = vim.api.nvim_get_current_buf()

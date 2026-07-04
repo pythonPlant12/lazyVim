@@ -1,3 +1,151 @@
+local tab_jump = require("utils.tab_jump")
+
+local picker_excludes = {
+  "node_modules/**",
+  "venv/**",
+  ".venv/**",
+  ".idea",
+  ".idea/**",
+  "**/.idea/**",
+  ".vscode/**",
+  ".zed/**",
+  ".git/**",
+  "shelved.patch",
+  "**/shelved.patch",
+}
+
+local function grep_case_mode_args(args, camel_case)
+  local filtered = {}
+  for _, arg in ipairs(args or {}) do
+    if arg ~= "--ignore-case" and arg ~= "--case-sensitive" and arg ~= "--smart-case" then
+      filtered[#filtered + 1] = arg
+    end
+  end
+  if not camel_case then
+    filtered[#filtered + 1] = "--ignore-case"
+  end
+  return filtered
+end
+
+local function toggle_grep_camel_case(picker)
+  local source = picker and picker.opts and picker.opts.source or nil
+  if source ~= "grep" and source ~= "grep_word" then
+    return
+  end
+
+  picker.opts.camel_case = not picker.opts.camel_case
+  picker.opts.args = grep_case_mode_args(picker.opts.args, picker.opts.camel_case)
+  picker.list:set_target()
+  picker:find()
+
+  vim.notify(
+    picker.opts.camel_case and "Grep case mode: camel/smart" or "Grep case mode: insensitive",
+    vim.log.levels.INFO,
+    { title = "Grep" }
+  )
+end
+
+local function apply_item_pos(item)
+  if not item then
+    return
+  end
+
+  require("snacks.picker.util").resolve_loc(item)
+
+  local pos = item.pos
+  if not (pos and pos[1]) and item.loc and item.loc.range and item.loc.range.start then
+    local start = item.loc.range.start
+    pos = { start.line + 1, start.character }
+  end
+  if not (pos and pos[1]) then
+    return
+  end
+
+  vim.schedule(function()
+    local line_count = vim.api.nvim_buf_line_count(0)
+    local row = math.max(1, math.min(pos[1], line_count))
+    local col = math.max(0, pos[2] or 0)
+    local ok = pcall(vim.cmd, ("keepjumps call cursor(%d, %d)"):format(row, col + 1))
+    if not ok then
+      pcall(vim.api.nvim_win_set_cursor, 0, { row, col })
+    end
+    pcall(vim.cmd, "normal! zv")
+    pcall(vim.cmd, "normal! zz")
+  end)
+end
+
+local function open_in_tab(picker, item)
+  if not item then
+    return
+  end
+
+  require("snacks.picker.util").resolve_loc(item)
+
+  local path = Snacks.picker.util.path(item) or item.file
+  if not path or path == "" then
+    local bufnr = item.buf
+    if not bufnr then return end
+    picker.opts.auto_close = false
+    vim.api.nvim_win_call(picker.main, function()
+      vim.cmd("tabnew")
+      vim.api.nvim_set_current_buf(bufnr)
+    end)
+    picker:focus()
+    picker.opts.auto_close = nil
+    return
+  end
+
+  local buf = vim.fn.bufadd(path)
+  vim.bo[buf].buflisted = true
+
+  picker.opts.auto_close = false
+  vim.api.nvim_win_call(picker.main, function()
+    vim.cmd(("tab sbuffer %d"):format(buf))
+  end)
+  apply_item_pos(item)
+  picker:focus()
+  picker.opts.auto_close = nil
+end
+
+local function confirm_lsp_location(picker, item)
+  if not item then
+    return
+  end
+
+  local function remember_jump_origin()
+    local win = vim.api.nvim_get_current_win()
+    local buf = vim.api.nvim_get_current_buf()
+    local is_empty = vim.bo[buf].buftype == ""
+      and vim.bo[buf].filetype == ""
+      and vim.api.nvim_buf_line_count(buf) == 1
+      and vim.api.nvim_buf_get_lines(buf, 0, -1, false)[1] == ""
+      and vim.api.nvim_buf_get_name(buf) == ""
+    if is_empty then
+      return
+    end
+
+    vim.api.nvim_win_call(win, function()
+      vim.cmd("normal! m'")
+    end)
+  end
+
+  remember_jump_origin()
+  picker:close()
+  require("snacks.picker.util").resolve_loc(item)
+
+  local path = Snacks.picker.util.path(item) or item.file
+  if not path or path == "" then
+    return
+  end
+
+  local ok, err = tab_jump.edit_or_goto_path(path)
+  if not ok then
+    vim.notify("Failed to open file: " .. (err or "unknown error"), vim.log.levels.ERROR)
+    return
+  end
+  apply_item_pos(item)
+end
+
 return {
   -- bufferline
   {

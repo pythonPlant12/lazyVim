@@ -9,6 +9,7 @@ return {
       { "<M-Up>", desc = "Multicursor add cursor above", mode = { "n", "x" } },
       { "<M-Down>", desc = "Multicursor add cursor below", mode = { "n", "x" } },
       { "<leader>mA", desc = "Multicursor add all matches", mode = { "n", "x" } },
+      { "<leader>mc", desc = "Multicursor build mode", mode = "n" },
       { "<leader>ms", desc = "Multicursor skip next match", mode = { "n", "x" } },
       { "<leader>mi", desc = "Multicursor insert at each line start", mode = "x" },
       { "<leader>mI", desc = "Multicursor append at each line end", mode = "x" },
@@ -18,6 +19,58 @@ return {
       mc.setup()
 
       local set = vim.keymap.set
+      local build_mode = { active = false, bufnr = nil }
+
+      local function stop_build_mode()
+        if not build_mode.active then
+          return
+        end
+
+        local bufnr = build_mode.bufnr
+        build_mode.active = false
+        build_mode.bufnr = nil
+
+        if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
+          for _, lhs in ipairs({ "c", "n", "q", "<Esc>" }) do
+            pcall(vim.keymap.del, "n", lhs, { buffer = bufnr })
+          end
+        end
+
+        if not mc.cursorsEnabled() then
+          mc.enableCursors()
+        end
+
+        vim.notify("Multicursor build mode off", vim.log.levels.INFO, { title = "Multicursor" })
+      end
+
+      local function start_build_mode()
+        if build_mode.active then
+          stop_build_mode()
+          return
+        end
+
+        local bufnr = vim.api.nvim_get_current_buf()
+        build_mode.active = true
+        build_mode.bufnr = bufnr
+
+        local opts = { buffer = bufnr, nowait = true, silent = true }
+        set("n", "c", mc.toggleCursor, vim.tbl_extend("force", opts, { desc = "MC build: Toggle cursor here" }))
+        set("n", "n", function() mc.matchAddCursor(1) end, vim.tbl_extend("force", opts, { desc = "MC build: Add next match" }))
+        set("n", "q", stop_build_mode, vim.tbl_extend("force", opts, { desc = "MC build: Finish" }))
+        set("n", "<Esc>", stop_build_mode, vim.tbl_extend("force", opts, { desc = "MC build: Finish" }))
+
+        vim.notify("Multicursor build mode: c toggle, n next match, q/<Esc> finish", vim.log.levels.INFO, {
+          title = "Multicursor",
+        })
+      end
+
+      local function clear_or_enable_cursors()
+        if not mc.cursorsEnabled() then
+          mc.enableCursors()
+        else
+          mc.clearCursors()
+        end
+      end
 
       set({ "n", "x" }, "<C-n>", function() mc.matchAddCursor(1) end, { desc = "MC: Add next match" })
       set({ "n", "x" }, "<leader>ms", function() mc.matchSkipCursor(1) end, { desc = "MC: Skip next match" })
@@ -25,6 +78,7 @@ return {
       set({ "n", "x" }, "<M-Up>", function() mc.lineAddCursor(-1) end, { desc = "MC: Add cursor above" })
       set({ "n", "x" }, "<M-Down>", function() mc.lineAddCursor(1) end, { desc = "MC: Add cursor below" })
       set({ "n", "x" }, "<leader>mA", mc.matchAllAddCursors, { desc = "MC: Add all matches" })
+      set("n", "<leader>mc", start_build_mode, { desc = "MC: Build cursors" })
       set({ "n", "x" }, "<leader>mo", mc.operator, { desc = "MC: Match with operator" })
       set({ "n", "x" }, "<leader>ml", mc.addCursorOperator, { desc = "MC: Add cursor per line (operator)" })
       set({ "n", "x" }, "<C-q>", mc.toggleCursor, { desc = "MC: Toggle current cursor" })
@@ -41,13 +95,8 @@ return {
         layer_set({ "n", "x" }, "<M-Left>", mc.prevCursor, { desc = "MC: Previous cursor" })
         layer_set({ "n", "x" }, "<M-Right>", mc.nextCursor, { desc = "MC: Next cursor" })
         layer_set({ "n", "x" }, "<leader>mx", mc.deleteCursor, { desc = "MC: Delete current cursor" })
-        layer_set("n", "<Esc>", function()
-          if not mc.cursorsEnabled() then
-            mc.enableCursors()
-          else
-            mc.clearCursors()
-          end
-        end, { desc = "MC: Clear cursors" })
+        layer_set("n", "q", clear_or_enable_cursors, { desc = "MC: Clear cursors" })
+        layer_set("n", "<Esc>", clear_or_enable_cursors, { desc = "MC: Clear cursors" })
       end)
 
       -- Keep cursor/match visuals readable across colorschemes.
