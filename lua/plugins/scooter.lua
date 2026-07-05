@@ -234,6 +234,18 @@ return {
           desc = "Search selected text in current file (grug-far)",
         },
         {
+          "<C-s>F",
+          function()
+            local filename = vim.fn.expand("%:t")
+            if filename == "" then
+              vim.notify("No current file name", vim.log.levels.WARN, { title = "grug-far" })
+              return
+            end
+            open_grug({ prefills = { search = filename, flags = "--fixed-strings --ignore-case", paths = "" } })
+          end,
+          desc = "Search current filename (grug-far)",
+        },
+        {
           "<C-s>d",
           function()
             open_grug({ prefills = { paths = escape_path(vim.fn.expand("%:h")), flags = "--fixed-strings --ignore-case" } })

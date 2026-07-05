@@ -488,24 +488,28 @@ return {
             end,
           },
           lsp_references = {
+            focus = "list",
             confirm = confirm_lsp_location,
             format = function(item, picker)
               return require("snacks.picker.format").filename(item, picker)
             end,
           },
           lsp_definitions = {
+            focus = "list",
             confirm = confirm_lsp_location,
             format = function(item, picker)
               return require("snacks.picker.format").filename(item, picker)
             end,
           },
           lsp_implementations = {
+            focus = "list",
             confirm = confirm_lsp_location,
             format = function(item, picker)
               return require("snacks.picker.format").filename(item, picker)
             end,
           },
           lsp_type_definitions = {
+            focus = "list",
             confirm = confirm_lsp_location,
             format = function(item, picker)
               return require("snacks.picker.format").filename(item, picker)
