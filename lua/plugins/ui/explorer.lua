@@ -226,6 +226,27 @@ return {
           },
         })
       end
+      opts.filesystem.commands.grug_far_search_node_filename = function(state)
+        local node = state.tree:get_node()
+        if not node or node.type == "message" then
+          return
+        end
+
+        local path = node:get_id()
+        local filename = path and vim.fn.fnamemodify(path, ":t") or ""
+        if filename == "" then
+          vim.notify("No selected file name", vim.log.levels.WARN, { title = "grug-far" })
+          return
+        end
+
+        grug_far_reuse.open_for_buffer(vim.api.nvim_get_current_buf(), {
+          prefills = {
+            search = filename,
+            paths = "",
+            flags = "--fixed-strings --ignore-case",
+          },
+        })
+      end
       opts.filesystem.commands.reveal_node_in_finder = function(state)
         local node = state.tree:get_node()
         if not node or node.type == "message" then
@@ -257,6 +278,8 @@ return {
       opts.filesystem.window.mappings["{"] = "navigate_up"
       opts.filesystem.window.mappings["}"] = "set_root"
       opts.filesystem.window.mappings["F"] = "reveal_node_in_finder"
+      opts.filesystem.window.mappings["<C-s>f"] = "grug_far_search_node"
+      opts.filesystem.window.mappings["<C-s>F"] = "grug_far_search_node_filename"
       opts.filesystem.window.mappings["<C-s>d"] = "grug_far_search_node"
 
       return opts

@@ -127,6 +127,26 @@ return {
         return p:gsub(" ", "\\ ")
       end
 
+      local function current_path()
+        if vim.bo.filetype == "neo-tree" then
+          local ok, state = pcall(function()
+            return require("neo-tree.sources.manager").get_state("filesystem")
+          end)
+          local node = ok and state and state.tree and state.tree:get_node() or nil
+          local path = node and node:get_id() or nil
+          if path and path ~= "" then return path end
+        end
+
+        return vim.api.nvim_buf_get_name(0)
+      end
+
+      local function current_dir()
+        local path = current_path()
+        if path == "" then return "" end
+        if vim.fn.isdirectory(path) == 1 then return path end
+        return vim.fn.fnamemodify(path, ":h")
+      end
+
       local function open_grug(opts)
         -- Reuse one grug-far instance per tab instead of stacking panels.
         return grug_far_reuse.open_for_buffer(vim.api.nvim_get_current_buf(), opts)
@@ -223,7 +243,12 @@ return {
         {
           "<C-s>f",
           function()
-            open_grug({ prefills = { paths = escape_path(vim.fn.expand("%")), flags = "--fixed-strings" } })
+            local path = current_path()
+            if path == "" then
+              vim.notify("No current file path", vim.log.levels.WARN, { title = "grug-far" })
+              return
+            end
+            open_grug({ prefills = { paths = escape_path(path), flags = "--fixed-strings" } })
           end,
           desc = "Search in current file (grug-far)",
         },
@@ -236,7 +261,7 @@ return {
         {
           "<C-s>F",
           function()
-            local filename = vim.fn.expand("%:t")
+            local filename = vim.fn.fnamemodify(current_path(), ":t")
             if filename == "" then
               vim.notify("No current file name", vim.log.levels.WARN, { title = "grug-far" })
               return
@@ -248,7 +273,12 @@ return {
         {
           "<C-s>d",
           function()
-            open_grug({ prefills = { paths = escape_path(vim.fn.expand("%:h")), flags = "--fixed-strings --ignore-case" } })
+            local dir = current_dir()
+            if dir == "" then
+              vim.notify("No current directory", vim.log.levels.WARN, { title = "grug-far" })
+              return
+            end
+            open_grug({ prefills = { paths = escape_path(dir), flags = "--fixed-strings --ignore-case" } })
           end,
           desc = "Search in current directory (grug-far)",
         },
