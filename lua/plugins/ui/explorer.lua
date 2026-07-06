@@ -226,8 +226,37 @@ return {
           },
         })
       end
+      opts.filesystem.commands.reveal_node_in_finder = function(state)
+        local node = state.tree:get_node()
+        if not node or node.type == "message" then
+          return
+        end
+
+        local path = node:get_id()
+        if not path or path == "" then
+          vim.notify("No selected path", vim.log.levels.WARN, { title = "Reveal File" })
+          return
+        end
+
+        path = vim.fn.fnamemodify(path, ":p")
+        if vim.fn.filereadable(path) ~= 1 and vim.fn.isdirectory(path) ~= 1 then
+          vim.notify("File not found: " .. path, vim.log.levels.WARN, { title = "Reveal File" })
+          return
+        end
+
+        if vim.fn.has("macunix") ~= 1 then
+          vim.notify("Finder reveal is only available on macOS", vim.log.levels.WARN, { title = "Reveal File" })
+          return
+        end
+
+        local ok = pcall(vim.system, { "open", "-R", path }, { detach = true })
+        if not ok then
+          vim.notify("Failed to reveal: " .. path, vim.log.levels.ERROR, { title = "Reveal File" })
+        end
+      end
       opts.filesystem.window.mappings["{"] = "navigate_up"
       opts.filesystem.window.mappings["}"] = "set_root"
+      opts.filesystem.window.mappings["F"] = "reveal_node_in_finder"
       opts.filesystem.window.mappings["<C-s>d"] = "grug_far_search_node"
 
       return opts
