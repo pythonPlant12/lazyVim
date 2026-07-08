@@ -1,6 +1,29 @@
 ---@diagnostic disable: undefined-global
 
 return {
+  -- Robust linewise/blockwise comments without relying on Neovim's builtin vim._comment module.
+  {
+    "numToStr/Comment.nvim",
+    event = "VeryLazy",
+    opts = {
+      padding = true,
+      sticky = true,
+      ignore = nil,
+      toggler = {
+        line = "gcc",
+        block = "gbc",
+      },
+      opleader = {
+        line = "gc",
+        block = "gb",
+      },
+      extra = {
+        above = "gcO",
+        below = "gco",
+        eol = "gcA",
+      },
+    },
+  },
   -- Inline rename command for LSP symbols.
   {
     "smjonas/inc-rename.nvim",

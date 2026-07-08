@@ -149,18 +149,38 @@ keymaps.set("i", "<A-BS>", "<C-w>", { desc = "Delete previous word" })
 keymaps.set("i", "<M-Del>", "<C-w>", { desc = "Delete previous word" })
 keymaps.set("i", "<A-Del>", "<C-w>", { desc = "Delete previous word" })
 
--- Reuse Comment.nvim motions so Ctrl-/ variants behave the same across terminals.
-local function comment_line()
-  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("gcc", true, false, true), "m", false)
+local function comment_api()
+  return require("Comment.api")
 end
-local function comment_visual()
-  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("gc", true, false, true), "m", false)
-  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("gv", true, false, true), "m", false)
+
+local function toggle_line_comment()
+  comment_api().toggle.linewise.current()
 end
-keymaps.set("n", "<C-/>", comment_line,   { desc = "Toggle comment" })
-keymaps.set("v", "<C-/>", comment_visual, { desc = "Toggle comment" })
-keymaps.set("n", "<C-_>", comment_line,   { desc = "Toggle comment" })
-keymaps.set("v", "<C-_>", comment_visual, { desc = "Toggle comment" })
+
+local function toggle_line_comment_visual()
+  local esc = vim.api.nvim_replace_termcodes("<ESC>", true, false, true)
+  vim.api.nvim_feedkeys(esc, "nx", false)
+  comment_api().toggle.linewise(vim.fn.visualmode())
+end
+
+local function toggle_block_comment()
+  comment_api().toggle.blockwise.current()
+end
+
+local function toggle_block_comment_visual()
+  local esc = vim.api.nvim_replace_termcodes("<ESC>", true, false, true)
+  vim.api.nvim_feedkeys(esc, "nx", false)
+  comment_api().toggle.blockwise(vim.fn.visualmode())
+end
+
+keymaps.set("n", "<C-/>", toggle_line_comment,        { desc = "Toggle line comment" })
+keymaps.set("v", "<C-/>", toggle_line_comment_visual, { desc = "Toggle line comment" })
+keymaps.set("n", "<C-_>", toggle_block_comment,        { desc = "Toggle block comment" })
+keymaps.set("v", "<C-_>", toggle_block_comment_visual, { desc = "Toggle block comment" })
+keymaps.set("n", "<C-?>", toggle_block_comment,        { desc = "Toggle block comment" })
+keymaps.set("v", "<C-?>", toggle_block_comment_visual, { desc = "Toggle block comment" })
+pcall(keymaps.set, "n", "<C-S-/>", toggle_block_comment,        { desc = "Toggle block comment" })
+pcall(keymaps.set, "v", "<C-S-/>", toggle_block_comment_visual, { desc = "Toggle block comment" })
 
 keymaps.set("n", "gl", function()
   local input = vim.fn.input(": ")
@@ -420,66 +440,89 @@ Snacks.toggle({
   end,
 }):map("<leader>ui")
 
--- Apply the persisted inlay-hint toggle to current and future LSP buffers.
-local function apply_inlay_hints(enabled, bufnr)
-  if not vim.lsp.inlay_hint then
+-- Keep inlay hints as one global state across buffers and filetypes.
+local inlay_hints_state_file = vim.fn.stdpath("state") .. "/inlay_hints_enabled"
+
+local function read_inlay_hints_state()
+  local ok, lines = pcall(vim.fn.readfile, inlay_hints_state_file)
+  if ok and lines[1] ~= nil then
+    return lines[1] == "true"
+  end
+  return true
+end
+
+local function write_inlay_hints_state(enabled)
+  vim.fn.mkdir(vim.fn.fnamemodify(inlay_hints_state_file, ":h"), "p")
+  pcall(vim.fn.writefile, { enabled and "true" or "false" }, inlay_hints_state_file)
+end
+
+local function inlay_hints_api()
+  return vim.lsp and vim.lsp.inlay_hint or nil
+end
+
+local function apply_inlay_hints_to_buffer(enabled, buf)
+  local api = inlay_hints_api()
+  if not api or not api.enable then
+    return
+  end
+  if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
+    return
+  end
+  if #vim.lsp.get_clients({ bufnr = buf }) == 0 then
     return
   end
 
-  local function apply(buf)
-    if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
-      return
-    end
-    if #vim.lsp.get_clients({ bufnr = buf }) == 0 then
-      return
-    end
-    vim.lsp.inlay_hint.enable(enabled, { bufnr = buf })
+  local ok = pcall(api.enable, enabled, { bufnr = buf })
+  if not ok then
+    pcall(api.enable, buf, enabled)
   end
+end
 
+local function apply_inlay_hints(enabled, bufnr)
   if bufnr then
-    apply(bufnr)
+    apply_inlay_hints_to_buffer(enabled, bufnr)
     return
   end
 
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    apply(buf)
+    apply_inlay_hints_to_buffer(enabled, buf)
   end
+end
+
+local function schedule_apply_inlay_hints(bufnr)
+  local function apply()
+    apply_inlay_hints(vim.g.inlay_hints_enabled, bufnr)
+  end
+  vim.schedule(apply)
+  vim.defer_fn(apply, 100)
+  vim.defer_fn(apply, 500)
 end
 
 vim.g.inlay_hints_enabled = vim.g.inlay_hints_enabled
 if vim.g.inlay_hints_enabled == nil then
-  vim.g.inlay_hints_enabled = true
+  vim.g.inlay_hints_enabled = read_inlay_hints_state()
 end
 
-vim.api.nvim_create_autocmd("LspAttach", {
+vim.api.nvim_create_autocmd({ "LspAttach", "BufEnter", "WinEnter" }, {
   group = vim.api.nvim_create_augroup("PersistentInlayHints", { clear = true }),
   callback = function(ev)
-    apply_inlay_hints(vim.g.inlay_hints_enabled, ev.buf)
+    schedule_apply_inlay_hints(ev.buf)
   end,
 })
 
-Snacks.toggle({
-  name = "Inlay Hints",
-  get = function()
-    return vim.g.inlay_hints_enabled
-  end,
-  set = function(enabled)
-    vim.g.inlay_hints_enabled = enabled
-    apply_inlay_hints(enabled)
-  end,
-}):map("<leader>up")
+local function toggle_inlay_hints()
+  local enabled = not vim.g.inlay_hints_enabled
+  vim.g.inlay_hints_enabled = enabled
+  write_inlay_hints_state(enabled)
+  apply_inlay_hints(enabled)
+  vim.notify((enabled and "Enabled" or "Disabled") .. " Inlay Hints", vim.log.levels.INFO, { title = "Inlay Hints" })
+end
 
-Snacks.toggle({
-  id = "persistent_inlay_hints_alias",
-  name = "Inlay Hints",
-  get = function()
-    return vim.g.inlay_hints_enabled
-  end,
-  set = function(enabled)
-    vim.g.inlay_hints_enabled = enabled
-    apply_inlay_hints(enabled)
-  end,
-}):map("<leader>uh")
+keymaps.set("n", "<leader>up", toggle_inlay_hints, { desc = "Toggle Inlay Hints" })
+keymaps.set("n", "<leader>uh", toggle_inlay_hints, { desc = "Toggle Inlay Hints" })
+vim.schedule(function()
+  apply_inlay_hints(vim.g.inlay_hints_enabled)
+end)
 
 vim.keymap.set("n", "<leader>ue", function()
   require("neo-tree.command").execute({ toggle = true, reveal = true, dir = LazyVim.root() })

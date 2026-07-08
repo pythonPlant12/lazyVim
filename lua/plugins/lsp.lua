@@ -82,10 +82,17 @@ local function install_inlay_hint_guard()
     end
 
     local bufnr = ctx.bufnr
+    if vim.g.inlay_hints_enabled == false then
+      pcall(vim.lsp.inlay_hint.enable, false, { bufnr = bufnr })
+      return original_on_inlayhint(nil, {}, ctx, ...)
+    end
+
     local version = ctx.version
     if version ~= nil and versions[bufnr] ~= nil and versions[bufnr] ~= version then
       pcall(vim.lsp.inlay_hint.enable, false, { bufnr = bufnr })
-      pcall(vim.lsp.inlay_hint.enable, true, { bufnr = bufnr })
+      if vim.g.inlay_hints_enabled ~= false then
+        pcall(vim.lsp.inlay_hint.enable, true, { bufnr = bufnr })
+      end
     end
     versions[bufnr] = version
 
