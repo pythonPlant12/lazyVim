@@ -332,6 +332,43 @@ keymaps.set("n", "<C-CR>", function() Snacks.picker.lsp_definitions() end, { des
 keymaps.set("n", "gd", function() Snacks.picker.lsp_definitions() end, { desc = "Go to definition" })
 keymaps.set("n", "gr", function() Snacks.picker.lsp_references() end, { desc = "Go to references" })
 
+-- Open the picked reference in a NEW tab. Runs on confirm, so it works whether
+-- Snacks auto-jumps (single reference) or shows the chooser (multiple references).
+local function open_reference_in_new_tab(picker, item)
+  if not item then
+    return
+  end
+  picker:close()
+  require("snacks.picker.util").resolve_loc(item)
+
+  local path = Snacks.picker.util.path(item) or item.file
+  if not path or path == "" then
+    return
+  end
+
+  local ok, err = pcall(vim.cmd, "tabedit " .. vim.fn.fnameescape(path))
+  if not ok then
+    vim.notify("Failed to open reference: " .. (err or "unknown error"), vim.log.levels.ERROR)
+    return
+  end
+
+  -- Position the cursor on the reference within the freshly opened tab.
+  local pos = item.pos
+  if not (pos and pos[1]) and item.loc and item.loc.range and item.loc.range.start then
+    local start = item.loc.range.start
+    pos = { start.line + 1, start.character }
+  end
+  if pos and pos[1] then
+    local row = math.max(1, math.min(pos[1], vim.api.nvim_buf_line_count(0)))
+    pcall(vim.api.nvim_win_set_cursor, 0, { row, math.max(0, pos[2] or 0) })
+    pcall(vim.cmd, "normal! zvzz")
+  end
+end
+
+keymaps.set("n", "gR", function()
+  Snacks.picker.lsp_references({ confirm = open_reference_in_new_tab })
+end, { desc = "Go to references (new tab)" })
+
 keymaps.set("n", "<leader>fp", function()
   local root = vim.fn.systemlist("git rev-parse --show-toplevel")[1]
   if vim.v.shell_error ~= 0 then root = vim.fn.getcwd() end
