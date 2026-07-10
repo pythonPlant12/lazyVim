@@ -21,8 +21,14 @@ keymaps.set("n", "-", "C-x")
 keymaps.set("n", "<C-a>", "gg<S-v>G")
 
 -- Jumplist navigation jumps to already-visible buffers in other tabs when possible.
+-- <C-o> goes back, <C-i> goes forward; both prefer returning to the tab where the
+-- previous location already lives (tracked by tab_jump's cross-tab history).
 local function smart_jump(motion)
-  tab_jump.jump(motion)
+  if motion == "<C-o>" then
+    tab_jump.back()
+  else
+    tab_jump.forward()
+  end
 end
 
 keymaps.set("n", "<leader>i", function() smart_jump("<C-o>") end, opts)

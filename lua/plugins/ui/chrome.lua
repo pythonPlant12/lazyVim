@@ -149,12 +149,16 @@ local function confirm_lsp_location(picker, item)
     return
   end
 
-  local ok, err = tab_jump.edit_or_goto_path(path)
-  if not ok then
-    vim.notify("Failed to open file: " .. (err or "unknown error"), vim.log.levels.ERROR)
-    return
-  end
-  apply_item_pos(item)
+  -- Record the origin->destination hop so <C-h>/<C-l> can return to the tab we came
+  -- from, even when the target lives in a different tab.
+  tab_jump.record(function()
+    local ok, err = tab_jump.edit_or_goto_path(path)
+    if not ok then
+      vim.notify("Failed to open file: " .. (err or "unknown error"), vim.log.levels.ERROR)
+      return
+    end
+    apply_item_pos(item)
+  end)
 end
 
 return {
