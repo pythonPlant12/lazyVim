@@ -1,5 +1,6 @@
 ---@diagnostic disable: undefined-global
 
+-- vim-illuminate: highlights other occurrences of the word under the cursor.
 return {
   {
     "RRethy/vim-illuminate",

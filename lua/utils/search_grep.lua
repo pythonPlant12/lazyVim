@@ -72,6 +72,7 @@ local toggle_keys = {
   ["<localleader>R"] = { "toggle_camel_case", mode = { "n" } },
 }
 
+-- Resolve the Snacks module (global or required), notifying if unavailable.
 local function get_snacks()
   if _G.Snacks and _G.Snacks.picker then
     return _G.Snacks
@@ -84,6 +85,7 @@ local function get_snacks()
   return nil
 end
 
+-- Split a comma/space separated string into trimmed non-empty tokens.
 local function split_filter_tokens(raw)
   local tokens = {}
   if type(raw) ~= "string" or raw == "" then
@@ -132,6 +134,7 @@ local function normalize_grep_glob(token, cwd)
   return glob
 end
 
+-- Turn raw filter input into a deduped list of ripgrep globs.
 local function build_grep_globs(raw, cwd)
   local seen = {}
   local globs = {}
@@ -145,6 +148,7 @@ local function build_grep_globs(raw, cwd)
   return globs
 end
 
+-- Strip leading *. / . and trailing . from an extension token.
 local function normalize_extension_token(token)
   local ext = vim.trim(token or "")
   if ext == "" then
@@ -159,6 +163,7 @@ local function normalize_extension_token(token)
   return ext
 end
 
+-- Convert extension tokens into deduped **/*.ext globs.
 local function build_extension_globs(raw)
   local seen = {}
   local globs = {}
@@ -215,6 +220,7 @@ local function collect_extension_items(cwd)
   return items
 end
 
+-- Prompt to pick an extension (or custom/none) and pass the choice to on_done.
 local function select_extension(cwd, on_done)
   local items = collect_extension_items(cwd)
   vim.ui.select(items, {
@@ -239,6 +245,7 @@ local function select_extension(cwd, on_done)
   end)
 end
 
+-- Prompt for path/glob filters with file completion.
 local function input_path_filters(prompt, on_done)
   vim.ui.input({ prompt = prompt, completion = "file" }, function(value)
     on_done(value)
@@ -264,6 +271,7 @@ local function merge_excludes(extra)
   return out
 end
 
+-- Launch the Snacks grep with shared toggle actions/keys applied.
 local function run_grep(opts)
   local snacks = get_snacks()
   if not snacks then

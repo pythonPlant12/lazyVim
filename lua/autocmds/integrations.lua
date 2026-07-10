@@ -1,3 +1,4 @@
+-- In neo-tree buffers, remap the bookmark key to warn instead of bookmarking.
 vim.api.nvim_create_autocmd("BufEnter", {
   group = vim.api.nvim_create_augroup("NeoTreeBookmarkToggle", { clear = true }),
   callback = function(ev)
@@ -9,6 +10,7 @@ vim.api.nvim_create_autocmd("BufEnter", {
   end,
 })
 
+-- Map Ctrl-j/k in a LazyGit terminal buffer to switch Neovim tabs; returns success.
 local function bind_lazygit_tab_nav(buf)
   -- Let terminal-mode LazyGit switch Neovim tabs without leaving the terminal stuck.
   if not vim.api.nvim_buf_is_valid(buf) or vim.bo[buf].filetype ~= "snacks_terminal" then
@@ -60,6 +62,7 @@ local function bind_lazygit_tab_nav(buf)
   return true
 end
 
+-- Try binding the LazyGit tab-nav keys now, retrying later if metadata isn't ready.
 local function bind_lazygit_tab_nav_deferred(buf)
   -- Snacks terminal metadata can appear after TermOpen, so retry shortly.
   if bind_lazygit_tab_nav(buf) then
@@ -77,6 +80,7 @@ local function bind_lazygit_tab_nav_deferred(buf)
   end, 25)
 end
 
+-- On entering/opening terminal buffers, wire up LazyGit tab navigation.
 vim.api.nvim_create_autocmd({ "BufEnter", "FileType", "TermOpen" }, {
   group = vim.api.nvim_create_augroup("LazyGitTerminalTabNav", { clear = true }),
   callback = function(ev)

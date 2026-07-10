@@ -1,5 +1,6 @@
 ---@diagnostic disable: undefined-global
 
+-- Python/Django backend LSP setup: basedpyright, ruff, ty, and jinja-lsp wiring plus venv/stub resolution.
 local resolver = require("utils.lsp_resolver")
 local python_lsp_settings = require("lsp.python_settings")
 local stub_generator = require("lsp.stub_generator")
@@ -58,6 +59,7 @@ local function apply_stub_paths(_, config)
   end
 end
 
+-- Chain a before_init hook onto any existing one without clobbering it.
 local function merge_before_init(server_opts, hook)
   local previous = server_opts.before_init
   server_opts.before_init = function(params, config)
@@ -91,6 +93,7 @@ local function apply_ruff_cmd_from_venv(_, config)
   end
 end
 
+-- Template buffers get noisy document highlights; disable them for html/jinja.
 local function disable_template_document_highlight(client, bufnr)
   local ft = vim.bo[bufnr].filetype
   if ft == "html" or ft == "htmldjango" or ft == "jinja" or ft == "jinja2" then
@@ -98,6 +101,7 @@ local function disable_template_document_highlight(client, bufnr)
   end
 end
 
+-- Register the ty server with lspconfig if LazyVim/lspconfig doesn't ship it.
 local function ensure_ty_lspconfig()
   local configs = require("lspconfig.configs")
   if not configs.ty then
@@ -120,6 +124,7 @@ end
 return {
   {
     "mason-org/mason.nvim",
+    -- Install the Python/Django language servers and linters.
     opts = function(_, opts)
       opts.ensure_installed = opts.ensure_installed or {}
       vim.list_extend(opts.ensure_installed, {
@@ -133,6 +138,7 @@ return {
   },
   {
     "neovim/nvim-lspconfig",
+    -- Wire up basedpyright/ruff/ty/jinja servers with project-aware roots and venv hooks.
     opts = function(_, opts)
       opts = opts or {}
       opts.servers = opts.servers or {}
@@ -170,6 +176,7 @@ return {
         root_dir = function(fname)
           return resolver.python_root(fname)
         end,
+        -- Strip every non-diagnostic capability so ty never competes with basedpyright.
         on_init = function(client)
           client.server_capabilities.completionProvider     = nil
           client.server_capabilities.hoverProvider          = false
@@ -220,6 +227,7 @@ return {
   },
   {
     "nvim-treesitter/nvim-treesitter",
+    -- Add Django/Jinja template grammars for highlighting.
     opts = function(_, opts)
       vim.list_extend(opts.ensure_installed, { "htmldjango", "jinja" })
     end,

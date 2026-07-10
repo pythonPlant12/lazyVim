@@ -1,3 +1,4 @@
+-- rustaceanvim: Rust LSP/tooling via LazyVim's rust extra; disables checkOnSave for bacon.
 return {
   { import = "lazyvim.plugins.extras.lang.rust" },
   {

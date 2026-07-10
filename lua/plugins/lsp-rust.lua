@@ -1,6 +1,8 @@
+-- Rust LSP wiring: bacon-ls for save-time checks + rust-analyzer for live diagnostics.
 return {
   {
     "mason-org/mason.nvim",
+    -- Ensure the bacon toolchain is installed via Mason.
     opts = function(_, opts)
       opts.ensure_installed = opts.ensure_installed or {}
       -- bacon provides continuous Rust diagnostics without rust-analyzer checkOnSave.
@@ -12,6 +14,7 @@ return {
   },
   {
     "neovim/nvim-lspconfig",
+    -- Register bacon-ls and tune rust-analyzer diagnostics.
     opts = function(_, opts)
       opts = opts or {}
       opts.servers = opts.servers or {}

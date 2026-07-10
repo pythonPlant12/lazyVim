@@ -1,5 +1,6 @@
 ---@diagnostic disable: undefined-global
 
+-- rainbow-delimiters.nvim: color-codes matching brackets/parens by nesting depth.
 return {
   {
     "HiPhish/rainbow-delimiters.nvim",

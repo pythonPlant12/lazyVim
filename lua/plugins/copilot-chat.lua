@@ -1,3 +1,4 @@
+-- CopilotChat.nvim: interactive chat window backed by GitHub Copilot.
 return {
   "CopilotC-Nvim/CopilotChat.nvim",
   branch = "main",
@@ -11,6 +12,7 @@ return {
     require("CopilotChat").setup(opts)
   end,
   keys = {
+    -- <leader>ac: open the chat window from normal or visual mode.
     {
       "<leader>ac",
       function() require("CopilotChat").open() end,

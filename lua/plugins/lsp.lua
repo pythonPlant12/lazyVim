@@ -1,5 +1,6 @@
 ---@diagnostic disable: undefined-global
 
+-- Core LSP config: shared capabilities, popup styling, :CheckLsp diagnostics, and inlay-hint safety.
 local resolver = require("utils.lsp_resolver")
 
 -- Shared LSP UX: popup sizing, root diagnostics, and inlay-hint safety guards.
@@ -129,6 +130,7 @@ end
 return {
   {
     "mason-org/mason.nvim",
+    -- Install Lua/Bash/shell tooling; luacheck only when luarocks is available.
     opts = function(_, opts)
       opts.ensure_installed = opts.ensure_installed or {}
       vim.list_extend(opts.ensure_installed, {
@@ -145,10 +147,23 @@ return {
   },
   {
     "neovim/nvim-lspconfig",
+    -- Global capabilities/keys, disable diagnostic signs, and per-server tweaks.
     opts = function(_, opts)
       opts = opts or {}
       opts.servers = opts.servers or {}
       opts.servers["*"] = opts.servers["*"] or {}
+      opts.servers["*"].capabilities = vim.tbl_deep_extend("force", opts.servers["*"].capabilities or {}, {
+        workspace = {
+          fileOperations = {
+            willRename = true,
+            didRename = true,
+            willCreate = true,
+            didCreate = true,
+            willDelete = true,
+            didDelete = true,
+          },
+        },
+      })
       opts.servers["*"].keys = opts.servers["*"].keys or {}
       opts.servers.bashls = vim.tbl_deep_extend("force", opts.servers.bashls or {}, {
         filetypes = { "sh", "bash", "zsh" },
@@ -159,6 +174,7 @@ return {
       table.insert(opts.servers["*"].keys, { "K", "Vj", desc = "Select line downward" })
       return opts
     end,
+    -- Register :CheckLsp, inlay-hint guard, rounded hover/signature popups, and highlights.
     init = function()
       install_inlay_hint_guard()
 

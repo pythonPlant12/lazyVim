@@ -1,6 +1,8 @@
+-- copilot.lua: GitHub Copilot inline completion engine; here pinned to a suitable Node runtime.
 return {
   "zbirenbaum/copilot.lua",
   opts = {
+    -- Resolve the newest nvm-installed Node >= 22 to run the Copilot agent.
     copilot_node_command = (function()
       -- Copilot needs modern Node; scan nvm directly so shell init is not required.
       local nvm_dir = vim.fn.expand("~/.nvm/versions/node")

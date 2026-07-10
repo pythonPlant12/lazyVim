@@ -153,20 +153,24 @@ local function comment_api()
   return require("Comment.api")
 end
 
+-- Toggle line comment on the current line.
 local function toggle_line_comment()
   comment_api().toggle.linewise.current()
 end
 
+-- Toggle line comments over the current visual selection.
 local function toggle_line_comment_visual()
   local esc = vim.api.nvim_replace_termcodes("<ESC>", true, false, true)
   vim.api.nvim_feedkeys(esc, "nx", false)
   comment_api().toggle.linewise(vim.fn.visualmode())
 end
 
+-- Toggle block comment on the current line.
 local function toggle_block_comment()
   comment_api().toggle.blockwise.current()
 end
 
+-- Toggle block comments over the current visual selection.
 local function toggle_block_comment_visual()
   local esc = vim.api.nvim_replace_termcodes("<ESC>", true, false, true)
   vim.api.nvim_feedkeys(esc, "nx", false)
@@ -203,6 +207,7 @@ end, { desc = "Go to line" })
 -- Theme selection persists to state and mirrors the matching LazyGit theme.
 local theme_state_file = vim.fn.stdpath("state") .. "/theme"
 
+-- Persist the chosen colorscheme name to the state file.
 local function save_theme(value)
   local f = io.open(theme_state_file, "w")
   if f then
@@ -212,6 +217,7 @@ local function save_theme(value)
 end
 
 local lazygit_cfg_dir = vim.fn.expand("~/Library/Application Support/lazygit")
+-- Map an internal scheme name to the corresponding LazyGit theme name.
 local function lazygit_theme_name(kind)
   if kind == "default-white" then
     return "light"
@@ -225,6 +231,7 @@ local function lazygit_theme_name(kind)
   return kind
 end
 
+-- Sync LazyGit's config.yml to match the theme, or write a default fallback.
 local function update_lazygit_theme(kind)
   kind = lazygit_theme_name(kind)
   local src
@@ -289,6 +296,7 @@ git:
   end
 end
 
+-- Pick the lualine theme hint that matches the given scheme/background.
 local function lualine_theme_hint(scheme, background)
   if scheme == "default-white" or scheme == "islands-white" or scheme == "islands-light" then
     return "islands-light"
@@ -299,6 +307,7 @@ local function lualine_theme_hint(scheme, background)
   return scheme:find("^islands") and ("islands-" .. background) or "auto"
 end
 
+-- Apply a colorscheme with matching background, blend, lualine, and LazyGit theme.
 local function apply_scheme(scheme, background)
   vim.o.background = background
   local transparent = scheme == "islands-dark"
@@ -315,6 +324,7 @@ local function apply_scheme(scheme, background)
   update_lazygit_theme(scheme)
 end
 
+-- Switch to light/dark mode by trying candidate schemes until one applies.
 local function apply_theme_mode(mode)
   local background = mode == "light" and "light" or "dark"
   vim.o.background = background
@@ -338,11 +348,13 @@ local function apply_theme_mode(mode)
   vim.notify("No colorscheme available for " .. background .. " mode", vim.log.levels.ERROR, { title = "Theme" })
 end
 
+-- Apply an "islands" scheme variant, choosing background from the variant.
 local function apply_islands_theme(variant)
   local bg = variant == "white" and "light" or "dark"
   apply_scheme("islands-" .. variant, bg)
 end
 
+-- Configure and apply a Catppuccin flavour.
 local function apply_catppuccin(flavour)
   local bg = (flavour == "latte") and "light" or "dark"
   vim.o.background = bg
@@ -356,6 +368,7 @@ local function apply_catppuccin(flavour)
   update_lazygit_theme(bg)
 end
 
+-- Apply a Rose Pine variant (main/moon/dawn) with matching background.
 local function apply_rose_pine(variant)
   local cs = variant == "main" and "rose-pine" or ("rose-pine-" .. variant)
   local bg = variant == "dawn" and "light" or "dark"
@@ -369,6 +382,7 @@ local function apply_rose_pine(variant)
   update_lazygit_theme(bg == "light" and "rose-pine-light" or "rose-pine-dark")
 end
 
+-- Apply the dimmed dark Rose Pine variant.
 local function apply_rose_pine_dark_dimmed()
   vim.o.background = "dark"
   vim.o.winblend = 0
@@ -380,6 +394,7 @@ local function apply_rose_pine_dark_dimmed()
   update_lazygit_theme("rose-pine-dark-dimmed")
 end
 
+-- Apply an "islands" Rose Pine variant with transparency enabled.
 local function apply_islands_rose_pine(variant)
   local cs = "islands-rose-pine-" .. variant
   local bg = variant == "light" and "light" or "dark"
@@ -443,6 +458,7 @@ Snacks.toggle({
 -- Keep inlay hints as one global state across buffers and filetypes.
 local inlay_hints_state_file = vim.fn.stdpath("state") .. "/inlay_hints_enabled"
 
+-- Read the persisted inlay-hints on/off state (defaults to on).
 local function read_inlay_hints_state()
   local ok, lines = pcall(vim.fn.readfile, inlay_hints_state_file)
   if ok and lines[1] ~= nil then
@@ -451,15 +467,18 @@ local function read_inlay_hints_state()
   return true
 end
 
+-- Persist the inlay-hints on/off state to disk.
 local function write_inlay_hints_state(enabled)
   vim.fn.mkdir(vim.fn.fnamemodify(inlay_hints_state_file, ":h"), "p")
   pcall(vim.fn.writefile, { enabled and "true" or "false" }, inlay_hints_state_file)
 end
 
+-- Return the LSP inlay-hint API if available on this Neovim.
 local function inlay_hints_api()
   return vim.lsp and vim.lsp.inlay_hint or nil
 end
 
+-- Enable/disable inlay hints for a single valid, LSP-attached buffer.
 local function apply_inlay_hints_to_buffer(enabled, buf)
   local api = inlay_hints_api()
   if not api or not api.enable then
@@ -478,6 +497,7 @@ local function apply_inlay_hints_to_buffer(enabled, buf)
   end
 end
 
+-- Apply inlay-hints state to one buffer, or all buffers when bufnr is nil.
 local function apply_inlay_hints(enabled, bufnr)
   if bufnr then
     apply_inlay_hints_to_buffer(enabled, bufnr)
@@ -489,6 +509,7 @@ local function apply_inlay_hints(enabled, bufnr)
   end
 end
 
+-- Re-apply inlay hints on several delays to catch late LSP attaches.
 local function schedule_apply_inlay_hints(bufnr)
   local function apply()
     apply_inlay_hints(vim.g.inlay_hints_enabled, bufnr)
@@ -510,6 +531,7 @@ vim.api.nvim_create_autocmd({ "LspAttach", "BufEnter", "WinEnter" }, {
   end,
 })
 
+-- Flip the global inlay-hints state, persist it, and apply everywhere.
 local function toggle_inlay_hints()
   local enabled = not vim.g.inlay_hints_enabled
   vim.g.inlay_hints_enabled = enabled

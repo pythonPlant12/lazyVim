@@ -1,3 +1,4 @@
+-- Git/history tooling: undotree (undo history visualizer) and gitsigns (signs + inline blame).
 return {
   {
     "mbbill/undotree",

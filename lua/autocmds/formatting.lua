@@ -1,3 +1,4 @@
+-- Run ESLint --fix on save for JS/TS/Vue files when the eslint LSP is attached.
 vim.api.nvim_create_autocmd("BufWritePre", {
   group = vim.api.nvim_create_augroup("EslintAutoFix", { clear = true }),
   pattern = { "*.js", "*.jsx", "*.ts", "*.tsx", "*.vue", "*.mjs", "*.cjs" },

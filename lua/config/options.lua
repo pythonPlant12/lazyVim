@@ -4,12 +4,14 @@
 
 -- Core editing defaults: keep navigation predictable and avoid swapfile clutter.
 vim.o.swapfile = false
-vim.opt.scrolloff=8
+vim.opt.scrolloff=8 -- keep 8 lines of context above/below the cursor
 
-vim.o.timeoutlen = 500
+vim.o.timeoutlen = 500 -- ms to wait for a mapped sequence to complete
 
+-- Cursor / visual behavior
 vim.o.smoothscroll = false
 vim.o.cursorline = true
+-- Per-mode cursor shapes/highlights; last entry disables blinking everywhere
 vim.opt.guicursor = table.concat({
   "n-v-c-sm:block-Cursor",
   "i-ci-ve:ver25-CursorInsert",
@@ -17,22 +19,25 @@ vim.opt.guicursor = table.concat({
   "a:blinkwait0-blinkon0-blinkoff0",
 }, ",")
 
+-- Windows / UI
 vim.o.winborder = "rounded"
-vim.o.switchbuf = "useopen"
+vim.o.switchbuf = "useopen" -- reuse an open window when switching to a buffer
 
-vim.diagnostic.config({ signs = false })
+vim.diagnostic.config({ signs = false }) -- no sign-column diagnostic markers
 
-vim.g.root_spec = { "cwd" }
+vim.g.root_spec = { "cwd" } -- LazyVim root detection uses cwd only
 
 -- Undercurl
 vim.cmd([[let &t_Cs = "\e[4:3m"]])
 vim.cmd([[let &t_Ce = "\e[4:0m"]])
 
+-- Command line / popup menu appearance
 vim.o.cmdheight = 2
 vim.o.pumheight = 20
-vim.o.pumblend = 10
-vim.o.winblend = 10
+vim.o.pumblend = 10 -- transparency for the popup menu
+vim.o.winblend = 10 -- transparency for floating windows
 
+-- Spell: ensure the personal spellfile directory exists before pointing at it
 local spell_dir = vim.fn.stdpath("config") .. "/spell"
 vim.fn.mkdir(spell_dir, "p")
 vim.opt.spellfile = spell_dir .. "/en.utf-8.add"
@@ -43,6 +48,7 @@ vim.g.eslint_autosave = false
 vim.g.lazyvim_picker = "snacks"
 
 -- Detect Django/Jinja template HTML so syntax, Treesitter, and LSP attach correctly.
+-- Normalize path separators to forward slashes for pattern matching.
 local function normalize_template_path(path)
   if not path or path == "" then
     return ""
@@ -51,6 +57,7 @@ local function normalize_template_path(path)
   return path:gsub("\\", "/")
 end
 
+-- Map a Jinja file path to htmldjango (if paired with .html) or plain jinja.
 local function jinja_template_filetype(path)
   local normalized = normalize_template_path(path)
   if normalized:match(".*%.html%.j2$") or normalized:match(".*%.html%.jinja$") or normalized:match(".*%.html%.jinja2$") then
@@ -60,6 +67,7 @@ local function jinja_template_filetype(path)
   return "jinja"
 end
 
+-- Scan the buffer in chunks for Jinja/Django template delimiters ({%, {{, {#).
 local function buffer_has_template_markers(bufnr)
   local line_count = vim.api.nvim_buf_line_count(bufnr)
   local chunk_size = 200
@@ -77,6 +85,7 @@ local function buffer_has_template_markers(bufnr)
   return false
 end
 
+-- Register template filetype detection by extension and path/name pattern.
 vim.filetype.add({
   extension = {
     j2 = jinja_template_filetype,
@@ -103,6 +112,7 @@ vim.filetype.add({
   },
 })
 
+-- Force the correct syntax engine for template filetypes on FileType.
 vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("TemplateSyntax", { clear = true }),
   pattern = { "jinja", "jinja2", "htmldjango" },

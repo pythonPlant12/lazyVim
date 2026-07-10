@@ -1,3 +1,4 @@
+-- Lualine statusline: custom mode/git/diagnostics/LSP chips with theme-aware highlights.
 return {
   -- statusline
   {
@@ -5,6 +6,7 @@ return {
     event = "VeryLazy",
     opts = function(_, opts)
       -- Match lualine's surface to transparent/opaque theme behavior.
+      -- Islands themes render lualine transparently over the editor background.
       local function is_transparent_lualine()
         local cs = vim.g.colors_name or ""
         return cs == "islands-dark"
@@ -12,6 +14,7 @@ return {
           or cs == "islands-light"
           or cs:find("^islands%-rose%-pine") ~= nil
       end
+      -- Statusline surface color: transparent for islands, else theme-dependent gray.
       local function lualine_bg()
         if is_transparent_lualine() then return "NONE" end
         return vim.o.background == "light" and "#F3F3F3" or "#2B2D30"
@@ -108,6 +111,7 @@ return {
       vim.g._git_modified = vim.g._git_modified or 0
       vim.g._git_deleted = vim.g._git_deleted or 0
       vim.g._git_conflicted = vim.g._git_conflicted or 0
+      -- Async count of commits ahead/behind upstream for the branch chip.
       local function refresh_git_ab()
         vim.fn.jobstart({ "git", "rev-list", "--left-right", "--count", "HEAD...@{upstream}" }, {
           cwd = vim.fn.getcwd(),
@@ -127,6 +131,7 @@ return {
           end,
         })
       end
+      -- Async tally of untracked/modified/deleted/conflicted files from git status.
       local function refresh_git_status()
         vim.fn.jobstart({ "git", "status", "--porcelain" }, {
           cwd = vim.fn.getcwd(),
@@ -184,6 +189,7 @@ return {
       setup_breadcrumb_hl()
       vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_breadcrumb_hl })
 
+      -- Theme-aware highlights for the git branch chip and its status indicators.
       local function setup_git_hl()
         local hint = vim.g._lualine_theme_hint or ""
         if vim.o.background == "light" then
@@ -209,6 +215,7 @@ return {
       setup_git_hl()
       vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_git_hl })
 
+      -- Reapply the lualine mode theme + StatusLine highlights from the theme hint.
       local function setup_lualine_theme_hl()
         local hint = vim.g._lualine_theme_hint or ""
         local theme
@@ -274,6 +281,7 @@ return {
         },
       }
 
+      -- Highlights for the compact diagnostics pill.
       local function setup_diag_hl()
         if vim.o.background == "light" then
           vim.api.nvim_set_hl(0, "DiagPillCap",   { fg = "#D5D0CA", bg = "#E2DFDB" })
@@ -422,6 +430,7 @@ return {
         ["null-ls"]    = "#1A8894",
       }
 
+      -- Per-server highlight groups for the LSP/tool status chips.
       local function setup_lsp_hl()
         local light = vim.o.background == "light"
         local lsp_bg = light and "#D5D0CA" or "#45475a"
@@ -591,12 +600,14 @@ return {
       opts.sections.lualine_y = {}
 
       -- Path/breadcrumb components are wrapped into rounded chips and truncated safely.
+      -- Rotating chip background colors for the path/breadcrumb segments.
       local function chip_bgs()
         return vim.o.background == "light"
           and { "#D5D0CA", "#D5D0CA", "#D5D0CA" }
           or  { "#3A3D41", "#42464D", "#4A4F57" }
       end
 
+      -- Wrap a component into a rounded chip with the given background color.
       local function style_chip(component, bg_fn)
         local comp = component
         if type(comp) == "function" then

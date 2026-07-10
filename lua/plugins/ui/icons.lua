@@ -19,6 +19,7 @@ local language_icon_theme_colors = {
   ["catppuccin-latte"] = { typescript = "#1E66F5", javascript = "#A17900", python = "#209FB5" },
 }
 
+-- Pick the icon color set for the active colorscheme, defaulting to islands-dark.
 local function language_icon_colors()
   local theme = vim.g.colors_name or ""
   return language_icon_theme_colors[theme] or language_icon_theme_colors["islands-dark"]

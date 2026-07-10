@@ -1,3 +1,4 @@
+-- Auto-restore equal split sizes when leaving a window that was zoomed/maximized.
 vim.api.nvim_create_autocmd("WinLeave", {
   group = vim.api.nvim_create_augroup("AutoUnzoom", { clear = true }),
   callback = function()

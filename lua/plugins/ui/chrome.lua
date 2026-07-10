@@ -1,3 +1,4 @@
+-- UI chrome plugins: bufferline tabs, Snacks pickers/lazygit/image, noice, which-key, trouble, borders.
 local tab_jump = require("utils.tab_jump")
 
 -- Some long-running picker callbacks may still resolve this as a Lua global until
@@ -18,6 +19,7 @@ local picker_excludes = {
   "**/shelved.patch",
 }
 
+-- Strip existing case flags, then default to ignore-case unless camel/smart mode is on.
 local function grep_case_mode_args(args, camel_case)
   local filtered = {}
   for _, arg in ipairs(args or {}) do
@@ -31,6 +33,7 @@ local function grep_case_mode_args(args, camel_case)
   return filtered
 end
 
+-- Toggle grep between camel/smart-case and insensitive, then rerun the search.
 local function toggle_grep_camel_case(picker)
   local source = picker and picker.opts and picker.opts.source or nil
   if source ~= "grep" and source ~= "grep_word" then
@@ -49,6 +52,7 @@ local function toggle_grep_camel_case(picker)
   )
 end
 
+-- Position the cursor on an opened picker item once Snacks resolves its location (async).
 local function apply_item_pos(item)
   if not item then
     return
@@ -78,6 +82,7 @@ local function apply_item_pos(item)
   end)
 end
 
+-- Open the picker item in a new tab without auto-closing the picker.
 local function open_in_tab(picker, item)
   if not item then
     return
@@ -111,11 +116,13 @@ local function open_in_tab(picker, item)
   picker.opts.auto_close = nil
 end
 
+-- Confirm an LSP location with tab-aware open, recording a jumplist mark to return to.
 local function confirm_lsp_location(picker, item)
   if not item then
     return
   end
 
+  -- Drop a jumplist mark unless we're sitting in a throwaway empty buffer.
   local function remember_jump_origin()
     local win = vim.api.nvim_get_current_win()
     local buf = vim.api.nvim_get_current_buf()
@@ -179,6 +186,7 @@ return {
         return { fg = "#BCBEC4", muted = "#6F737A", border = "#4A4F57", active_bg = "#2F496F", active_fg = "#E8F0FA", bg = "NONE" }
       end
 
+      -- Map palette colors onto every bufferline tab highlight group.
       local function tab_highlights()
         local c = palette()
         return {
@@ -211,6 +219,7 @@ return {
       end
 
       opts.highlights = tab_highlights()
+      -- Recompute tab colors whenever the colorscheme changes.
       vim.api.nvim_create_autocmd("ColorScheme", {
         callback = function()
           local ok, bufferline = pcall(require, "bufferline")
@@ -225,6 +234,7 @@ return {
   },
   {
     "folke/snacks.nvim",
+    -- Patch Snacks statuscolumn to pad the current line number so it aligns with the gutter.
     init = function()
       vim.api.nvim_create_autocmd("User", {
         pattern = "VeryLazy",
@@ -615,6 +625,7 @@ return {
         border = "rounded",
       },
       spec = {
+        -- Hide LazyVim's default git keys here since custom Git mappings replace them.
         { "<leader>g",   group = nil },
         { "<leader>gh",  group = nil },
         { "<leader>gg",  hidden = true },
@@ -631,6 +642,7 @@ return {
   {
     "folke/trouble.nvim",
     opts = {
+      -- Inverted j/k to match this config's vertical navigation direction.
       keys = {
         j = "prev",
         k = "next",

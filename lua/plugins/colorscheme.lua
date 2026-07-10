@@ -1,3 +1,4 @@
+-- Colorscheme bootstrap: pick/persist the theme, sync background & transparency, then configure providers (catppuccin, rose-pine, snacks).
 -- Theme selection is persisted in state so <leader>ut survives restarts.
 local state_file = vim.fn.stdpath("state") .. "/theme"
 local f = io.open(state_file, "r")

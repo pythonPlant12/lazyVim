@@ -6,6 +6,7 @@ local function is_islands_or_catppuccin()
   return cs:find("^islands") ~= nil or cs:find("^catppuccin") ~= nil
 end
 
+-- True only for the fully transparent islands variants that need blended floats.
 local function is_transparent_theme()
   local cs = vim.g.colors_name or ""
   return cs == "islands-dark"
@@ -54,6 +55,7 @@ local function apply_theme_blend()
   end
 end
 
+-- True for the built-in default-dark/default-white themes.
 local function is_default_theme()
   local cs = vim.g.colors_name or ""
   return cs == "default-dark" or cs == "default-white"
@@ -246,6 +248,7 @@ local plain_keyword_groups = {
   "@lsp.type.keyword",
 }
 
+-- Filetypes whose keywords should be flattened to a single plain color.
 local plain_keyword_langs = {
   "lua",
   "python",
@@ -265,6 +268,7 @@ local plain_keyword_langs = {
   "htmldjango",
 }
 
+-- Recolor all keyword-related groups to match the base Keyword foreground.
 local function apply_plain_keyword_hl()
   local keyword = vim.api.nvim_get_hl(0, { name = "Keyword", link = false })
   if not keyword or not keyword.fg then
@@ -284,6 +288,7 @@ local function apply_plain_keyword_hl()
   end
 end
 
+-- Apply plain keyword colors now and after delays so late plugins are covered.
 local function schedule_plain_keyword_hl()
   apply_plain_keyword_hl()
   for _, delay in ipairs({ 50, 200, 1000 }) do
@@ -353,6 +358,7 @@ local function apply_semantic_token_hl()
   end
 end
 
+-- Apply semantic token colors now and after delays so late LSP tokens are covered.
 local function schedule_semantic_token_hl()
   apply_semantic_token_hl()
   for _, delay in ipairs({ 50, 200, 1000 }) do
@@ -360,6 +366,7 @@ local function schedule_semantic_token_hl()
   end
 end
 
+-- Set cursor block colors per mode (normal/insert/replace) for light and dark.
 local function apply_cursor_hl()
   local is_light = vim.o.background == "light"
   local normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
@@ -378,6 +385,7 @@ local function apply_cursor_hl()
   hl(0, "TermCursor",    { link = "Cursor" })
 end
 
+-- Read one color attribute from a highlight group, returning a hex string or fallback.
 local function color_from_hl(group, key, fallback)
   local ok, current = pcall(vim.api.nvim_get_hl, 0, { name = group, link = false })
   local value = ok and current and current[key] or nil
@@ -533,6 +541,7 @@ local function apply_transparent_hl()
   end
 end
 
+-- Apply transparent highlights now and once more after a short delay.
 local function schedule_transparent_hl()
   if not is_transparent_theme() then return end
 
@@ -776,6 +785,7 @@ vim.api.nvim_create_autocmd("User", {
   callback = schedule_default_opaque_hl,
 })
 
+-- Once Snacks loads, wrap its set_hl to inject theme-aware diff colors on defaults.
 vim.api.nvim_create_autocmd("User", {
   pattern = "VeryLazy",
   group = vim.api.nvim_create_augroup("SnacksPickerDiffHl", { clear = true }),
@@ -829,6 +839,7 @@ local function apply_grugfar_hl()
   local search = vim.api.nvim_get_hl(0, { name = "Search", link = false })
   vim.api.nvim_set_hl(0, "GrugFarResultsMatch", { bg = search.bg, fg = search.fg, bold = search.bold })
 end
+-- Reapply the grug-far match color whenever the colorscheme changes.
 vim.api.nvim_create_autocmd("ColorScheme", {
   group = vim.api.nvim_create_augroup("GrugFarHl", { clear = true }),
   callback = apply_grugfar_hl,
@@ -961,6 +972,7 @@ local function apply_html_hl()
   hl(0, "djangoComBlock",           { fg = muted, italic = true })
 end
 
+-- Reapply HTML/Vue/Jinja color tweaks when opening those filetypes.
 vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("HtmlTsColors", { clear = true }),
   pattern = { "html", "vue", "jinja", "jinja2", "htmldjango" },
@@ -969,12 +981,14 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
+-- Reapply HTML/Vue/Jinja color tweaks after any colorscheme change.
 vim.api.nvim_create_autocmd("ColorScheme", {
   group = vim.api.nvim_create_augroup("HtmlTsColorsScheme", { clear = true }),
   callback = apply_html_hl,
 })
 apply_html_hl()
 
+-- Reapply the full custom highlight layer on colorscheme changes.
 vim.api.nvim_create_autocmd("ColorScheme", {
   group = vim.api.nvim_create_augroup("CursorTheme", { clear = true }),
   callback = function()

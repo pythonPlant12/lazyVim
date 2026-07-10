@@ -1,5 +1,6 @@
 local grug_far_reuse = require("utils.grug_far_reuse")
 
+-- Neo-tree explorer tweaks: navigation, path yanking, bookmark cleanup, grug-far/Finder integration.
 return {
   -- Neo-tree is tab-aware and reveals the current file with hidden files visible.
   {
@@ -50,6 +51,7 @@ return {
         created = true,
       }
 
+      -- Recursively force-show (or restore) the detail columns across nested renderers.
       local function toggle_renderer_details(components, show_all)
         for _, component in ipairs(components or {}) do
           local name = component[1]
@@ -81,6 +83,7 @@ return {
       opts.window.position = "left"
       opts.window.border = "rounded"
       opts.window.mappings = opts.window.mappings or {}
+      -- Left collapses an expanded dir or jumps to the parent node.
       opts.window.mappings["<Left>"] = function(state)
         local node = state.tree:get_node()
         if node.type == "directory" and node:is_expanded() then
@@ -93,6 +96,7 @@ return {
           end
         end
       end
+      -- Right expands a collapsed directory.
       opts.window.mappings["<Right>"] = function(state)
         local node = state.tree:get_node()
         if node.type == "directory" and not node:is_expanded() then
@@ -104,6 +108,7 @@ return {
       opts.window.mappings["]"]         = "next_source"
       opts.window.mappings["<"]         = false
       opts.window.mappings[">"]         = false
+      -- I toggles the extra detail columns for the whole tree.
       opts.window.mappings["I"] = function(state)
         state.__show_all_details = not state.__show_all_details
         local show_all = state.__show_all_details
@@ -112,6 +117,7 @@ return {
         end
         require("neo-tree.ui.renderer").redraw(state)
       end
+      -- y/p/P yank the node's absolute, relative, or absolute path to the clipboard.
       opts.window.mappings["y"] = function(state)
         local node = state.tree:get_node()
         if not node then
@@ -226,6 +232,7 @@ return {
           },
         })
       end
+      -- Search for the selected node's bare filename across the project.
       opts.filesystem.commands.grug_far_search_node_filename = function(state)
         local node = state.tree:get_node()
         if not node or node.type == "message" then
@@ -247,6 +254,7 @@ return {
           },
         })
       end
+      -- Reveal the selected node in macOS Finder.
       opts.filesystem.commands.reveal_node_in_finder = function(state)
         local node = state.tree:get_node()
         if not node or node.type == "message" then
@@ -283,6 +291,27 @@ return {
       opts.filesystem.window.mappings["<C-s>d"] = "grug_far_search_node"
 
       return opts
+    end,
+  },
+  -- Bridge Neo-tree file operations to LSP so servers can rewrite moved imports.
+  {
+    "antosha417/nvim-lsp-file-operations",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      "nvim-neo-tree/neo-tree.nvim",
+    },
+    opts = {
+      operations = {
+        willRenameFiles = true,
+        didRenameFiles = true,
+        willCreateFiles = true,
+        didCreateFiles = true,
+        willDeleteFiles = true,
+        didDeleteFiles = true,
+      },
+    },
+    config = function(_, opts)
+      require("lsp-file-operations").setup(opts)
     end,
   },
 }

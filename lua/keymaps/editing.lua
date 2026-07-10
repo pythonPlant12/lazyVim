@@ -44,6 +44,7 @@ keymaps.set("n", "sv", ":vsplit<Return>", opts)
 
 local resize_mode_active = false
 
+-- Asynchronously redraw lualine's statusline (e.g. after resize-mode toggles).
 local function refresh_statusline()
   vim.schedule(function()
     local ok, lualine = pcall(require, "lualine")
@@ -131,12 +132,14 @@ keymaps.set("v", "p", '"_dP', opts)
 keymaps.set("v", "P", '"_dP', opts)
 
 -- Custom B/W delete/change motions respect the remapped line-start/end behavior.
+-- Delete a text span and reposition the cursor, optionally dropping into insert mode.
 local function delete_range(start_row, start_col, end_row, end_col, enter_insert)
   vim.api.nvim_buf_set_text(0, start_row, start_col, end_row, end_col, { "" })
   vim.api.nvim_win_set_cursor(0, { start_row + 1, start_col })
   if enter_insert then vim.cmd("startinsert") end
 end
 
+-- Delete/change from the cursor to the custom line start (^/0) or line end target.
 local function change_to_custom_line_motion(side, enter_insert)
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
   local line = vim.api.nvim_get_current_line()
@@ -166,6 +169,7 @@ keymaps.set("n", "dB", function() change_to_custom_line_motion("left", false) en
 keymaps.set("n", "cW", function() change_to_custom_line_motion("right", true) end, { desc = "Change to custom W target" })
 keymaps.set("n", "cB", function() change_to_custom_line_motion("left", true) end, { desc = "Change to custom B target" })
 
+-- True if the (row, col) cursor position falls within the Treesitter node's range.
 local function node_contains_cursor(node, row, col)
   local start_row, start_col, end_row, end_col = node:range()
   if row < start_row or row > end_row then return false end
@@ -174,6 +178,7 @@ local function node_contains_cursor(node, row, col)
   return true
 end
 
+-- Check whether a Treesitter node type belongs to the requested function/class kind.
 local function node_type_matches(kind, node_type)
   local function_types = {
     function_declaration = true,
@@ -218,6 +223,7 @@ local function treesitter_containing_range(kind)
   return nil
 end
 
+-- Map an LSP document symbol kind to the requested function/class category.
 local function lsp_symbol_kind_matches(kind, symbol_kind)
   local lsp_kind = vim.lsp.protocol.SymbolKind
   if kind == "function" then
@@ -229,6 +235,7 @@ local function lsp_symbol_kind_matches(kind, symbol_kind)
     or symbol_kind == lsp_kind.Enum
 end
 
+-- Find the smallest LSP document symbol of the given kind that encloses the cursor.
 local function lsp_containing_range(kind)
   local params = { textDocument = vim.lsp.util.make_text_document_params(0) }
   local responses = vim.lsp.buf_request_sync(0, "textDocument/documentSymbol", params, 1000)
@@ -265,6 +272,7 @@ local function lsp_containing_range(kind)
   return best_start, best_end
 end
 
+-- Delete the containing function/class (Treesitter, else LSP), optionally entering insert.
 local function delete_code_object(kind, enter_insert)
   local start_row, end_row = treesitter_containing_range(kind)
   if not start_row then
@@ -351,6 +359,7 @@ local function path_under_cursor_or_buffer()
   return vim.api.nvim_buf_get_name(0)
 end
 
+-- Build the OS-specific command to reveal a path in the system file manager.
 local function file_manager_reveal_command(path)
   if vim.fn.has("macunix") == 1 then
     return { "open", "-R", path }
@@ -521,6 +530,7 @@ end, { desc = "Toggle maximize window" })
 keymaps.set("n", "<C-w>_", "<cmd>vsplit<CR>", { desc = "Split window vertically" })
 keymaps.set("n", "<C-w>-", "<cmd>split<CR>",  { desc = "Split window horizontally" })
 
+-- Open (or close) a bottom terminal split via Snacks.
 local function toggle_terminal_split()
   Snacks.terminal.toggle(nil, {
     count = 1,
@@ -561,6 +571,60 @@ end
 keymaps.set("n", "<C-Tab>",    pick_buffers_smart, { desc = "Find buffers" })
 keymaps.set("n", "<leader>bl", pick_buffers_smart, { desc = "List buffers" })
 
+local function pick_tabs()
+  local items = {}
+  local tabs = vim.api.nvim_list_tabpages()
+  local cur = vim.api.nvim_get_current_tabpage()
+  for i, tab in ipairs(tabs) do
+    local win = vim.api.nvim_tabpage_get_win(tab)
+    local buf = vim.api.nvim_win_get_buf(win)
+    local name = vim.api.nvim_buf_get_name(buf)
+    local fname = name ~= "" and vim.fn.fnamemodify(name, ":~:.") or "[No Name]"
+
+    -- Other named buffers visible in this tab (besides the active window's).
+    local seen, extra = { [buf] = true }, {}
+    for _, w in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
+      local b = vim.api.nvim_win_get_buf(w)
+      local n = vim.api.nvim_buf_get_name(b)
+      if not seen[b] and n ~= "" then
+        seen[b] = true
+        extra[#extra + 1] = vim.fn.fnamemodify(n, ":t")
+      end
+    end
+
+    local label = ("%d: %s"):format(i, fname)
+    if #extra > 0 then label = label .. "  (" .. table.concat(extra, ", ") .. ")" end
+
+    items[#items + 1] = {
+      text = label,
+      idx = i,
+      tabpage = tab,
+      current = tab == cur,
+      file = name ~= "" and name or nil,
+    }
+  end
+
+  Snacks.picker({
+    title = "Tabs",
+    items = items,
+    format = function(item)
+      local ret = {}
+      ret[#ret + 1] = item.current
+        and { "● ", "SnacksPickerGitStatusUntracked" }
+        or { "  ", "SnacksPickerDimmed" }
+      ret[#ret + 1] = { item.text }
+      return ret
+    end,
+    confirm = function(picker, item)
+      picker:close()
+      if item and item.tabpage and vim.api.nvim_tabpage_is_valid(item.tabpage) then
+        vim.api.nvim_set_current_tabpage(item.tabpage)
+      end
+    end,
+  })
+end
+keymaps.set("n", "<leader><tab>l", pick_tabs, { desc = "List tabs" })
+
 keymaps.set("n", "<Tab>", ">>", { desc = "Indent line" })
 keymaps.set("n", "<S-Tab>", "<<", { desc = "Unindent line" })
 keymaps.set("v", "<Tab>", ">gv", { desc = "Indent selection" })
@@ -568,11 +632,13 @@ keymaps.set("v", "<S-Tab>", "<gv", { desc = "Unindent selection" })
 keymaps.set("i", "<Tab>", "<C-t>", { desc = "Indent" })
 keymaps.set("i", "<S-Tab>", "<C-d>", { desc = "Unindent" })
 
+-- Move the current line up/down by one and reindent it.
 local function move_current_line(delta)
   vim.cmd(delta < 0 and "move .-2" or "move .+1")
   vim.cmd("normal! ==")
 end
 
+-- Move the visually selected lines up/down by one, keeping the selection and reindenting.
 local function move_selected_lines(delta)
   local start_line = vim.fn.line("v")
   local end_line = vim.fn.line(".")
@@ -614,5 +680,6 @@ keymaps.set("n", "<C-e>", vim.diagnostic.open_float, { desc = "Show line diagnos
 
 
 
+-- Swap vertical window navigation to match the inverted j/k (j=up, k=down)
 keymaps.set("n", "<C-w>j", "<C-w>k", opts)
 keymaps.set("n", "<C-w>k", "<C-w>j", opts)

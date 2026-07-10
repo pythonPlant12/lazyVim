@@ -47,6 +47,7 @@ end
 return {
   {
     "mason-org/mason.nvim",
+    -- Install frontend language servers (Tailwind, vtsls, Vue, ESLint).
     opts = function(_, opts)
       opts.ensure_installed = opts.ensure_installed or {}
       vim.list_extend(opts.ensure_installed, {
@@ -59,6 +60,7 @@ return {
   },
   {
     "neovim/nvim-lspconfig",
+    -- Configure vtsls (with Vue TS plugin), vue_ls, and ESLint root/config resolution.
     opts = function(_, opts)
       opts = opts or {}
       opts.servers = opts.servers or {}

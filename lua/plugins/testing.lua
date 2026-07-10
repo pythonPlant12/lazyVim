@@ -1,5 +1,6 @@
 local resolver = require("utils.lsp_resolver")
 
+-- neotest: multi-framework test runner (Vitest, Jest, Playwright, Python) with smart root/adapter routing.
 -- Root markers let "run all" pick the right adapter for mixed JS/Python projects.
 local vitest_root_markers_global = {
   "vitest.config.ts",
@@ -93,6 +94,7 @@ return {
       "nvim-neotest/neotest-jest",
       "thenbe/neotest-playwright",
     },
+    -- Configure per-framework adapters: command/cwd/config resolution and test-file filters.
     opts = function(_, opts)
       local function file_dir(path)
         if not path or path == "" then
@@ -227,6 +229,7 @@ return {
         return false
       end
 
+      -- Pure-filesystem upward root search (no plugin deps), bounded by cwd.
       local function nearest_root_fs(path, markers)
         local start_dir = path_dir(path)
         local cwd = normalize_slashes(vim.uv.cwd() or ""):gsub("/+$", "")
@@ -647,6 +650,7 @@ return {
       })
       opts.adapters["neotest-vim-test"] = false
     end,
+    -- Test-runner keymaps (run all/nearest/file, stop, jump between failures).
     keys = {
       {
         "<leader>ta",

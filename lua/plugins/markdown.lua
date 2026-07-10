@@ -1,3 +1,4 @@
+-- markdown-preview.nvim: live browser preview of the current markdown buffer.
 return {
   "iamcco/markdown-preview.nvim",
   cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop" },

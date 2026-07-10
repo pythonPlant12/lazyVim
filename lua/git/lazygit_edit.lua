@@ -10,6 +10,7 @@ function M.set_open_tab_next()
   _open_tab_next = true
 end
 
+-- True if the buffer is a Snacks terminal running LazyGit.
 local function is_lazygit_buf(buf)
   if vim.bo[buf].filetype ~= "snacks_terminal" then
     return false
@@ -36,10 +37,12 @@ function M.open_tab_next_and_edit()
   _open_tab_next = false
 end
 
+-- True if the current buffer is the LazyGit terminal.
 function M.is_current_lazygit()
   return is_lazygit_buf(vim.api.nvim_get_current_buf())
 end
 
+-- Focus the LazyGit terminal window across any tab; false if not open.
 function M.jump_to_lazygit()
   for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
     for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
@@ -68,6 +71,7 @@ local function capture_origin()
   }
 end
 
+-- Return to the captured origin tab/window/cursor/view.
 local function restore_origin(origin)
   if not origin then return end
 
@@ -83,6 +87,7 @@ local function restore_origin(origin)
   end)
 end
 
+-- Close the diff tab, then either open the target file or restore the origin.
 local function close_diff_tab(origin, opts)
   local ok_cursor, cursor = pcall(vim.api.nvim_win_get_cursor, 0)
 
@@ -102,6 +107,7 @@ local function close_diff_tab(origin, opts)
   end
 end
 
+-- Bind q in every window of the diff tab to close it.
 local function bind_q_in_tab(origin, opts)
   local tabpage = vim.api.nvim_get_current_tabpage()
   for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
@@ -110,6 +116,7 @@ local function bind_q_in_tab(origin, opts)
   end
 end
 
+-- Read a file's contents at a git revision; returns lines or nil + error.
 local function git_show(git_root, rev, relpath)
   local out = vim.fn.systemlist(
     "git -C " .. vim.fn.shellescape(git_root)
@@ -121,6 +128,7 @@ local function git_show(git_root, rev, relpath)
   return out
 end
 
+-- Resolve the git top-level directory containing path.
 local function git_root_for(path)
   local dir = vim.fn.fnamemodify(path, ":p:h")
   local result = vim.fn.systemlist("git -C " .. vim.fn.shellescape(dir) .. " rev-parse --show-toplevel")
@@ -157,6 +165,7 @@ function M._open_two_buf_diff(left_name, left_lines, right_name, right_lines, ft
   bind_q_in_tab(origin, opts)
 end
 
+-- Diff HEAD against the working tree for the given file.
 function M.diff(path)
   if not path or path == "" then return end
 
@@ -185,6 +194,7 @@ function M.diff(path)
   M._open_two_buf_diff("HEAD:" .. relpath, before, "worktree:" .. relpath, after, ft, { target_path = abs })
 end
 
+-- Diff a file between a commit and its parent.
 function M.diff_commit(path, hash)
   if not path or path == "" or not hash or hash == "" then return end
 
@@ -214,6 +224,7 @@ function M.diff_commit(path, hash)
   M._open_two_buf_diff(short .. "^:" .. relpath, before, short .. ":" .. relpath, after, ft)
 end
 
+-- Open a file in a new tab, optionally at a line.
 function M.open(path, line)
   if not path or path == "" then return end
 
@@ -241,12 +252,14 @@ local function normal_window_in_current_tab()
   end
 end
 
+-- The LazyGit window in the current tab, if focused.
 local function current_lazygit_window()
   local win = vim.api.nvim_get_current_win()
   local buf = vim.api.nvim_win_get_buf(win)
   return is_lazygit_buf(buf) and win or nil
 end
 
+-- Close the LazyGit window after a short delay.
 local function close_lazygit_window(win)
   if not win or not vim.api.nvim_win_is_valid(win) then
     return
@@ -259,6 +272,7 @@ local function close_lazygit_window(win)
   end, 50)
 end
 
+-- Clamp the cursor to a target column on the current line.
 local function restore_cursor_col(col)
   if not col then return end
   local function restore()

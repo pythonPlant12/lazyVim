@@ -1,5 +1,7 @@
 ---@diagnostic disable: undefined-global
 
+-- conform.nvim/mason formatting: project-aware ruff for Python plus a custom HTML/Vue static class wrapper.
+
 local uv = vim.uv
 
 -- Formatting setup prefers project-local tools and adds a custom static class wrapper.
@@ -317,6 +319,7 @@ return {
   },
   {
     "stevearc/conform.nvim",
+    -- Wire up Python ruff formatters and register the custom class-wrap formatter per filetype.
     opts = function(_, opts)
       opts.formatters_by_ft = opts.formatters_by_ft or {}
       opts.formatters_by_ft.python = { "ruff_fix", "ruff_format" }

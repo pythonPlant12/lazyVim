@@ -10,13 +10,14 @@ keymaps.set("n", "<C-g>g", function()
 
   Snacks.lazygit({ cwd = LazyVim.root.git() })
 end, { desc = "Lazygit" })
-keymaps.set("n", "<C-g>l",  "<Nop>", opts)
+keymaps.set("n", "<C-g>l",  "<Nop>", opts) -- disable bare <C-g>l so it acts only as a prefix
 keymaps.set("n", "<C-g>h",  function() Snacks.picker.git_log({ cwd = LazyVim.root.git() }) end, { desc = "Git history" })
 keymaps.set("n", "<C-g>s",  function() Snacks.picker.git_status() end, { desc = "Git status" })
 keymaps.set("n", "<C-g>d",  function() Snacks.picker.git_diff() end, { desc = "Git diff" })
 keymaps.set("n", "<C-g>ld", function() require("gitsigns").preview_hunk_inline() end, { desc = "Line diff" })
 keymaps.set("n", "<C-g>lh", function() Snacks.picker.git_log_line() end, { desc = "Line history" })
 keymaps.set("n", "<C-g>lr", function() require("gitsigns").reset_hunk() end, { desc = "Revert line/hunk to HEAD" })
+-- Return the git toplevel, falling back to cwd when not in a repo.
 local function git_root_or_cwd()
   local ok, root = pcall(function() return LazyVim.root.git() end)
   return (ok and root and root ~= "") and root or vim.fn.getcwd()
@@ -37,6 +38,7 @@ local function current_file_git_root()
   return root ~= "" and root or git_root_or_cwd()
 end
 
+-- Run a git command and return its stdout split into lines, or nil + error.
 local function git_lines(args, cwd)
   local cmd = { "git" }
   vim.list_extend(cmd, args)
@@ -52,6 +54,7 @@ local function git_lines(args, cwd)
   return vim.split(out, "\n", { trimempty = true }), nil
 end
 
+-- Return the current branch name (or "HEAD" if detached/unknown).
 local function current_branch(cwd)
   local lines = git_lines({ "rev-parse", "--abbrev-ref", "HEAD" }, cwd)
   if type(lines) == "table" and lines[1] and lines[1] ~= "" then
@@ -95,6 +98,7 @@ local function list_branches(active_branch, cwd)
   return items, nil
 end
 
+-- Return recent commits for a ref as selectable items (marking HEAD).
 local function list_commits(ref, limit, cwd)
   local lines, err = git_lines({ "log", ref, "--pretty=format:%h\t%s", ("--max-count=%d"):format(limit or 150) }, cwd)
   if not lines then
@@ -172,6 +176,7 @@ local function open_file_diff_fullscreen(base)
   end, 50)
 end
 
+-- Pick a branch then commit and open that ref's diff in fullscreen.
 local function pick_diff_base_and_open()
   local cwd = current_file_git_root()
   local active = current_branch(cwd)

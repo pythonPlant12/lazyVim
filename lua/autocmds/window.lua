@@ -5,6 +5,7 @@
 -- Default autocmds that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/autocmds.lua
 -- Add any additional autocmds here
 
+-- Enable cursorline in normal edit windows, disable it in floats and tool panes.
 vim.api.nvim_create_autocmd("WinEnter", {
   group = vim.api.nvim_create_augroup("FloatNoCursorLine", { clear = true }),
   callback = function()
@@ -22,6 +23,7 @@ vim.api.nvim_create_autocmd("WinEnter", {
   end,
 })
 
+-- In the quickfix list, swap j/k so navigation matches its inverted ordering.
 vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("InvertedListNavigation", { clear = true }),
   pattern = "qf",

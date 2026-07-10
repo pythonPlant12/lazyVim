@@ -2,6 +2,7 @@ do
   -- Small buffer history powers the custom alternate-buffer picker/navigation.
   vim.g.buf_history = vim.g.buf_history or {}
 
+  -- Append a buffer to the recent-buffer list, skipping repeats and capping at 50.
   local function push_buf_history(bufnr)
     local h = vim.g.buf_history
     if h[#h] == bufnr then return end
@@ -10,6 +11,7 @@ do
     vim.g.buf_history = h
   end
 
+  -- Record real file buffers (not tool/help panes) into the history on entry.
   vim.api.nvim_create_autocmd("BufEnter", {
     group = vim.api.nvim_create_augroup("BufHistory", { clear = true }),
     callback = function(ev)

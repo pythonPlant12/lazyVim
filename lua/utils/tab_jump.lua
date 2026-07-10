@@ -3,6 +3,7 @@ local M = {}
 
 local uv = vim.uv or vim.loop
 
+-- Resolve a path to a normalized absolute real path (follows symlinks) for reliable comparison.
 local function canonical(path)
   if not path or path == "" then
     return nil
@@ -16,6 +17,8 @@ local function canonical(path)
   return normalized:gsub("[\\/]$", "")
 end
 
+-- Return tab handles to search, putting OTHER tabs before the current one so an
+-- existing copy elsewhere is preferred over the current tab.
 local function ordered_tabs(prefer_other_tabs)
   local current = vim.api.nvim_get_current_tabpage()
   local tabs = vim.api.nvim_list_tabpages()
@@ -65,6 +68,7 @@ local function restore_window_buf(bufnr, restore)
   pcall(vim.api.nvim_win_set_buf, restore.win, restore.buf)
 end
 
+-- Switch to the given tab/window; restore the old buffer in the window we left behind.
 local function goto_visible(tab, win, bufnr, opts)
   if not (tab and win) then
     return false
@@ -81,6 +85,7 @@ local function goto_visible(tab, win, bufnr, opts)
   return true
 end
 
+-- Locate the tab/window currently displaying the given buffer number.
 function M.find_visible_buf(bufnr, opts)
   if not bufnr or bufnr <= 0 or not vim.api.nvim_buf_is_valid(bufnr) then
     return nil, nil, nil
@@ -90,6 +95,7 @@ function M.find_visible_buf(bufnr, opts)
   end, opts)
 end
 
+-- Locate the tab/window currently displaying the buffer for the given file path.
 function M.find_visible_path(path, opts)
   local target = canonical(path)
   if not target then
@@ -101,11 +107,13 @@ function M.find_visible_path(path, opts)
   end, opts)
 end
 
+-- Jump to an existing window showing this buffer; returns true on success.
 function M.goto_visible_buf(bufnr, opts)
   local tab, win = M.find_visible_buf(bufnr, opts)
   return goto_visible(tab, win, bufnr, opts)
 end
 
+-- Jump to an existing window showing this path; returns true on success.
 function M.goto_visible_path(path, opts)
   local tab, win, bufnr = M.find_visible_path(path, opts)
   return goto_visible(tab, win, bufnr, opts)
@@ -125,24 +133,28 @@ function M.edit_or_goto_path(path, opts)
   return true
 end
 
--- Wrap jumplist motions so they land on visible buffers in other tabs when possible.
+-- Wrap jumplist motions (<C-o>/<C-i>) so they land on an already-visible copy of
+-- the target buffer in another tab instead of duplicating it in the current window.
 function M.jump(motion)
   local pre_buf = vim.api.nvim_get_current_buf()
   local pre_win = vim.api.nvim_get_current_win()
-  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(motion, true, false, true), "n", false)
+  -- The "x" flag forces the fed motion to run immediately, so we can inspect the
+  -- result synchronously (scheduling could run before the jump finished).
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(motion, true, false, true), "nx", false)
 
-  vim.schedule(function()
-    local post_buf = vim.api.nvim_get_current_buf()
-    if post_buf == pre_buf or not vim.api.nvim_buf_is_valid(post_buf) then
-      return
-    end
-    if vim.bo[post_buf].buftype ~= "" or vim.api.nvim_buf_get_name(post_buf) == "" then
-      return
-    end
-    M.goto_visible_buf(post_buf, {
-      restore = { win = pre_win, buf = pre_buf },
-    })
-  end)
+  local post_buf = vim.api.nvim_get_current_buf()
+  -- Nothing to do if the motion stayed in the same buffer or landed on a scratch/no-name buffer.
+  if post_buf == pre_buf or not vim.api.nvim_buf_is_valid(post_buf) then
+    return
+  end
+  if vim.bo[post_buf].buftype ~= "" or vim.api.nvim_buf_get_name(post_buf) == "" then
+    return
+  end
+  -- Jump to the existing tab/window showing this buffer and put the old buffer back
+  -- in the window we came from (restore), avoiding a duplicate.
+  M.goto_visible_buf(post_buf, {
+    restore = { win = pre_win, buf = pre_buf },
+  })
 end
 
 return M

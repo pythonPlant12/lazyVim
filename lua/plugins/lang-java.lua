@@ -1,6 +1,8 @@
+-- nvim-jdtls: Java LSP (jdtls) integration; configures Gradle and JDK runtimes.
 return {
   {
     "mfussenegger/nvim-jdtls",
+    -- Deep-merge Java settings so LazyVim's jdtls defaults are preserved.
     opts = function(_, opts)
       opts.settings = vim.tbl_deep_extend("force", opts.settings or {}, {
         java = {

@@ -1,5 +1,6 @@
 ---@diagnostic disable: undefined-global
 
+-- Coding editor plugins: commenting, LSP rename, surround, treesitter context, and blink.cmp tweaks.
 return {
   -- Robust linewise/blockwise comments without relying on Neovim's builtin vim._comment module.
   {
@@ -56,6 +57,7 @@ return {
   },
   {
     "saghen/blink.cmp",
+    -- Extend LazyVim's blink.cmp: remap interface kinds, customize menu columns, and Tab handling.
     opts = function(_, opts)
       opts.sources = opts.sources or {}
       opts.sources.transform_items = function(_, items)

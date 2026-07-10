@@ -1,5 +1,6 @@
 ---@diagnostic disable: undefined-global
 
+-- HTML/CSS/Emmet LSP setup, extended to cover Django template filetypes.
 local function disable_template_document_highlight(client, bufnr)
   -- Template buffers get noisy document highlights from html/css/emmet servers.
   local ft = vim.bo[bufnr].filetype
@@ -11,6 +12,7 @@ end
 return {
   {
     "mason-org/mason.nvim",
+    -- Install the HTML/CSS/Emmet language servers.
     opts = function(_, opts)
       opts.ensure_installed = opts.ensure_installed or {}
       vim.list_extend(opts.ensure_installed, {
@@ -22,6 +24,7 @@ return {
   },
   {
     "neovim/nvim-lspconfig",
+    -- Extend html/cssls/emmet filetypes to include Django templates.
     opts = function(_, opts)
       opts = opts or {}
       opts.servers = opts.servers or {}

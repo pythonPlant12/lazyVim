@@ -1,3 +1,4 @@
+-- avante.nvim: Cursor-style AI assistant sidebar (chat, edits, suggestions) inside Neovim.
 return {
   "yetone/avante.nvim",
   event = "VeryLazy",
@@ -28,6 +29,7 @@ return {
     selector = { provider = "snacks" },
     input = { provider = "snacks" },
     hints = { enabled = true },
+    -- Sidebar geometry: dock on the right at a fixed width with a centered rounded header.
     windows = {
       position = "right",
       width = 35,

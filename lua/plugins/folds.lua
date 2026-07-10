@@ -1,3 +1,4 @@
+-- nvim-ufo: modern folding with Treesitter/indent providers and pretty fold previews.
 -- Folds are useful in files, but noisy in plugin/tool windows.
 local excluded_ft = {
   ["grug-far"]        = true,

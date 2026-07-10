@@ -8,6 +8,7 @@ local managed_clients = { vtsls = true, vue_ls = true }
 
 local cached_state = nil
 
+-- Read an entire file, returning nil if it cannot be opened.
 local function read_file(path)
   local file = io.open(path, "r")
   if not file then
@@ -18,6 +19,7 @@ local function read_file(path)
   return content
 end
 
+-- Write content to a file, creating parent directories as needed.
 local function write_file(path, content)
   vim.fn.mkdir(vim.fn.fnamemodify(path, ":h"), "p")
   local file = io.open(path, "w")
@@ -29,6 +31,7 @@ local function write_file(path, content)
   return true
 end
 
+-- Normalize a root path, defaulting to cwd when empty.
 local function normalize_root(root)
   if not root or root == "" then
     return vim.fn.getcwd()
@@ -36,10 +39,12 @@ local function normalize_root(root)
   return vim.fs.normalize(root)
 end
 
+-- Resolve a client's normalized project root.
 local function client_root(client)
   return normalize_root(client and (client.root_dir or (client.config and client.config.root_dir)))
 end
 
+-- Load and cache per-project state from the state file.
 local function load_state()
   if cached_state ~= nil then
     return cached_state
@@ -57,6 +62,7 @@ local function load_state()
   return cached_state
 end
 
+-- Persist state to disk and refresh the cache.
 local function save_state(state)
   cached_state = state
   return write_file(state_file, vim.json.encode(state))
@@ -66,19 +72,23 @@ function M.state_file()
   return state_file
 end
 
+-- Normalized project root for a given client.
 function M.root_for_client(client)
   return client_root(client)
 end
 
+-- True when the client is one this module manages (vtsls/vue_ls).
 function M.is_managed_client(client)
   return client and managed_clients[client.name] == true
 end
 
+-- Current type-check level for a root (defaults to "project").
 function M.type_check_level(root)
   local project = load_state().projects[normalize_root(root)] or {}
   return project.typeCheckLevel or default_type_check_level
 end
 
+-- Persist the type-check level ("off" or "project") for a root.
 function M.set_type_check_level(root, level)
   level = level == "off" and "off" or default_type_check_level
   local state = load_state()
@@ -89,14 +99,17 @@ function M.set_type_check_level(root, level)
   return level
 end
 
+-- True when type checking is not disabled for a root.
 function M.type_check_enabled(root)
   return M.type_check_level(root) ~= "off"
 end
 
+-- Whether ts/js validation should run for a root.
 local function validation_enabled(root)
   return M.type_check_enabled(root)
 end
 
+-- Build the LSP settings table toggling ts/js validation for a root.
 local function settings_for_root(root)
   local enabled = validation_enabled(root)
   return {
@@ -109,6 +122,7 @@ local function settings_for_root(root)
   }
 end
 
+-- Push root-derived settings to a managed client.
 function M.apply_to_client(client)
   if not M.is_managed_client(client) then
     return nil
@@ -129,6 +143,7 @@ local function filter_diagnostics(client, diagnostics)
   return {}
 end
 
+-- Reset a client's diagnostic namespace to clear stale entries.
 local function reset_client_diagnostics(client)
   if not (vim.lsp.diagnostic and vim.lsp.diagnostic.get_namespace) then
     return
@@ -139,6 +154,7 @@ local function reset_client_diagnostics(client)
   end
 end
 
+-- Wrap a managed client's diagnostics handler to honor the type-check toggle.
 function M.attach(client)
   if not M.is_managed_client(client) or client._typescript_lsp_settings_attached then
     return
@@ -161,6 +177,7 @@ function M.attach(client)
   end
 end
 
+-- All managed clients whose root matches the given root.
 function M.clients_for_root(root)
   local normalized = normalize_root(root)
   return vim.tbl_filter(function(client)

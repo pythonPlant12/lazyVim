@@ -45,6 +45,7 @@ local function read_file(path)
   return content
 end
 
+-- True if any of the named files exists directly in dir.
 local function has_any_file(dir, names)
   for _, name in ipairs(names) do
     if is_file(join_path(dir, name)) then
@@ -54,6 +55,7 @@ local function has_any_file(dir, names)
   return false
 end
 
+-- List a directory and its ancestors up to (and including) stop_dir.
 local function ancestors_until(start_dir, stop_dir)
   local dirs = {}
   local current = normalize(start_dir)
@@ -98,6 +100,7 @@ M.global_eslint_config_file = vim.fn.stdpath("config") .. "/eslint/eslint.config
 M.eslint_no_config_roots = {}   -- roots where user explicitly disabled global config
 M.eslint_warned_roots    = {}   -- roots where we already showed the one-time warning
 
+-- Detect an inline "eslintConfig" key inside a directory's package.json.
 local function package_json_has_eslint(dir)
   local package_json = join_path(dir, "package.json")
   if not is_file(package_json) then
@@ -174,6 +177,7 @@ function M.workspace_root()
   return normalize(vim.fn.getcwd()) or normalize(vim.env.HOME) or "/"
 end
 
+-- Nearest ancestor (within the workspace) containing any of the marker files.
 function M.nearest_root_by_markers(bufnr, markers)
   local fname = type(bufnr) == "string" and bufnr or vim.api.nvim_buf_get_name(bufnr)
   local file_dir = dir_of(fname)
@@ -265,6 +269,7 @@ function M.python_venv_for_root(root)
   return M.active_venv_dir()
 end
 
+-- Resolve an executable inside a venv's bin/Scripts directory, if present.
 function M.python_exec_from_venv(venv_dir, executable)
   if not venv_dir then
     return nil
@@ -305,6 +310,7 @@ function M.python_root_info(bufnr)
   return root or normalize(vim.env.HOME) or "/", "default-ruff"
 end
 
+-- Convenience wrapper returning only the Python root directory.
 function M.python_root(bufnr)
   local root = M.python_root_info(bufnr)
   return root

@@ -4,6 +4,7 @@ local keymaps = vim.keymap
 local python_lsp_settings = require("lsp.python_settings")
 local typescript_lsp_settings = require("lsp.typescript_settings")
 
+-- Return the first attached basedpyright/pyright client and its name.
 local function get_pyright_client()
   -- basedpyright is preferred, but pyright fallback keeps helpers usable.
   for _, name in ipairs({ "basedpyright", "pyright" }) do
@@ -13,6 +14,7 @@ local function get_pyright_client()
   return nil, nil
 end
 
+-- Build a settings table that sets the type-checking mode for the given server.
 local function python_type_check_settings_patch(server_name, mode)
   local root = server_name == "basedpyright" and "basedpyright" or "python"
   return {
@@ -24,6 +26,7 @@ local function python_type_check_settings_patch(server_name, mode)
   }
 end
 
+-- Run fn(client, name) only when the current buffer has a Python LSP attached.
 local function with_python_client(fn)
   if vim.bo.filetype ~= "python" then
     vim.notify("Not a Python buffer", vim.log.levels.WARN, { title = "Python" })
@@ -37,12 +40,14 @@ local function with_python_client(fn)
   return fn(client, name)
 end
 
+-- Persist a setting value and push it to the live client.
 local function apply_python_server_value(client, server_name, path, value)
   -- Runtime Python LSP setting changes are also persisted by python_settings.
   python_lsp_settings.set_value(server_name, path, value)
   return python_lsp_settings.apply_to_client(client, server_name)
 end
 
+-- Flip a boolean Python setting and notify the new value.
 local function toggle_python_server_value(path, label)
   with_python_client(function(client, name)
     local current = python_lsp_settings.get_value(name, path)
@@ -52,6 +57,7 @@ local function toggle_python_server_value(path, label)
   end)
 end
 
+-- Prompt to pick one of values for a Python setting, marking the current one.
 local function select_python_server_value(path, values, label)
   with_python_client(function(client, name)
     local current = python_lsp_settings.get_value(name, path)
@@ -71,6 +77,7 @@ local function select_python_server_value(path, values, label)
   end)
 end
 
+-- Execute a basedpyright-only LSP command, warning if basedpyright isn't active.
 local function run_basedpyright_command(command, arguments)
   with_python_client(function(_, name)
     if name ~= "basedpyright" then
@@ -81,6 +88,7 @@ local function run_basedpyright_command(command, arguments)
   end)
 end
 
+-- Read an entire file's contents, returning nil if it can't be opened.
 local function read_config_file(path)
   local f = io.open(path, "r")
   if not f then return nil end
@@ -89,10 +97,12 @@ local function read_config_file(path)
   return content
 end
 
+-- Escape Lua pattern magic characters so a key can be matched literally.
 local function escape_lua_pattern(s)
   return s:gsub("([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1")
 end
 
+-- Minimal TOML lookup: read a string/number key from a section (or top level).
 local function toml_get(content, section, key)
   local key_pat = escape_lua_pattern(key)
   local in_target = (section == nil)
@@ -110,6 +120,7 @@ local function toml_get(content, section, key)
   return nil
 end
 
+-- Walk from the buffer's dir up to cwd, returning the first truthy callback result.
 local function walk_ancestors(callback)
   local bufpath = vim.api.nvim_buf_get_name(0)
   if bufpath == "" then return nil end
@@ -130,6 +141,7 @@ local function walk_ancestors(callback)
   return nil
 end
 
+-- Find the project's configured typeCheckingMode from pyright/pyproject config.
 local function read_project_type_checking_mode(server_name)
   -- Project config wins over defaults when no per-user override exists.
   return walk_ancestors(function(dir)
@@ -147,6 +159,7 @@ local function read_project_type_checking_mode(server_name)
   end) or "standard"
 end
 
+-- Read Ruff/pyproject indent-width for Python files in a directory.
 local function read_python_indent_config(dir)
   -- Match Python indentation to Ruff/pyproject when present.
   for _, name in ipairs({ "ruff.toml", ".ruff.toml" }) do
@@ -165,6 +178,7 @@ local function read_python_indent_config(dir)
   end
 end
 
+-- Safely JSON-decode content into a table, returning nil on failure.
 local function json_decode_safe(content)
   if not content then return nil end
   local ok, data = pcall(vim.json.decode, content)
@@ -172,6 +186,7 @@ local function json_decode_safe(content)
   return nil
 end
 
+-- Follow nested keys into a decoded table, returning the leaf only if numeric.
 local function json_get(data, ...)
   local val = data
   for _, key in ipairs({ ... }) do
@@ -181,12 +196,14 @@ local function json_get(data, ...)
   return (type(val) == "number") and val or nil
 end
 
+-- Strip // and /* */ comments so JSONC can be parsed as JSON.
 local function strip_json_comments(text)
   text = text:gsub("//[^\r\n]*", "")
   text = text:gsub("/%*.-%*/", "")
   return text
 end
 
+-- Read JS/TS indent-width from Biome, Prettier, or package.json in a directory.
 local function read_js_indent_config(dir)
   -- Match JS/TS indentation to Biome, Prettier, or package.json config.
   for _, name in ipairs({ "biome.json", "biome.jsonc" }) do
@@ -224,6 +241,7 @@ local function read_js_indent_config(dir)
   end
 end
 
+-- Read HTML/template indent-width from Biome, Prettier, or package.json.
 local function read_html_indent_config(dir)
   -- HTML/template indentation follows the same frontend formatter configs.
   for _, name in ipairs({ "biome.json", "biome.jsonc" }) do
@@ -267,6 +285,7 @@ local js_filetypes = {
   vue = true,
 }
 
+-- Collect the unique vtsls/vue_ls clients attached to the current buffer.
 local function get_typescript_clients()
   local seen = {}
   local attached = {}
@@ -282,6 +301,7 @@ local function get_typescript_clients()
   return attached
 end
 
+-- Run fn(roots) with the deduped project roots of attached TS/Vue clients.
 local function with_typescript_project_clients(fn)
   -- Apply TypeScript toggles once per root, even with both vtsls and vue_ls attached.
   if not js_filetypes[vim.bo.filetype] then
@@ -315,6 +335,7 @@ local html_filetypes = {
 
 local auto_indent_filetypes = vim.tbl_extend("force", { python = true }, js_filetypes, html_filetypes)
 
+-- Dispatch to the right formatter-config reader for the current filetype.
 local function read_project_indent()
   -- Prefer formatter config, then fall back to detecting indentation from the buffer.
   local ft = vim.bo.filetype
@@ -330,6 +351,7 @@ local function read_project_indent()
   return nil
 end
 
+-- Guess indentation width by scanning indentation deltas in the buffer.
 local function detect_indent()
   -- Lightweight fallback: infer the most common small indentation delta.
   local lines = vim.api.nvim_buf_get_lines(0, 0, math.min(200, vim.api.nvim_buf_line_count(0)), false)
@@ -435,6 +457,7 @@ keymaps.set("n", "<leader>Lpb", function()
   run_basedpyright_command("basedpyright.writeBaseline")
 end, { desc = "Python write baseline" })
 
+-- Register a Snacks toggle for a persisted basedpyright boolean setting.
 local function python_snacks_toggle(path, name, lhs)
   -- Snack toggles share the same persistence path as manual selectors.
   Snacks.toggle({
@@ -647,6 +670,7 @@ keymaps.set("n", "<leader>Lsi", function()
   end)
 end, { desc = "Indentation width" })
 
+-- Run a spell command on the word under cursor and notify what changed.
 local function spell_word_action(action, command)
   local word = vim.fn.expand("<cword>")
   vim.cmd("normal! " .. command)

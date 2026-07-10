@@ -1,6 +1,7 @@
 -- Generate Python stubs from diagnostics when the language keymaps request it.
 local M = {}
 
+-- Read an entire file, returning nil if it cannot be opened.
 local function read_file(path)
   local f = io.open(path, "r")
   if not f then return nil end
@@ -9,6 +10,7 @@ local function read_file(path)
   return content
 end
 
+-- Append lines (blank-line separated) to a file.
 local function append_to_file(path, lines)
   local f = io.open(path, "a")
   if not f then return false end
@@ -17,6 +19,7 @@ local function append_to_file(path, lines)
   return true
 end
 
+-- Pull the missing attribute name out of a basedpyright diagnostic message.
 function M.extract_missing_attr(message)
   local attr = message:match('"([%w_]+)" is not a known attribute of module')
   if attr then return attr end
@@ -26,6 +29,7 @@ function M.extract_missing_attr(message)
   return attr
 end
 
+-- Detect a "not a known attribute of None" (nil-safety) diagnostic.
 function M.extract_optional_member_attr(message)
   -- Optional-member diagnostics are real nil-safety issues, not missing stubs.
   return message:match('"([%w_]+)" is not a known attribute of "None"')
@@ -49,6 +53,7 @@ local function extract_module_from_import(bufnr, attr)
   return nil, nil
 end
 
+-- Locate the stub .pyi path for a module, preferring an existing file.
 local function find_stub_file(module_path)
   -- Custom stubs live under config/stubs and mirror Python module paths.
   local stub_root = vim.fn.stdpath("config") .. "/stubs"
@@ -63,10 +68,12 @@ local function find_stub_file(module_path)
   return candidates[1]
 end
 
+-- Convert a slash module path to dotted import notation.
 local function module_to_import(module_path)
   return module_path:gsub("/", ".")
 end
 
+-- Introspect a symbol via a Python subprocess, returning an encoded result.
 local function introspect_symbol(module_path, attr, venv_python)
   -- Use the project Python to preserve installed packages and runtime signatures.
   local script = string.format([[
@@ -117,6 +124,7 @@ except Exception as e:
   return vim.trim(result)
 end
 
+-- Turn an introspection result into stub lines for a function or value.
 local function build_stub_lines(attr, introspect_result)
   local kind, rest = introspect_result:match("^([^|]+)|(.*)$")
   if kind == "callable" then
@@ -144,6 +152,7 @@ local function build_stub_lines(attr, introspect_result)
   end
 end
 
+-- Resolve an alias/name to its fully-qualified module path from buffer imports.
 local function resolve_import_alias(bufnr, alias)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, 50, false)
   for _, line in ipairs(lines) do
@@ -159,6 +168,7 @@ local function resolve_import_alias(bufnr, alias)
   return nil
 end
 
+-- Find a project venv Python, falling back to system python3.
 local function find_venv_python(root_dir)
   local candidates = {
     root_dir .. "/venv/bin/python",
@@ -170,6 +180,7 @@ local function find_venv_python(root_dir)
   return "python3"
 end
 
+-- Introspect a class via Python, returning its body lines (attrs + methods).
 local function introspect_class(module_path, class_name, venv_python)
   -- Class stubs include inherited annotations and public methods when available.
   local script = string.format([[
@@ -227,6 +238,7 @@ except Exception as e:
   return vim.trim(result)
 end
 
+-- Introspect the current file's class and append a class stub to its .pyi.
 function M.add_stub_for_class(class_name, bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local filepath = vim.api.nvim_buf_get_name(bufnr)
@@ -332,6 +344,7 @@ function M.add_stub_for_diagnostic()
   M._finish_add_stub(attr, module_path, bufnr)
 end
 
+-- Introspect the resolved symbol and append its stub to the module's .pyi.
 function M._finish_add_stub(attr, module_path, bufnr)
   -- Notify basedpyright so the new .pyi is picked up without restarting LSP.
   local root_dir = vim.fn.getcwd()
@@ -365,6 +378,7 @@ function M._finish_add_stub(attr, module_path, bufnr)
   end
 end
 
+-- Register the :StubAddDiagnostic user command.
 function M.setup()
   vim.api.nvim_create_user_command("StubAddDiagnostic", function()
     M.add_stub_for_diagnostic()

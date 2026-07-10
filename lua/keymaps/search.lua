@@ -92,6 +92,7 @@ local function parse_search_query(input)
   }
 end
 
+-- Parse the input, then load the pattern into the search register and highlight.
 local function set_prefixed_search(input)
   local parsed = parse_search_query(input)
   if not parsed then
@@ -132,6 +133,7 @@ keymaps.set("n", "/", function()
   pcall(vim.cmd, "normal! zv")
 end, { desc = "Search (prefix flags before ':' e.g. re:, c:, w:, cw:, wcre:)" })
 
+-- Yank the visual selection (restoring the register) and search for it exactly.
 local function visual_search_set()
   local saved = vim.fn.getreg('"')
   local saved_type = vim.fn.getregtype('"')

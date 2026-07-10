@@ -3,10 +3,12 @@
 -- Reuse one grug-far instance per tab so repeated searches focus existing windows.
 local M = {}
 
+-- Stable per-tab instance name so grug-far reuses one buffer per tabpage.
 local function instance_name(tabpage)
   return "__grug_far_tab_instance__" .. tostring(tabpage)
 end
 
+-- Find an existing grug-far window/instance in the given tabpage, if any.
 local function grug_window_instance(grug_far, tabpage)
   for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
     local buf = vim.api.nvim_win_get_buf(win)
@@ -17,6 +19,7 @@ local function grug_window_instance(grug_far, tabpage)
   end
 end
 
+-- Fill in default search/replace/flags so update_input_values has all fields.
 local function normalized_prefills(prefills)
   return vim.tbl_extend("force", {
     search = "",
@@ -27,6 +30,7 @@ local function normalized_prefills(prefills)
   }, prefills or {})
 end
 
+-- Focus a window if it is still valid.
 local function focus_window(win)
   if win and vim.api.nvim_win_is_valid(win) then
     vim.api.nvim_set_current_win(win)
@@ -35,11 +39,13 @@ local function focus_window(win)
   return false
 end
 
+-- Focus an already-open grug-far window in this tab and return its instance.
 local function focus_open_grug_window(grug_far, tabpage)
   local win, inst = grug_window_instance(grug_far, tabpage)
   if focus_window(win) then return inst end
 end
 
+-- Once the instance is ready, focus its search input and enter insert mode.
 local function focus_search_input(inst)
   inst:when_ready(function()
     vim.schedule(function()
@@ -55,6 +61,7 @@ local function focus_search_input(inst)
   end)
 end
 
+-- Open or reuse this tab's grug-far instance with the given prefills.
 function M.open_for_buffer(_, opts)
   local grug_far = require("grug-far")
   local tabpage = vim.api.nvim_get_current_tabpage()

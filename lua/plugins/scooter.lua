@@ -1,5 +1,6 @@
 ---@diagnostic disable: undefined-global
 
+-- grug-far.nvim: interactive project-wide search and replace, with custom result handling.
 local function focus_window_for_location(grug_buf, filename)
   -- After opening a result, focus the existing file window instead of grug-far.
   if not filename or filename == "" then
@@ -23,6 +24,7 @@ local function run_enter_fallback(fallback)
   end
 end
 
+-- Open the result under the cursor defensively, then focus its file window.
 local function open_grug_result_and_focus(buf, fallback)
   local grug_far = require("grug-far")
   local inst = grug_far.get_instance(buf)
@@ -71,6 +73,7 @@ return {
       -- Result folding hides context while editing replacements.
       folding = { enabled = false },
     },
+    -- Set up grug-far, patch a CRLF bug, and add buffer-local keymaps per instance.
     config = function(_, opts)
       require("grug-far").setup(opts)
 
@@ -123,10 +126,12 @@ return {
     keys = function()
       local grug_far_reuse = require("utils.grug_far_reuse")
 
+      -- Escape spaces so paths survive grug-far's argument splitting.
       local function escape_path(p)
         return p:gsub(" ", "\\ ")
       end
 
+      -- Resolve the path under the cursor, honoring neo-tree selections.
       local function current_path()
         if vim.bo.filetype == "neo-tree" then
           local ok, state = pcall(function()

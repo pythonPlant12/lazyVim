@@ -1,5 +1,7 @@
 ---@diagnostic disable: undefined-global
 
+-- bookmarks.nvim: persistent, named line bookmarks with a Telescope picker and repo-scoped deletion helpers.
+
 local function current_git_root()
   -- Repository scope lets destructive bookmark actions avoid unrelated projects.
   local path = vim.api.nvim_buf_get_name(0)
@@ -14,6 +16,7 @@ local function current_git_root()
 end
 
 local function path_in_root(path, root)
+  -- True when `path` resolves to `root` itself or lives beneath it.
   if type(path) ~= "string" or path == "" then
     return false
   end
@@ -64,6 +67,7 @@ return {
       "stevearc/dressing.nvim",
     },
     keys = {
+      -- <C-b>d: delete the bookmark on the current line, refresh signs/tree, and notify.
       {
         "<C-b>d",
         function()
@@ -92,6 +96,7 @@ return {
         end,
         desc = "Delete bookmark on line",
       },
+      -- <C-b>D: delete every bookmark belonging to the current git repository.
       {
         "<C-b>D",
         delete_repo_bookmarks,
@@ -99,6 +104,7 @@ return {
       },
     },
     config = function()
+      -- Display name for a bookmark, falling back to a placeholder when unnamed.
       local function bookmark_title(bookmark)
         return (type(bookmark.name) == "string" and bookmark.name ~= "") and bookmark.name or "[Untitled]"
       end

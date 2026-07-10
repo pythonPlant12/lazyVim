@@ -21,6 +21,7 @@ return {
       local set = vim.keymap.set
       local build_mode = { active = false, bufnr = nil }
 
+      -- Publish a global flag so the statusline can show multicursor state.
       local function sync_multicursor_status()
         local has_cursors = false
         if not build_mode.active then
@@ -51,6 +52,7 @@ return {
         end)
       end
 
+      -- Build mode: interactively add/remove cursors with single-key mappings.
       local function stop_build_mode()
         if not build_mode.active then
           return
@@ -103,6 +105,7 @@ return {
         })
       end
 
+      -- <C-q>/q toggles: re-enable disabled cursors, otherwise clear them all.
       local function clear_or_enable_cursors()
         if not mc.cursorsEnabled() then
           mc.enableCursors()
