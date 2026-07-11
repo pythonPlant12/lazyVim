@@ -243,4 +243,40 @@ function M.forward()
   M.jump("<C-i>")
 end
 
+-- Open a Snacks picker item (an LSP location) in a brand-new tab, closing the
+-- picker. Used by gD/gR to force a new tab regardless of where the target already
+-- lives. Works whether Snacks auto-jumps (single result) or shows the chooser.
+function M.open_lsp_item_in_new_tab(picker, item)
+  if not item then
+    return
+  end
+  if picker then
+    picker:close()
+  end
+  require("snacks.picker.util").resolve_loc(item)
+
+  local path = Snacks.picker.util.path(item) or item.file
+  if not path or path == "" then
+    return
+  end
+
+  local ok, err = pcall(vim.cmd, "tabedit " .. vim.fn.fnameescape(path))
+  if not ok then
+    vim.notify("Failed to open location: " .. (err or "unknown error"), vim.log.levels.ERROR)
+    return
+  end
+
+  -- Position the cursor on the target within the freshly opened tab.
+  local pos = item.pos
+  if not (pos and pos[1]) and item.loc and item.loc.range and item.loc.range.start then
+    local start = item.loc.range.start
+    pos = { start.line + 1, start.character }
+  end
+  if pos and pos[1] then
+    local row = math.max(1, math.min(pos[1], vim.api.nvim_buf_line_count(0)))
+    pcall(vim.api.nvim_win_set_cursor, 0, { row, math.max(0, pos[2] or 0) })
+    pcall(vim.cmd, "normal! zvzz")
+  end
+end
+
 return M

@@ -172,6 +172,18 @@ return {
       opts.diagnostics.signs = false
       opts.folds = { enabled = false }
       table.insert(opts.servers["*"].keys, { "K", "Vj", desc = "Select line downward" })
+      -- Override LazyVim's default gD (textDocument/declaration, unsupported by many
+      -- servers) so it uses the same definition LSP as gd but opens in a new tab.
+      table.insert(opts.servers["*"].keys, {
+        "gD",
+        function()
+          Snacks.picker.lsp_definitions({
+            confirm = require("utils.tab_jump").open_lsp_item_in_new_tab,
+          })
+        end,
+        desc = "Goto Definition (new tab)",
+        has = "definition",
+      })
       return opts
     end,
     -- Register :CheckLsp, inlay-hint guard, rounded hover/signature popups, and highlights.
