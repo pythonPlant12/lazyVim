@@ -1,12 +1,15 @@
 -- Language icons use explicit colors so file chips stay readable across themes.
 local language_icon_theme_colors = {
   ["default-dark"] = { typescript = "#4FA6E8", javascript = "#F0D55C", python = "#5DADE2" },
+  ["cursor-dark"] = { typescript = "#87C3FF", javascript = "#F8C762", python = "#88C0D0" },
+  ["cursor-dark-midnight"] = { typescript = "#81A1C1", javascript = "#EBCB8B", python = "#88C0D0" },
+  ["cursor-light"] = { typescript = "#005293", javascript = "#A8552A", python = "#176C74" },
   ["default-white"] = { typescript = "#256FB8", javascript = "#B8860B", python = "#2F6F9F" },
   ["islands-dark"] = { typescript = "#4FA6E8", javascript = "#F0D55C", python = "#5DADE2" },
   ["islands-light"] = { typescript = "#256FB8", javascript = "#B8860B", python = "#2F6F9F" },
   ["islands-white"] = { typescript = "#256FB8", javascript = "#B8860B", python = "#2F6F9F" },
   ["islands-rose-pine-dark"] = { typescript = "#4FA6E8", javascript = "#E8D05A", python = "#5BA8D9" },
-  ["islands-rose-pine-light"] = { typescript = "#2F76B7", javascript = "#9A7600", python = "#286B96" },
+  ["islands-rose-pine-light"] = { typescript = "#7d5fa6", javascript = "#8b5f85", python = "#68647a" },
   ["rose-pine"] = { typescript = "#4FA6E8", javascript = "#E8D05A", python = "#5BA8D9" },
   ["rose-pine-main"] = { typescript = "#4FA6E8", javascript = "#E8D05A", python = "#5BA8D9" },
   ["rose-pine-moon"] = { typescript = "#66B2EA", javascript = "#EAD56A", python = "#6DB2DE" },

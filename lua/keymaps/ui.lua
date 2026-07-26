@@ -304,6 +304,9 @@ local function lualine_theme_hint(scheme, background)
   if scheme == "default-dark" or scheme == "islands-dark" then
     return "islands-dark"
   end
+  if scheme == "cursor-dark" or scheme == "cursor-dark-midnight" or scheme == "cursor-light" then
+    return scheme
+  end
   return scheme:find("^islands") and ("islands-" .. background) or "auto"
 end
 
@@ -411,6 +414,9 @@ end
 keymaps.set("n", "<leader>ut", function()
   local items = {
     { label = "Default Dark Theme",        action = function() apply_theme_mode("dark") end },
+    { label = "Cursor Dark Theme",         action = function() apply_scheme("cursor-dark", "dark") end },
+    { label = "Cursor Dark Midnight",      action = function() apply_scheme("cursor-dark-midnight", "dark") end },
+    { label = "Cursor Light Theme",        action = function() apply_scheme("cursor-light", "light") end },
     { label = "Default White Theme",       action = function() apply_theme_mode("light") end },
     { label = "Islands Dark Theme",        action = function() apply_islands_theme("dark") end },
     { label = "Islands White Theme",       action = function() apply_islands_theme("white") end },

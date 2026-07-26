@@ -41,6 +41,8 @@ hl(0, "htmlValue", { fg = string_fg })
 hl(0, "@string", { fg = string_fg })
 hl(0, "@string.html", { fg = string_fg })
 hl(0, "@string.vue", { fg = string_fg })
+hl(0, "@string.javascript", { fg = string_fg })
+hl(0, "@string.typescript", { fg = string_fg })
 
 for _, group in ipairs({
   "NormalFloat",

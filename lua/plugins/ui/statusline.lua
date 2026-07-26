@@ -17,9 +17,37 @@ return {
       -- Statusline surface color: transparent for islands, else theme-dependent gray.
       local function lualine_bg()
         if is_transparent_lualine() then return "NONE" end
+        if vim.g._lualine_theme_hint == "cursor-dark" then return "#141414" end
+        if vim.g._lualine_theme_hint == "cursor-dark-midnight" then return "#191c22" end
+        if vim.g._lualine_theme_hint == "cursor-light" then return "#F3F3F3" end
         return vim.o.background == "light" and "#F3F3F3" or "#2B2D30"
       end
       local surface_bg = lualine_bg()
+      local function cursor_lualine_palette()
+        local hint = vim.g._lualine_theme_hint or ""
+        if hint == "cursor-dark" then
+          return {
+            fg = "#D6D6DD", fg_bright = "#F0F0F0", muted = "#626262", surface = "#141414",
+            normal = "#81A1C1", insert = "#70B489", visual = "#AAA0FA", replace = "#E34671", command = "#F1B467",
+            green = "#70B489", yellow = "#F1B467", peach = "#EFB080", red = "#E34671", info = "#88C0D0",
+            lsp_bg = "#181818", lsp_ts = "#87C3FF", lsp_js = "#F8C762", lsp_py = "#88C0D0", lsp_misc = "#82D2CE",
+          }
+        elseif hint == "cursor-dark-midnight" then
+          return {
+            fg = "#7b88a1", fg_bright = "#D8DEE9", muted = "#4b5163", surface = "#191c22",
+            normal = "#88C0D0", insert = "#A3BE8C", visual = "#B48EAD", replace = "#BF616A", command = "#EBCB8B",
+            green = "#A3BE8C", yellow = "#EBCB8B", peach = "#D08770", red = "#BF616A", info = "#88C0D0",
+            lsp_bg = "#20242c", lsp_ts = "#81A1C1", lsp_js = "#EBCB8B", lsp_py = "#88C0D0", lsp_misc = "#8FBCBB",
+          }
+        elseif hint == "cursor-light" then
+          return {
+            fg = "#444444", fg_bright = "#141414", muted = "#999999", surface = "#F3F3F3",
+            normal = "#2778C1", insert = "#007041", visual = "#654DC0", replace = "#BE1744", command = "#A8552A",
+            green = "#007041", yellow = "#A46700", peach = "#A8552A", red = "#BE1744", info = "#176C74",
+            lsp_bg = "#EAEAEA", lsp_ts = "#005293", lsp_js = "#A8552A", lsp_py = "#176C74", lsp_misc = "#3B7E84",
+          }
+        end
+      end
       local lualine_light = {
         normal   = { a = { fg = "#2F496F", bg = "#D2E4F5", gui = "bold" }, b = { fg = "#4C4F69", bg = surface_bg, gui = "bold" }, c = { fg = "#4C4F69", bg = surface_bg } },
         insert   = { a = { fg = "#34523E", bg = "#D8E8DA", gui = "bold" }, b = { fg = "#4C4F69", bg = surface_bg, gui = "bold" } },
@@ -36,8 +64,17 @@ return {
         command  = { a = { fg = "#F5E8D0", bg = "#5A3A1A", gui = "bold" }, b = { fg = "#BCBEC4", bg = surface_bg, gui = "bold" } },
         inactive = { a = { fg = "#6F737A", bg = surface_bg }, b = { fg = "#6F737A", bg = surface_bg }, c = { fg = "#6F737A", bg = surface_bg } },
       }
+      local cursor_palette = cursor_lualine_palette()
+      local lualine_cursor = cursor_palette and {
+        normal   = { a = { fg = vim.o.background == "light" and "#FCFCFC" or "#191c22", bg = cursor_palette.normal, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" }, c = { fg = cursor_palette.fg, bg = surface_bg } },
+        insert   = { a = { fg = vim.o.background == "light" and "#FCFCFC" or "#191c22", bg = cursor_palette.insert, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" } },
+        visual   = { a = { fg = vim.o.background == "light" and "#FCFCFC" or "#191c22", bg = cursor_palette.visual, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" } },
+        replace  = { a = { fg = "#FCFCFC", bg = cursor_palette.replace, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" } },
+        command  = { a = { fg = vim.o.background == "light" and "#FCFCFC" or "#191c22", bg = cursor_palette.command, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" } },
+        inactive = { a = { fg = cursor_palette.muted, bg = surface_bg }, b = { fg = cursor_palette.muted, bg = surface_bg }, c = { fg = cursor_palette.muted, bg = surface_bg } },
+      } or nil
       local _hint = vim.g._lualine_theme_hint or ""
-      local mode_theme = _hint == "islands-light" and lualine_light or _hint == "islands-dark" and lualine_dark or (vim.o.background == "light" and lualine_light or lualine_dark)
+      local mode_theme = lualine_cursor or _hint == "islands-light" and lualine_light or _hint == "islands-dark" and lualine_dark or (vim.o.background == "light" and lualine_light or lualine_dark)
       opts.options = vim.tbl_extend("force", opts.options or {}, {
         theme = mode_theme,
         section_separators = { left = "", right = "" },
@@ -201,6 +238,15 @@ return {
           vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = hint == "islands-light" and "#8A6B20" or "#A8983A", bg = bg, bold = true })
           vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = hint == "islands-light" and "#8E5324" or "#C87A3A", bg = bg, bold = true })
           vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = hint == "islands-light" and "#B54A5C" or "#B85C5C", bg = bg, bold = true })
+        elseif cursor_lualine_palette() then
+          local c = cursor_lualine_palette()
+          local bg = c.normal
+          vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = "#191c22", bg = bg, bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = "#191c22", bg = bg, bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = c.green, bg = bg, bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = c.yellow, bg = bg, bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = c.peach, bg = bg, bold = true })
+          vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = c.red, bg = bg, bold = true })
         else
           local bg = hint == "islands-dark" and "#342F67" or "#cba6f7"
           local base_fg = hint == "islands-dark" and "#ECEBFB" or "#151619"
@@ -221,6 +267,8 @@ return {
         local theme
         if hint == "islands-light" then
           theme = lualine_light
+        elseif cursor_lualine_palette() then
+          theme = lualine_cursor
         elseif hint == "islands-dark" then
           theme = lualine_dark
         else
@@ -232,13 +280,16 @@ return {
         cfg.options = cfg.options or {}
         cfg.options.theme = theme
         lualine.setup(cfg)
-        vim.api.nvim_set_hl(0, "StatusLine",   { fg = vim.o.background == "light" and "#4C4F69" or "#BCBEC4", bg = lualine_bg() })
-        vim.api.nvim_set_hl(0, "StatusLineNC", { fg = vim.o.background == "light" and "#7A7880" or "#6F737A", bg = lualine_bg() })
+        local c = cursor_lualine_palette()
+        vim.api.nvim_set_hl(0, "StatusLine",   { fg = c and c.fg or (vim.o.background == "light" and "#4C4F69" or "#BCBEC4"), bg = lualine_bg() })
+        vim.api.nvim_set_hl(0, "StatusLineNC", { fg = c and c.muted or (vim.o.background == "light" and "#7A7880" or "#6F737A"), bg = lualine_bg() })
       end
       vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_lualine_theme_hl })
       vim.defer_fn(function()
-        vim.api.nvim_set_hl(0, "StatusLine",   { fg = vim.o.background == "light" and "#4C4F69" or "#BCBEC4", bg = lualine_bg() })
-        vim.api.nvim_set_hl(0, "StatusLineNC", { fg = vim.o.background == "light" and "#7A7880" or "#6F737A", bg = lualine_bg() })
+        local hint = vim.g._lualine_theme_hint or ""
+        local c = cursor_lualine_palette()
+        vim.api.nvim_set_hl(0, "StatusLine",   { fg = c and c.fg or (vim.o.background == "light" and "#4C4F69" or "#BCBEC4"), bg = lualine_bg() })
+        vim.api.nvim_set_hl(0, "StatusLineNC", { fg = c and c.muted or (vim.o.background == "light" and "#7A7880" or "#6F737A"), bg = lualine_bg() })
       end, 50)
 
       opts.sections.lualine_b = {
@@ -283,7 +334,16 @@ return {
 
       -- Highlights for the compact diagnostics pill.
       local function setup_diag_hl()
-        if vim.o.background == "light" then
+        local hint = vim.g._lualine_theme_hint or ""
+        local c = cursor_lualine_palette()
+        if c then
+          vim.api.nvim_set_hl(0, "DiagPillCap",   { fg = c.lsp_bg, bg = c.surface })
+          vim.api.nvim_set_hl(0, "DiagPillBase",  { fg = c.muted, bg = c.lsp_bg })
+          vim.api.nvim_set_hl(0, "DiagPillError", { fg = c.red, bg = c.lsp_bg })
+          vim.api.nvim_set_hl(0, "DiagPillWarn",  { fg = c.yellow, bg = c.lsp_bg })
+          vim.api.nvim_set_hl(0, "DiagPillInfo",  { fg = c.info, bg = c.lsp_bg })
+          vim.api.nvim_set_hl(0, "DiagPillHint",  { fg = c.info, bg = c.lsp_bg })
+        elseif vim.o.background == "light" then
           vim.api.nvim_set_hl(0, "DiagPillCap",   { fg = "#D5D0CA", bg = "#E2DFDB" })
           vim.api.nvim_set_hl(0, "DiagPillBase",  { fg = "#7A7880", bg = "#D5D0CA" })
           vim.api.nvim_set_hl(0, "DiagPillError", { fg = "#B85C5C", bg = "#D5D0CA" })
@@ -357,6 +417,10 @@ return {
         separator = { left = "\u{E0B6}", right = "\u{E0B4}" },
         color = function()
           local light = vim.o.background == "light"
+          local c = cursor_lualine_palette()
+          if c then
+            return { fg = c.muted, bg = c.surface }
+          end
           return { fg = light and "#7A7880" or "#7A7E85", bg = light and "#D5D0CA" or "#2B2D30" }
         end,
         padding = { left = 1, right = 1 },
@@ -433,12 +497,22 @@ return {
       -- Per-server highlight groups for the LSP/tool status chips.
       local function setup_lsp_hl()
         local light = vim.o.background == "light"
-        local lsp_bg = light and "#D5D0CA" or "#45475a"
+        local c = cursor_lualine_palette()
+        local lsp_bg = c and c.lsp_bg or (light and "#D5D0CA" or "#45475a")
         local colors = light and lsp_colors_light or lsp_colors
-        vim.api.nvim_set_hl(0, "LualineLspBase",        { fg = light and "#7A7880" or "#93a1a1",  bg = lsp_bg })
-        vim.api.nvim_set_hl(0, "LualineCopilotOn",      { fg = light and "#7B72C9" or "#cba6f7",  bg = lsp_bg })
-        vim.api.nvim_set_hl(0, "LualineCopilotSpinner", { fg = light and "#A8983A" or "#f9e2af",  bg = lsp_bg })
-        vim.api.nvim_set_hl(0, "LualineCopilotOff",     { fg = light and "#7A7880" or "#6c7086",  bg = lsp_bg })
+        if c then
+          colors = vim.tbl_extend("force", colors, {
+            vtsls = c.lsp_ts, ts_ls = c.lsp_ts, tsserver = c.lsp_ts,
+            vue_ls = c.green, volar = c.green, tailwindcss = c.info,
+            lua_ls = c.lsp_ts, pyright = c.lsp_py, basedpyright = c.lsp_py, pylsp = c.lsp_py,
+            jsonls = c.lsp_js, html = c.peach, cssls = c.info, emmet_ls = c.peach,
+            bashls = c.green, dockerls = c.info, yamlls = c.lsp_js, copilot = c.visual, ["null-ls"] = c.info,
+          })
+        end
+        vim.api.nvim_set_hl(0, "LualineLspBase",        { fg = c and c.muted or (light and "#7A7880" or "#93a1a1"),  bg = lsp_bg })
+        vim.api.nvim_set_hl(0, "LualineCopilotOn",      { fg = c and c.visual or (light and "#7B72C9" or "#cba6f7"),  bg = lsp_bg })
+        vim.api.nvim_set_hl(0, "LualineCopilotSpinner", { fg = c and c.yellow or (light and "#A8983A" or "#f9e2af"),  bg = lsp_bg })
+        vim.api.nvim_set_hl(0, "LualineCopilotOff",     { fg = c and c.muted or (light and "#7A7880" or "#6c7086"),  bg = lsp_bg })
         for name, fg in pairs(colors) do
           local hl = "LualineLsp_" .. name:gsub("[%-%.]", "_")
           vim.api.nvim_set_hl(0, hl, { fg = fg, bg = lsp_bg })

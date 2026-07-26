@@ -5,45 +5,45 @@ end
 vim.o.background = "light"
 
 local ui = {
-  bg = "#FFFFFF",
-  fg = "#3a3650",
-  fg_bright = "#1a1830",
-  muted = "#5e5a74",
-  line = "#F3F3F3",
-  line_alt = "#F3F3F3",
-  selection = "#d4e4f4",
-  search = "#c8daf0",
+  bg = "#fbfbfd",
+  fg = "#4f4a63",
+  fg_bright = "#27233a",
+  muted = "#6f6a7f",
+  line = "#f1f2f5",
+  line_alt = "#f1f2f5",
+  selection = "#dedcf0",
+  search = "#e6dded",
   border = "#DCDCDC",
 }
 
 local syn = {
-  comment  = "#9298A4",
-  string   = "#6F4100",
-  number   = "#6F4100",
-  func     = "#BF4568",
-  keyword  = "#186D8C",
-  operator = "#9298A4",
-  type     = "#208CA8",
-  constant = "#6F4100",
-  preproc  = "#6C4AB6",
-  special  = "#208CA8",
-  ident    = "#3a3650",
-  tag      = "#208CA8",
-  tag_attr = "#6C4AB6",
-  tag_delim = "#9298A4",
-  iris     = "#6C4AB6",
-  pine     = "#186D8C",
-  foam     = "#208CA8",
-  subtle   = "#9298A4",
-  text     = "#3a3650",
-  gold     = "#6F4100",
-  rose     = "#BF4568",
-  red      = "#941426",
+  comment  = "#8e899b",
+  string   = "#5f7f52",
+  number   = "#8b5f85",
+  func     = "#9f5572",
+  keyword  = "#6f5a9b",
+  operator = "#7a7486",
+  type     = "#71618f",
+  constant = "#8b5f85",
+  preproc  = "#7d5fa6",
+  special  = "#8b5f85",
+  ident    = "#4f4a63",
+  tag      = "#7d5fa6",
+  tag_attr = "#856098",
+  tag_delim = "#8e899b",
+  iris     = "#7d5fa6",
+  pine     = "#68647a",
+  foam     = "#6f6a7f",
+  subtle   = "#8e899b",
+  text     = "#4f4a63",
+  gold     = "#8a6b35",
+  rose     = "#9f5572",
+  red      = "#a34655",
 }
 
 vim.g.theme_custom_hl = {
   name = "islands-rose-pine-light",
-  border = "#8F98A8",
+  border = "#9c96a7",
   select_bg = ui.selection,
   ref_bg = "#F2F2F4",
   diag_err = syn.red,
@@ -57,15 +57,15 @@ vim.g.theme_custom_hl = {
   diff_context = "#E5E5E5",
   gadd_inline = "#A8D4AE",
   gdel_inline = "#E8B0B0",
-  gchg_inline = "#EEDFC5",
+  gchg_inline = "#e8dfe8",
   gadd_ln = "#D4EDD9",
   gdel_ln = "#F5DADA",
-  gchg_ln = "#F2E8D6",
-  neotree_added = "#3A7D50",
-  neotree_mod = "#A8631A",
-  neotree_red = "#BE3A4A",
-  neotree_cursor_fg = "#2F496F",
-  neotree_cursor_bg = "#D2E4F5",
+  gchg_ln = "#f0eaf0",
+  neotree_added = "#5f7f52",
+  neotree_mod = "#8a6b35",
+  neotree_red = syn.red,
+  neotree_cursor_fg = syn.pine,
+  neotree_cursor_bg = ui.selection,
   neotree_cursor_line_fg = "#1e2030",
   param = syn.iris,
   vbuiltin = syn.rose,
@@ -77,30 +77,30 @@ vim.g.theme_custom_hl = {
   purple = syn.iris,
   cyan = syn.foam,
   peach = syn.gold,
-  green = "#4D8454",
+  green = "#5f7f52",
   text = syn.text,
   muted_text = syn.subtle,
-  snacks_line_fg = "#2F496F",
+  snacks_line_fg = syn.pine,
   snacks_line_bg = ui.selection,
   snacks_file = syn.text,
   snacks_dir = ui.muted,
   snacks_match = syn.rose,
   snacks_row = syn.foam,
   snacks_col = ui.muted,
-  snacks_directory = syn.foam,
+  snacks_directory = ui.fg,
   snacks_prompt = syn.iris,
-  snacks_delim = "#7B8491",
+  snacks_delim = "#837d8f",
   snacks_selected = syn.iris,
   snacks_unselected = ui.muted,
-  snacks_comment = "#7B8491",
-  snacks_search_bg = "#C8D8EE",
+  snacks_comment = "#837d8f",
+  snacks_search_bg = "#e6dded",
   indent_fg = "#C4CAD3",
-  indent_scope_fg = "#8FA8C8",
+  indent_scope_fg = "#aaa0c2",
   context_bg = ui.line_alt,
   treesitter_context_bg = ui.line,
   fold_bg = "#EEF2F7",
   fold_fg = ui.muted,
-  blame_fg = "#7B8491",
+  blame_fg = "#837d8f",
 }
 
 vim.cmd("highlight clear")
@@ -117,13 +117,13 @@ hl(0, "CursorReplace", { fg = "#FFFFFF",   bg = syn.rose })
 hl(0, "lCursor",       { link = "CursorInsert" })
 hl(0, "CursorIM",      { link = "CursorInsert" })
 hl(0, "TermCursor",    { link = "Cursor" })
-hl(0, "FloatBorder",   { fg = "#9098A6",    bg = ui.bg })
+hl(0, "FloatBorder",   { fg = "#9c96a7",    bg = ui.bg })
 hl(0, "CursorLine",    { bg = ui.line_alt })
 hl(0, "CursorLineNr",  { fg = ui.fg_bright, bg = ui.line_alt, bold = true })
 hl(0, "LineNr",        { fg = ui.muted })
 hl(0, "SignColumn",    { fg = ui.muted,     bg = ui.bg })
-hl(0, "VertSplit",     { fg = "#C5C8CE",    bg = ui.bg })
-hl(0, "WinSeparator",  { fg = "#C5C8CE",    bg = ui.bg })
+hl(0, "VertSplit",     { fg = "#cec9d6",    bg = ui.bg })
+hl(0, "WinSeparator",  { fg = "#cec9d6",    bg = ui.bg })
 hl(0, "Pmenu",         { fg = ui.fg,        bg = ui.bg })
 hl(0, "PmenuSel",      { fg = ui.fg_bright, bg = ui.selection })
 hl(0, "PmenuSbar",     { bg = ui.line })
@@ -244,22 +244,22 @@ hl(0, "@tag.delimiter.vue",         { fg = syn.subtle })
 hl(0, "@punctuation.bracket.vue",   { fg = syn.subtle })
 hl(0, "@lsp.type.keyword.vue",      { fg = syn.keyword })
 
-hl(0, "NeoTreeGitAdded",                { fg = "#3A7D50", bold = true })
-hl(0, "NeoTreeGitUntracked",            { fg = "#3A7D50", bold = true })
-hl(0, "NeoTreeGitModified",             { fg = "#A8631A", bold = true })
-hl(0, "NeoTreeGitConflict",             { fg = "#BE3A4A", bold = true })
-hl(0, "NeoTreeGitDeleted",              { fg = "#BE3A4A", bold = true })
+hl(0, "NeoTreeGitAdded",                { fg = "#5f7f52", bold = true })
+hl(0, "NeoTreeGitUntracked",            { fg = "#5f7f52", bold = true })
+hl(0, "NeoTreeGitModified",             { fg = syn.gold,  bold = true })
+hl(0, "NeoTreeGitConflict",             { fg = syn.red,   bold = true })
+hl(0, "NeoTreeGitDeleted",              { fg = syn.red,   bold = true })
 hl(0, "NeoTreeGitIgnored",              { fg = ui.muted,  bold = true })
-hl(0, "NeoTreeGitRenamed",              { fg = "#7C52AE", bold = true })
-hl(0, "NeoTreeGitStaged",               { fg = "#3A7D50", bold = true })
+hl(0, "NeoTreeGitRenamed",              { fg = syn.iris,  bold = true })
+hl(0, "NeoTreeGitStaged",               { fg = "#5f7f52", bold = true })
 
-hl(0, "NeoTreeGitAddedFolderName",      { fg = "#3A7D50", bold = true })
-hl(0, "NeoTreeGitUntrackedFolderName",  { fg = "#3A7D50", bold = true })
-hl(0, "NeoTreeGitModifiedFolderName",   { fg = "#A8631A", bold = true })
-hl(0, "NeoTreeGitConflictFolderName",   { fg = "#BE3A4A", bold = true })
-hl(0, "NeoTreeGitDeletedFolderName",    { fg = "#BE3A4A", bold = true })
+hl(0, "NeoTreeGitAddedFolderName",      { fg = "#5f7f52", bold = true })
+hl(0, "NeoTreeGitUntrackedFolderName",  { fg = "#5f7f52", bold = true })
+hl(0, "NeoTreeGitModifiedFolderName",   { fg = syn.gold,  bold = true })
+hl(0, "NeoTreeGitConflictFolderName",   { fg = syn.red,   bold = true })
+hl(0, "NeoTreeGitDeletedFolderName",    { fg = syn.red,   bold = true })
 hl(0, "NeoTreeGitIgnoredFolderName",    { fg = ui.muted,  bold = true })
-hl(0, "NeoTreeGitRenamedFolderName",    { fg = "#7C52AE", bold = true })
+hl(0, "NeoTreeGitRenamedFolderName",    { fg = syn.iris,  bold = true })
 
 hl(0, "NeotestPassed",       { fg = syn.foam })
 hl(0, "NeotestFailed",       { fg = syn.red })
@@ -278,36 +278,5 @@ hl(0, "NeotestExpandMarker", { fg = ui.muted })
 hl(0, "NeotestWinSelect",    { fg = syn.foam, bold = true })
 hl(0, "NeotestFocused",      { bold = true, underline = true })
 
-vim.o.winblend = 10
-vim.o.pumblend = 10
-
-for _, group in ipairs({
-  "Normal",
-  "NormalNC",
-  "NormalFloat",
-  "FloatBorder",
-  "FloatTitle",
-  "FloatFooter",
-  "FloatShadow",
-  "FloatShadowThrough",
-  "SignColumn",
-  "FoldColumn",
-  "Folded",
-  "UfoFoldedBg",
-  "UfoFoldedEllipsis",
-  "LineNr",
-  "EndOfBuffer",
-  "WinSeparator",
-  "VertSplit",
-  "StatusLine",
-  "StatusLineNC",
-  "StatusLineTerm",
-  "StatusLineTermNC",
-  "TabLine",
-  "TabLineFill",
-  "Pmenu",
-}) do
-  local current = vim.api.nvim_get_hl(0, { name = group, link = false })
-  current.bg = "NONE"
-  hl(0, group, current)
-end
+vim.o.winblend = 0
+vim.o.pumblend = 0
