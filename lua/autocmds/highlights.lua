@@ -59,6 +59,7 @@ end
 local function is_default_theme()
   local cs = vim.g.colors_name or ""
   return cs == "default-dark"
+    or cs == "default-light"
     or cs == "default-white"
     or cs == "islands-rose-pine-light"
     or (cs == "rose-pine" and vim.o.background == "light")
@@ -204,6 +205,7 @@ local function apply_default_opaque_hl()
   local normal_bg = (normal and normal.bg) and string.format("#%06x", normal.bg) or (vim.o.background == "light" and "#FFFFFF" or "#151619")
   local normal_fg = (normal and normal.fg) and string.format("#%06x", normal.fg) or (vim.o.background == "light" and "#4C4F69" or "#BCBEC4")
   local c = type(vim.g.theme_custom_hl) == "table" and vim.g.theme_custom_hl or {}
+  local panel_bg = c.panel_bg or normal_bg
   local context_bg = c.treesitter_context_bg or c.context_bg or (vim.o.background == "light" and "#F3F3F3" or "#313244")
   local border = c.border or normal_fg
 
@@ -242,7 +244,7 @@ local function apply_default_opaque_hl()
     "SnacksInputNormal",
     "SnacksInputTitle",
   }) do
-    with_bg(group, normal_bg, normal_fg)
+    with_bg(group, panel_bg, normal_fg)
   end
 
   for _, group in ipairs({
@@ -260,7 +262,7 @@ local function apply_default_opaque_hl()
     "SnacksInputBorder",
     "TreesitterContextSeparator",
   }) do
-    with_bg(group, normal_bg, border)
+    with_bg(group, panel_bg, border)
   end
 
   for _, group in ipairs({

@@ -738,7 +738,7 @@ return {
               local c = type(existing_color_fn) == "function" and existing_color_fn() or {}
               local cs = vim.g.colors_name or ""
               local is_light = vim.o.background == "light"
-              local is_default_white = cs == "default-white"
+              local is_default_white = cs == "default-white" or cs == "default-light"
               local is_islands_white = cs == "islands-white" or cs == "islands-light"
               c.fg = is_light and ((is_default_white or is_islands_white) and "#2F496F" or "#FFFFFF") or "#151619"
               c.bg = is_light and ((is_default_white or is_islands_white) and "#D2E4F5" or "#2A6296") or "#9ccfd8"
