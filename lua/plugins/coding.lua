@@ -71,6 +71,14 @@ return {
       end
 
       opts.completion = opts.completion or {}
+      -- Only commit a completion on <CR>. Highlight the top item (preselect) but
+      -- never insert its text while navigating/typing (auto_insert = false), so
+      -- continuing to type leaves the buffer untouched until Enter is pressed.
+      opts.completion.list = opts.completion.list or {}
+      opts.completion.list.selection = vim.tbl_deep_extend("force", opts.completion.list.selection or {}, {
+        preselect = true,
+        auto_insert = false,
+      })
       opts.completion.menu = opts.completion.menu or {}
       opts.completion.menu.draw = opts.completion.menu.draw or {}
       opts.completion.menu.draw.columns = {
@@ -102,6 +110,18 @@ return {
           end
         end,
         "snippet_backward",
+        "fallback",
+      }
+
+      -- Escape closes the completion menu and reverts any previewed/auto-inserted
+      -- text without accepting the active item. Only Enter (or typing on) keeps it.
+      -- When the menu is closed, Escape behaves normally (leaves insert mode).
+      opts.keymap["<Esc>"] = {
+        function(cmp)
+          if cmp.is_menu_visible() then
+            return cmp.cancel()
+          end
+        end,
         "fallback",
       }
     end,
