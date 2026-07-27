@@ -112,18 +112,6 @@ return {
         "snippet_backward",
         "fallback",
       }
-
-      -- Escape closes the completion menu and reverts any previewed/auto-inserted
-      -- text without accepting the active item. Only Enter (or typing on) keeps it.
-      -- When the menu is closed, Escape behaves normally (leaves insert mode).
-      opts.keymap["<Esc>"] = {
-        function(cmp)
-          if cmp.is_menu_visible() then
-            return cmp.cancel()
-          end
-        end,
-        "fallback",
-      }
     end,
   },
 }
