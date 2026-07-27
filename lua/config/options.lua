@@ -88,6 +88,7 @@ end
 -- Register template filetype detection by extension and path/name pattern.
 vim.filetype.add({
   extension = {
+    pcss = "css",
     j2 = jinja_template_filetype,
     jinja = jinja_template_filetype,
     jinja2 = jinja_template_filetype,
