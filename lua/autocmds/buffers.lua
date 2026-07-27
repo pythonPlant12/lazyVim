@@ -22,18 +22,6 @@ do
   })
 end
 
--- Prevent conceal-related cursor blink in JSON files.
--- Treesitter JSON has @conceal captures for " chars; with conceallevel>=1 this
--- causes a redraw (and visible cursor flicker) on every vertical cursor movement.
-vim.api.nvim_create_autocmd("FileType", {
-  group = vim.api.nvim_create_augroup("JsonNoConceallevel", { clear = true }),
-  pattern = { "json", "jsonc", "json5" },
-  callback = function()
-    vim.opt_local.conceallevel = 0
-    vim.opt_local.concealcursor = "nvic"
-  end,
-})
-
 -- Treesitter markdown highlights use (#set! conceal_lines "") to fully hide
 -- fenced code block delimiters (```) when conceallevel >= 1. This makes code
 -- blocks appear to collapse/vanish. Disable conceal for markdown files.
