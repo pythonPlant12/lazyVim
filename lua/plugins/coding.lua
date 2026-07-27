@@ -112,6 +112,16 @@ return {
         "snippet_backward",
         "fallback",
       }
+
+      -- Escape always drops straight to normal mode, even with the menu open.
+      -- Hide the menu, then return nothing so it falls through to the default
+      -- <Esc> (which leaves insert mode) in the same keypress.
+      opts.keymap["<Esc>"] = {
+        function(cmp)
+          if cmp.is_menu_visible() then cmp.hide() end
+        end,
+        "fallback",
+      }
     end,
   },
 }
