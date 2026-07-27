@@ -78,6 +78,74 @@ return {
         end
       end
 
+      -- While a `/` search is active, order matches by how shallow they are: a
+      -- node that itself matches (or whose nearest matching descendant is
+      -- closest) sorts first, then alphabetically. So a root-level `.serena`
+      -- beats a match buried in `other/deep/`. Normal browsing keeps neo-tree's
+      -- default folders-first ordering untouched.
+      local ok_mgr, fs_manager = pcall(require, "neo-tree.sources.manager")
+      local ok_fzy, fzy = pcall(require, "neo-tree.sources.common.filters.filter_fzy")
+
+      local function name_matches(name, pattern)
+        if not name or not pattern or pattern == "" then
+          return false
+        end
+        if ok_fzy then
+          local ok, res = pcall(fzy.has_match, pattern, name)
+          if ok then
+            return res
+          end
+        end
+        return name:lower():find(pattern:lower(), 1, true) ~= nil
+      end
+
+      -- Shallowest depth (0 = this node) at which `pattern` matches a name in
+      -- this subtree; math.huge if nothing matches. Memoised on the node — the
+      -- item tree is rebuilt on every navigate, so the cache never goes stale.
+      local function match_depth(node, pattern)
+        if node.__match_depth ~= nil then
+          return node.__match_depth
+        end
+        local depth = math.huge
+        if name_matches(node.name, pattern) then
+          depth = 0
+        elseif type(node.children) == "table" then
+          for _, child in ipairs(node.children) do
+            local d = match_depth(child, pattern) + 1
+            if d < depth then
+              depth = d
+            end
+          end
+        end
+        node.__match_depth = depth
+        return depth
+      end
+
+      opts.sort_function = function(a, b)
+        local pattern
+        if ok_mgr then
+          local st = fs_manager.get_state("filesystem")
+          if st and st.search_pattern ~= nil and st.search_pattern ~= "" then
+            pattern = st.search_pattern
+          end
+        end
+        -- Depth ordering needs real item nodes (with .name/.children). neo-tree
+        -- probes this function with bare {type,path} stubs to check validity,
+        -- and normal browsing wants the default order — both fall through to
+        -- the folders-first comparison below.
+        if pattern and a.name ~= nil and b.name ~= nil then
+          local da, db = match_depth(a, pattern), match_depth(b, pattern)
+          if da ~= db then
+            return da < db
+          end
+          return a.name:lower() < b.name:lower()
+        end
+        if a.type ~= b.type then
+          return a.type < b.type
+        end
+        return a.path < b.path
+      end
+
       opts.popup_border_style = "rounded"
       opts.window = opts.window or {}
       opts.window.position = "left"
