@@ -91,6 +91,15 @@ end
 local function close_diff_tab(origin, opts)
   local ok_cursor, cursor = pcall(vim.api.nvim_win_get_cursor, 0)
 
+  -- A writable worktree pane with unsaved edits would make tabclose raise E37.
+  -- Closing the diff means discarding those unsaved edits (save with :w first).
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    if vim.bo[buf].modified then
+      vim.bo[buf].modified = false
+    end
+  end
+
   if #vim.api.nvim_list_tabpages() > 1 then
     vim.cmd("tabclose")
   else
@@ -136,16 +145,40 @@ local function git_root_for(path)
   return result[1]
 end
 
--- Git revisions are readonly scratch buffers, not files on disk.
-local function make_rev_buf(name, lines, ft)
+-- Git-revision panes are scratch buffers, not files on disk. A HEAD/commit
+-- revision is read-only; the worktree pane can be made editable by passing
+-- writable_path, in which case :w writes the buffer back to that real file.
+local function make_rev_buf(name, lines, ft, writable_path)
   local buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_name(buf, name)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  vim.bo[buf].buftype    = "nofile"
   vim.bo[buf].bufhidden  = "wipe"
   vim.bo[buf].swapfile   = false
-  vim.bo[buf].modifiable = false
   if ft then vim.bo[buf].filetype = ft end
+
+  if writable_path and writable_path ~= "" then
+    -- acwrite lets :w hit our BufWriteCmd instead of trying to write the
+    -- scratch buffer's fake name to disk.
+    vim.bo[buf].buftype    = "acwrite"
+    vim.bo[buf].modifiable = true
+    vim.api.nvim_create_autocmd("BufWriteCmd", {
+      buffer = buf,
+      callback = function()
+        local data = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        local ok, err = pcall(vim.fn.writefile, data, writable_path)
+        if not ok then
+          vim.notify("Write failed: " .. tostring(err), vim.log.levels.ERROR, { title = "Git Diff" })
+          return
+        end
+        vim.bo[buf].modified = false
+        vim.cmd("checktime")  -- let the file's other buffers pick up the change
+        vim.notify("Saved " .. writable_path, vim.log.levels.INFO, { title = "Git Diff" })
+      end,
+    })
+  else
+    vim.bo[buf].buftype    = "nofile"
+    vim.bo[buf].modifiable = false
+  end
   return buf
 end
 
@@ -158,8 +191,17 @@ function M._open_two_buf_diff(left_name, left_lines, right_name, right_lines, ft
   vim.api.nvim_win_set_buf(0, left)
 
   vim.cmd("vsplit")
-  local right = make_rev_buf(right_name, right_lines, ft)
+  local right = make_rev_buf(right_name, right_lines, ft, opts and opts.writable_path)
   vim.api.nvim_win_set_buf(0, right)
+
+  -- Stamp the real on-disk file on both scratch panes so file-scoped git maps
+  -- (fd/fD/fR) can see through the scratch buffer names to the actual file.
+  -- real_path is stamp-only; target_path additionally drives the q close action.
+  local stamp = opts and (opts.real_path or opts.target_path)
+  if stamp and stamp ~= "" then
+    vim.b[left].git_real_path = stamp
+    vim.b[right].git_real_path = stamp
+  end
 
   vim.cmd("windo diffthis")
   bind_q_in_tab(origin, opts)
@@ -191,7 +233,7 @@ function M.diff(path)
     after = {}
   end
 
-  M._open_two_buf_diff("HEAD:" .. relpath, before, "worktree:" .. relpath, after, ft, { target_path = abs })
+  M._open_two_buf_diff("HEAD:" .. relpath, before, "worktree:" .. relpath, after, ft, { target_path = abs, writable_path = abs })
 end
 
 -- Diff a file between a commit and its parent.
@@ -221,7 +263,7 @@ function M.diff_commit(path, hash)
   end
 
   local short = hash:sub(1, 8)
-  M._open_two_buf_diff(short .. "^:" .. relpath, before, short .. ":" .. relpath, after, ft)
+  M._open_two_buf_diff(short .. "^:" .. relpath, before, short .. ":" .. relpath, after, ft, { target_path = abs })
 end
 
 -- Open a file in a new tab, optionally at a line.

@@ -23,9 +23,19 @@ local function git_root_or_cwd()
   return (ok and root and root ~= "") and root or vim.fn.getcwd()
 end
 
+-- Real on-disk file behind the current buffer. Inside the scratch diff view the
+-- panes carry a git_real_path stamp; everywhere else it's the buffer name.
+local function current_real_file()
+  local ok, v = pcall(function() return vim.b.git_real_path end)
+  if ok and type(v) == "string" and v ~= "" then
+    return v
+  end
+  return vim.api.nvim_buf_get_name(0)
+end
+
 -- Resolve from the current file so nested repositories do not fall back to cwd.
 local function current_file_git_root()
-  local path = vim.api.nvim_buf_get_name(0)
+  local path = current_real_file()
   if path == "" then
     return git_root_or_cwd()
   end
@@ -161,6 +171,13 @@ keymaps.set("n", "<C-g>lD", pick_line_diff_base_and_preview, { desc = "Line diff
 
 -- Treat gitsigns diff as a temporary fullscreen view; q restores the layout.
 local function open_file_diff_fullscreen(base)
+  -- gitsigns can only diff a real tracked buffer. When invoked from inside the
+  -- scratch diff view, collapse it and load the real file first.
+  local ok, real = pcall(function() return vim.b.git_real_path end)
+  if ok and type(real) == "string" and real ~= "" then
+    vim.cmd("only")
+    vim.cmd("edit " .. vim.fn.fnameescape(real))
+  end
   local orig_win = vim.api.nvim_get_current_win()
   require("gitsigns").diffthis(base)
 
@@ -218,7 +235,7 @@ local function pick_diff_base_and_open()
 end
 
 keymaps.set("n", "<C-g>fd", function()
-  local path = vim.api.nvim_buf_get_name(0)
+  local path = current_real_file()
   if path == "" then
     vim.notify("No file in current buffer", vim.log.levels.ERROR, { title = "Git Diff" })
     return
@@ -263,7 +280,7 @@ local function pick_ref_and_restore_file()
     }, function(commit_item)
       if not commit_item then return end
 
-      local filepath = vim.api.nvim_buf_get_name(0)
+      local filepath = current_real_file()
       if not filepath or filepath == "" then
         vim.notify("No file in current buffer", vim.log.levels.ERROR, { title = "Git Restore" })
         return
