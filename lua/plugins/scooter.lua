@@ -157,7 +157,8 @@ return {
         return grug_far_reuse.open_for_buffer(vim.api.nvim_get_current_buf(), opts)
       end
 
-      local function grug_visual(extra_prefills)
+      -- Build (but don't open) the prefills for a visual-selection search.
+      local function grug_visual_prefills(extra_prefills)
         -- Single-word visual searches default to whole-word matching.
         local s = vim.fn.getpos("'<")
         local e = vim.fn.getpos("'>")
@@ -182,7 +183,36 @@ return {
           end
         end
 
+        return prefills
+      end
+
+      local function grug_visual(extra_prefills)
+        local prefills = grug_visual_prefills(extra_prefills)
         open_grug(next(prefills) ~= nil and { prefills = prefills } or nil)
+      end
+
+      -- Open the same search in a NEW TAB. `build` runs in the current buffer
+      -- (so cursor word / path / visual selection are captured BEFORE the tab
+      -- switch) and returns the open_grug opts, or false to abort without
+      -- creating a tab.
+      local function in_new_tab(build)
+        local opts
+        if build then
+          opts = build()
+          if opts == false then return end
+        end
+        vim.cmd("tabnew")
+        open_grug(opts or nil)
+      end
+
+      -- New-tab wrapper for a visual-selection search with the given flags.
+      local function tab_visual(extra_prefills)
+        return function()
+          in_new_tab(function()
+            local p = grug_visual_prefills(extra_prefills)
+            return next(p) ~= nil and { prefills = p } or nil
+          end)
+        end
       end
 
       return {
@@ -313,6 +343,134 @@ return {
           end,
           mode = "v",
           desc = "Search whole word (selected text) (grug-far)",
+        },
+
+        -- Same searches under <C-S-s>, but opened in a new tab.
+        {
+          "<C-S-s>g",
+          function() in_new_tab() end,
+          desc = "Search and Replace in new tab (grug-far)",
+        },
+        {
+          "<C-S-s>g",
+          tab_visual(),
+          mode = "v",
+          desc = "Search selected text in new tab (grug-far)",
+        },
+        {
+          "<C-S-s>r",
+          function()
+            in_new_tab(function()
+              return { prefills = { flags = "--fixed-strings --ignore-case" } }
+            end)
+          end,
+          desc = "Search and Replace in new tab (grug-far)",
+        },
+        {
+          "<C-S-s>r",
+          tab_visual({ flags = "--fixed-strings --ignore-case" }),
+          mode = "v",
+          desc = "Search selected text in new tab (grug-far)",
+        },
+        {
+          "<C-S-s>s",
+          function()
+            in_new_tab(function()
+              return { prefills = { search = vim.fn.expand("<cword>"), flags = "--fixed-strings --ignore-case", paths = "" } }
+            end)
+          end,
+          desc = "Search word under cursor in new tab (grug-far)",
+        },
+        {
+          "<C-S-s>s",
+          tab_visual({ flags = "--fixed-strings --ignore-case" }),
+          mode = "v",
+          desc = "Search selected text in new tab (grug-far)",
+        },
+        {
+          "<C-S-s>f",
+          function()
+            in_new_tab(function()
+              local path = current_path()
+              if path == "" then
+                vim.notify("No current file path", vim.log.levels.WARN, { title = "grug-far" })
+                return false
+              end
+              return { prefills = { paths = escape_path(path), flags = "--fixed-strings" } }
+            end)
+          end,
+          desc = "Search in current file in new tab (grug-far)",
+        },
+        {
+          "<C-S-s>f",
+          function()
+            in_new_tab(function()
+              local p = grug_visual_prefills({ paths = escape_path(vim.fn.expand("%")) })
+              return next(p) ~= nil and { prefills = p } or nil
+            end)
+          end,
+          mode = "v",
+          desc = "Search selected text in current file in new tab (grug-far)",
+        },
+        {
+          "<C-S-s>F",
+          function()
+            in_new_tab(function()
+              local filename = vim.fn.fnamemodify(current_path(), ":t")
+              if filename == "" then
+                vim.notify("No current file name", vim.log.levels.WARN, { title = "grug-far" })
+                return false
+              end
+              return { prefills = { search = filename, flags = "--fixed-strings --ignore-case", paths = "" } }
+            end)
+          end,
+          desc = "Search current filename in new tab (grug-far)",
+        },
+        {
+          "<C-S-s>d",
+          function()
+            in_new_tab(function()
+              local dir = current_dir()
+              if dir == "" then
+                vim.notify("No current directory", vim.log.levels.WARN, { title = "grug-far" })
+                return false
+              end
+              return { prefills = { paths = escape_path(dir), flags = "--fixed-strings --ignore-case" } }
+            end)
+          end,
+          desc = "Search in current directory in new tab (grug-far)",
+        },
+        {
+          "<C-S-s>d",
+          function()
+            in_new_tab(function()
+              local p = grug_visual_prefills({ paths = escape_path(vim.fn.expand("%:h")), flags = "--fixed-strings --ignore-case" })
+              return next(p) ~= nil and { prefills = p } or nil
+            end)
+          end,
+          mode = "v",
+          desc = "Search selected text in current directory in new tab (grug-far)",
+        },
+        {
+          "<C-S-s>w",
+          function()
+            in_new_tab(function()
+              return {
+                prefills = {
+                  search = vim.fn.expand("<cword>"),
+                  flags  = "--fixed-strings --word-regexp --case-sensitive",
+                  paths = "",
+                },
+              }
+            end)
+          end,
+          desc = "Search whole word under cursor in new tab (grug-far)",
+        },
+        {
+          "<C-S-s>w",
+          tab_visual({ flags = "--fixed-strings --word-regexp --case-sensitive", paths = "" }),
+          mode = "v",
+          desc = "Search whole word (selected text) in new tab (grug-far)",
         },
       }
     end,
