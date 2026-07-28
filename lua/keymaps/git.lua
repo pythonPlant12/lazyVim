@@ -3,6 +3,9 @@ local opts = { noremap = true, silent = true }
 local lazygit_edit = require("git.lazygit_edit")
 
 -- Git (<C-g>): custom workflows around LazyGit, Snacks pickers, and gitsigns.
+-- Guard bare <C-g> so it acts only as a prefix; without this, pausing after
+-- <C-g> falls through to the native CTRL-G file-info ruler.
+keymaps.set("n", "<C-g>", "<Nop>", opts)
 keymaps.set("n", "<C-g>g", function()
   if lazygit_edit.jump_to_lazygit() then
     return
