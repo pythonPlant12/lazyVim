@@ -179,8 +179,9 @@ end
 
 keymaps.set("n", "<C-/>", toggle_line_comment,        { desc = "Toggle line comment" })
 keymaps.set("v", "<C-/>", toggle_line_comment_visual, { desc = "Toggle line comment" })
-keymaps.set("n", "<C-_>", toggle_block_comment,        { desc = "Toggle block comment" })
-keymaps.set("v", "<C-_>", toggle_block_comment_visual, { desc = "Toggle block comment" })
+-- Many terminals encode Ctrl-/ as Ctrl-_; keep both encodings linewise.
+keymaps.set("n", "<C-_>", toggle_line_comment,        { desc = "Toggle line comment" })
+keymaps.set("v", "<C-_>", toggle_line_comment_visual, { desc = "Toggle line comment" })
 keymaps.set("n", "<C-?>", toggle_block_comment,        { desc = "Toggle block comment" })
 keymaps.set("v", "<C-?>", toggle_block_comment_visual, { desc = "Toggle block comment" })
 pcall(keymaps.set, "n", "<C-S-/>", toggle_block_comment,        { desc = "Toggle block comment" })
