@@ -19,7 +19,7 @@ local themes = {
     muted = "#A4A4A4",
     faint = "#626262",
     comment = "#6A9955",
-    string = "#E394DC",
+    string = "#C8A2C8",
     number = "#F8C762",
     boolean = "#82D2CE",
     keyword = "#82D2CE",
@@ -27,7 +27,7 @@ local themes = {
     method_decl = "#87C3FF",
     type = "#EBC88D",
     property = "#AAA0FA",
-    param = "#C8A2C8",
+    param = "#E394DC",
     constant = "#82D2CE",
     preproc = "#AAA0FA",
     special = "#88C0D0",
@@ -105,12 +105,12 @@ local themes = {
     muted = "#6E6E6E",
     faint = "#999999",
     comment = "#6E6E6E",
-    string = "#7565CC",
+    string = "#157F55", -- emerald green
     number = "#92156A",
     boolean = "#3B7E84",
     keyword = "#0C746E", -- teal (dark-theme keyword hue), darkened for light-bg contrast
-    func = "#005293",
-    method_decl = "#005293",
+    func = "#0B7A9E", -- function cyan (bluer than keyword teal, trial)
+    method_decl = "#0B7A9E",
     type = "#A8552A",
     property = "#654DC0",
     param = "#9A5A86", -- mauve (cursor-dark's param hue), darkened for light-bg; distinct from type orange
@@ -300,33 +300,36 @@ function M.apply(variant)
   hl(0, "Special",     { fg = p.special })
   hl(0, "Delimiter",   { fg = p.fg })
 
-  hl(0, "@variable",                   { fg = p.fg })
-  hl(0, "@variable.member",            { fg = p.property })
-  hl(0, "@variable.parameter",         { fg = p.param })
-  hl(0, "@variable.parameter.builtin", { fg = p.method_decl })
-  hl(0, "@parameter",                  { fg = p.param })
-  hl(0, "@variable.builtin",           { fg = p.keyword })
-  hl(0, "@property",                   { fg = p.property })
-  hl(0, "@field",                      { fg = p.property })
-  hl(0, "@function",                   { fg = p.func })
-  hl(0, "@function.call",              { fg = p.func })
-  hl(0, "@function.method",            { fg = p.func })
-  hl(0, "@function.method.call",       { fg = p.func })
-  hl(0, "@function.special",           { fg = p.special })
-  hl(0, "@constructor",                { fg = p.type })
-  hl(0, "@type",                       { fg = p.type })
-  hl(0, "@type.builtin",               { fg = p.keyword })
-  hl(0, "@constant",                   { fg = p.constant })
-  hl(0, "@constant.builtin",           { fg = p.boolean })
-  hl(0, "@string",                     { fg = p.string })
-  hl(0, "@string.special.url",         { fg = p.special, underline = true })
-  hl(0, "@number",                     { fg = p.number })
-  hl(0, "@boolean",                    { fg = p.boolean })
-  hl(0, "@keyword",                    { fg = p.keyword })
-  hl(0, "@operator",                   { fg = p.fg })
-  hl(0, "@punctuation.bracket",        { fg = p.fg })
-  hl(0, "@punctuation.delimiter",      { fg = p.fg })
-  hl(0, "@comment",                    { fg = p.comment, italic = false })
+  -- Treesitter + LSP token colors are assigned by semantic category through the
+  -- shared registry (themes/semantic.lua). Every language variant and LSP
+  -- semantic token inherits its color from this one map.
+  require("themes.semantic").apply(hl, {
+    ["function.call"]       = p.func,
+    ["function.definition"] = p.func,
+    ["function.special"]    = p.special,
+    ["type"]                = p.type,
+    ["type.builtin"]        = p.keyword,
+    ["variable"]            = p.fg,
+    ["variable.builtin"]    = p.keyword,
+    ["member"]              = p.property,
+    ["parameter"]           = p.param,
+    ["parameter.builtin"]   = p.method_decl,
+    ["constant"]            = p.constant,
+    ["constant.builtin"]    = p.boolean,
+    ["enum.member"]         = p.param,
+    ["namespace"]           = p.blue,
+    ["decorator"]           = p.green,
+    ["string"]              = p.string,
+    ["number"]              = p.number,
+    ["boolean"]             = p.boolean,
+    ["keyword"]             = p.keyword,
+    ["operator"]            = p.fg,
+    ["punctuation"]         = p.fg,
+    ["comment"]             = { fg = p.comment, italic = false },
+  })
+
+  -- Handled outside the registry: URL underline, and HTML/tag groups.
+  hl(0, "@string.special.url", { fg = p.special, underline = true })
 
   hl(0, "@tag",               { fg = p.keyword })
   hl(0, "@tag.builtin",       { fg = p.keyword })
@@ -339,39 +342,6 @@ function M.apply(variant)
   hl(0, "htmlArg",            { fg = p.type })
   hl(0, "htmlString",         { fg = p.string })
   hl(0, "htmlValue",          { fg = p.string })
-
-  local lsp_groups = {
-    ["@lsp.type.class"] = p.type,
-    ["@lsp.type.decorator"] = p.green,
-    ["@lsp.type.enum"] = p.type,
-    ["@lsp.type.enumMember"] = p.param,
-    ["@lsp.type.function"] = p.func,
-    ["@lsp.type.interface"] = p.type,
-    ["@lsp.type.method"] = p.func,
-    ["@lsp.type.namespace"] = p.blue,
-    ["@lsp.type.parameter"] = p.param,
-    ["@lsp.type.property"] = p.property,
-    ["@lsp.type.struct"] = p.type,
-    ["@lsp.type.type"] = p.type,
-    ["@lsp.type.typeAlias"] = p.type,
-    ["@lsp.type.typeParameter"] = p.type,
-    ["@lsp.type.variable"] = p.fg,
-    ["@lsp.typemod.variable.readonly"] = p.constant,
-    ["@lsp.typemod.variable.defaultLibrary"] = p.fg,
-    ["@lsp.typemod.parameter.declaration"] = p.param,
-    ["@lsp.typemod.parameter.readonly"] = p.param,
-    ["@lsp.typemod.variable.parameter"] = p.param,
-    ["@lsp.typemod.variable.parameter.readonly"] = p.param,
-    ["@lsp.typemod.variable.readonly.parameter"] = p.param,
-    ["@lsp.typemod.function.declaration"] = p.method_decl,
-    ["@lsp.typemod.method.declaration"] = p.method_decl,
-  }
-  for group, fg in pairs(lsp_groups) do
-    hl(0, group, { fg = fg })
-    for _, lang in ipairs({ "rust", "typescript", "javascript", "python" }) do
-      hl(0, group .. "." .. lang, { fg = fg })
-    end
-  end
 
   hl(0, "DiagnosticError", { fg = p.red })
   hl(0, "DiagnosticWarn",  { fg = p.warn })
