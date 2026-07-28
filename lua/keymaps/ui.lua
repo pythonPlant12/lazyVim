@@ -419,9 +419,9 @@ end
 keymaps.set("n", "<leader>ut", function()
   local items = {
     { label = "Default Dark Theme",        action = function() apply_theme_mode("dark") end },
-    { label = "Cursor Dark Theme",         action = function() apply_scheme("cursor-dark", "dark") end },
-    { label = "Cursor Dark Midnight",      action = function() apply_scheme("cursor-dark-midnight", "dark") end },
-    { label = "Cursor Light Theme",        action = function() apply_scheme("cursor-light", "light") end },
+    { label = "Meteorite Dark",            action = function() apply_scheme("cursor-dark", "dark") end },
+    { label = "Meteorite Gray",            action = function() apply_scheme("cursor-dark-midnight", "dark") end },
+    { label = "Meteorite Light",           action = function() apply_scheme("cursor-light", "light") end },
     { label = "Default Light Theme",       action = function() apply_scheme("default-light", "light") end },
     { label = "Default White Theme",       action = function() apply_theme_mode("light") end },
     { label = "Islands Dark Theme",        action = function() apply_islands_theme("dark") end },
