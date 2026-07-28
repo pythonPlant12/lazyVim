@@ -18,7 +18,7 @@ return {
       local function lualine_bg()
         if is_transparent_lualine() then return "NONE" end
         if vim.g._lualine_theme_hint == "cursor-dark" then return "#141414" end
-        if vim.g._lualine_theme_hint == "cursor-dark-midnight" then return "#191c22" end
+        if vim.g._lualine_theme_hint == "cursor-dark-midnight" then return "#21252b" end
         if vim.g._lualine_theme_hint == "cursor-light" then return "#F3F3F3" end
         return vim.o.background == "light" and "#F3F3F3" or "#2B2D30"
       end
@@ -27,21 +27,21 @@ return {
         local hint = vim.g._lualine_theme_hint or ""
         if hint == "cursor-dark" then
           return {
-            fg = "#D6D6DD", fg_bright = "#F0F0F0", muted = "#626262", surface = "#141414",
+            fg = "#D6D6DD", fg_bright = "#F0F0F0", muted = "#626262", surface = "#141414", badge_fg = "#191c22",
             normal = "#81A1C1", insert = "#70B489", visual = "#AAA0FA", replace = "#E34671", command = "#F1B467",
             green = "#70B489", yellow = "#F1B467", peach = "#EFB080", red = "#E34671", info = "#88C0D0",
             lsp_bg = "#181818", lsp_ts = "#87C3FF", lsp_js = "#F8C762", lsp_py = "#88C0D0", lsp_misc = "#82D2CE",
           }
         elseif hint == "cursor-dark-midnight" then
           return {
-            fg = "#7b88a1", fg_bright = "#D8DEE9", muted = "#4b5163", surface = "#191c22",
-            normal = "#88C0D0", insert = "#A3BE8C", visual = "#B48EAD", replace = "#BF616A", command = "#EBCB8B",
-            green = "#A3BE8C", yellow = "#EBCB8B", peach = "#D08770", red = "#BF616A", info = "#88C0D0",
-            lsp_bg = "#20242c", lsp_ts = "#81A1C1", lsp_js = "#EBCB8B", lsp_py = "#88C0D0", lsp_misc = "#8FBCBB",
+            fg = "#D6D6DD", fg_bright = "#F0F0F0", muted = "#626262", surface = "#21252b", badge_fg = "#282c34",
+            normal = "#81A1C1", insert = "#70B489", visual = "#AAA0FA", replace = "#E34671", command = "#F1B467",
+            green = "#70B489", yellow = "#F1B467", peach = "#EFB080", red = "#E34671", info = "#88C0D0",
+            lsp_bg = "#353b45", lsp_ts = "#87C3FF", lsp_js = "#F8C762", lsp_py = "#88C0D0", lsp_misc = "#82D2CE",
           }
         elseif hint == "cursor-light" then
           return {
-            fg = "#444444", fg_bright = "#141414", muted = "#999999", surface = "#F3F3F3",
+            fg = "#444444", fg_bright = "#141414", muted = "#999999", surface = "#F3F3F3", badge_fg = "#FCFCFC",
             normal = "#2778C1", insert = "#007041", visual = "#654DC0", replace = "#BE1744", command = "#A8552A",
             green = "#007041", yellow = "#A46700", peach = "#A8552A", red = "#BE1744", info = "#176C74",
             lsp_bg = "#EAEAEA", lsp_ts = "#005293", lsp_js = "#A8552A", lsp_py = "#176C74", lsp_misc = "#3B7E84",
@@ -66,11 +66,11 @@ return {
       }
       local cursor_palette = cursor_lualine_palette()
       local lualine_cursor = cursor_palette and {
-        normal   = { a = { fg = vim.o.background == "light" and "#FCFCFC" or "#191c22", bg = cursor_palette.normal, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" }, c = { fg = cursor_palette.fg, bg = surface_bg } },
-        insert   = { a = { fg = vim.o.background == "light" and "#FCFCFC" or "#191c22", bg = cursor_palette.insert, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" } },
-        visual   = { a = { fg = vim.o.background == "light" and "#FCFCFC" or "#191c22", bg = cursor_palette.visual, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" } },
-        replace  = { a = { fg = "#FCFCFC", bg = cursor_palette.replace, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" } },
-        command  = { a = { fg = vim.o.background == "light" and "#FCFCFC" or "#191c22", bg = cursor_palette.command, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" } },
+        normal   = { a = { fg = cursor_palette.badge_fg, bg = cursor_palette.normal, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" }, c = { fg = cursor_palette.fg, bg = surface_bg } },
+        insert   = { a = { fg = cursor_palette.badge_fg, bg = cursor_palette.insert, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" } },
+        visual   = { a = { fg = cursor_palette.badge_fg, bg = cursor_palette.visual, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" } },
+        replace  = { a = { fg = cursor_palette.badge_fg, bg = cursor_palette.replace, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" } },
+        command  = { a = { fg = cursor_palette.badge_fg, bg = cursor_palette.command, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" } },
         inactive = { a = { fg = cursor_palette.muted, bg = surface_bg }, b = { fg = cursor_palette.muted, bg = surface_bg }, c = { fg = cursor_palette.muted, bg = surface_bg } },
       } or nil
       local _hint = vim.g._lualine_theme_hint or ""

@@ -2,7 +2,7 @@
 local language_icon_theme_colors = {
   ["default-dark"] = { typescript = "#4FA6E8", javascript = "#F0D55C", python = "#5DADE2" },
   ["cursor-dark"] = { typescript = "#87C3FF", javascript = "#F8C762", python = "#88C0D0" },
-  ["cursor-dark-midnight"] = { typescript = "#81A1C1", javascript = "#EBCB8B", python = "#88C0D0" },
+  ["cursor-dark-midnight"] = { typescript = "#87C3FF", javascript = "#F8C762", python = "#88C0D0" },
   ["cursor-light"] = { typescript = "#005293", javascript = "#A8552A", python = "#176C74" },
   ["default-light"] = { typescript = "#256FB8", javascript = "#B8860B", python = "#2F6F9F" },
   ["islands-dark"] = { typescript = "#4FA6E8", javascript = "#F0D55C", python = "#5DADE2" },
