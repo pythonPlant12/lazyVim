@@ -61,16 +61,16 @@ local themes = {
     fg_dim = "#D6D6DD",
     muted = "#A4A4A4",
     faint = "#626262",
-    comment = "#6A9955",
-    string = "#C8A2C8",
+    comment = "#A4A4A4",
+    string = "#80c2a6",
     number = "#F8C762",
     boolean = "#82D2CE",
     keyword = "#82D2CE",
     func = "#87C3FF",
     method_decl = "#87C3FF",
     type = "#EBC88D",
-    property = "#AAA0FA",
-    param = "#E394DC",
+    property = "#C8A2C8",
+    param = "#D99AE7",
     constant = "#82D2CE",
     preproc = "#AAA0FA",
     special = "#88C0D0",
@@ -297,12 +297,13 @@ function M.apply(variant)
   hl(0, "Type",        { fg = p.type })
   hl(0, "Constant",    { fg = p.constant })
   hl(0, "PreProc",     { fg = p.preproc })
-  hl(0, "Special",     { fg = p.special })
+  hl(0, "Special",     { fg = p.name == "cursor-dark-midnight" and p.property or p.special })
   hl(0, "Delimiter",   { fg = p.fg })
 
   -- Treesitter + LSP token colors are assigned by semantic category through the
   -- shared registry (themes/semantic.lua). Every language variant and LSP
   -- semantic token inherits its color from this one map.
+  local namespace = p.name == "cursor-dark-midnight" and p.type or p.blue
   require("themes.semantic").apply(hl, {
     ["function.call"]       = p.func,
     ["function.definition"] = p.func,
@@ -317,7 +318,7 @@ function M.apply(variant)
     ["constant"]            = p.constant,
     ["constant.builtin"]    = p.boolean,
     ["enum.member"]         = p.param,
-    ["namespace"]           = p.blue,
+    ["namespace"]           = namespace,
     ["decorator"]           = p.green,
     ["string"]              = p.string,
     ["number"]              = p.number,
@@ -331,15 +332,18 @@ function M.apply(variant)
   -- Handled outside the registry: URL underline, and HTML/tag groups.
   hl(0, "@string.special.url", { fg = p.special, underline = true })
 
+  local attribute = p.name == "cursor-dark-midnight" and p.property or p.type
+  local tag_delimiter = p.name == "cursor-dark-midnight" and p.property or p.muted
+  local tag_name = p.name == "cursor-dark-midnight" and p.property or p.keyword
   hl(0, "@tag",               { fg = p.keyword })
   hl(0, "@tag.builtin",       { fg = p.keyword })
-  hl(0, "@tag.attribute",     { fg = p.type })
-  hl(0, "@tag.delimiter",     { fg = p.muted })
-  hl(0, "htmlTag",            { fg = p.muted })
-  hl(0, "htmlEndTag",         { fg = p.muted })
-  hl(0, "htmlTagName",        { fg = p.keyword })
-  hl(0, "htmlSpecialTagName", { fg = p.keyword })
-  hl(0, "htmlArg",            { fg = p.type })
+  hl(0, "@tag.attribute",     { fg = attribute })
+  hl(0, "@tag.delimiter",     { fg = tag_delimiter })
+  hl(0, "htmlTag",            { fg = tag_delimiter })
+  hl(0, "htmlEndTag",         { fg = tag_delimiter })
+  hl(0, "htmlTagName",        { fg = tag_name })
+  hl(0, "htmlSpecialTagName", { fg = tag_name })
+  hl(0, "htmlArg",            { fg = attribute })
   hl(0, "htmlString",         { fg = p.string })
   hl(0, "htmlValue",          { fg = p.string })
 
