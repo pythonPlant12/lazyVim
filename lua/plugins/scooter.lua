@@ -114,6 +114,17 @@ return {
               vim.keymap.set("n", "<enter>", function()
                 open_grug_result_and_focus(ev.buf, enter_fallback)
               end, { buffer = ev.buf, silent = true, desc = "Open result and focus file" })
+
+              -- grug-far's Sync Next uses open_location = false, so after
+              -- syncing it advances but the left buffer doesn't follow. Re-map
+              -- <S-CR> to the same action with open_location = true so the next
+              -- match is opened on the left (like the <up>/<down> nav maps).
+              vim.keymap.set({ "n", "i" }, "<S-CR>", function()
+                local sync_inst = require("grug-far").get_instance(ev.buf)
+                if sync_inst then
+                  sync_inst:apply_next_change({ open_location = true, remove_synced = false, notify = true })
+                end
+              end, { buffer = ev.buf, silent = true, desc = "Sync change and open next match" })
             end
           end)
 
