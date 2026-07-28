@@ -8,7 +8,6 @@ local catppuccin_flavour = "mocha"
 local valid_schemes = {
   ["default-dark"] = true,
   ["default-light"] = true,
-  ["default-white"] = true,
   ["islands-dark"] = true,
   ["islands-white"] = true,
   ["islands-light"] = true,
@@ -40,13 +39,12 @@ end
 -- No saved theme: match the macOS light/dark appearance.
 if not cs then
   local appearance = vim.fn.system("defaults read -g AppleInterfaceStyle 2>/dev/null"):gsub("%s+", "")
-  cs = appearance == "Dark" and "default-dark" or "default-white"
+  cs = appearance == "Dark" and "default-dark" or "default-light"
 end
 
 -- Set background/lualine hint before UI plugins derive their palettes.
 do
   local light_schemes = {
-    ["default-white"] = true,
     ["default-light"] = true,
     ["islands-white"] = true,
     ["islands-light"] = true,
@@ -58,7 +56,7 @@ do
   vim.o.background = is_light and "light" or "dark"
   if cs == "cursor-dark" or cs == "cursor-dark-midnight" or cs == "cursor-light" then
     vim.g._lualine_theme_hint = cs
-  elseif cs == "default-white" or cs == "default-light" or cs == "islands-white" or cs == "islands-light" then
+  elseif cs == "default-light" or cs == "islands-white" or cs == "islands-light" then
     vim.g._lualine_theme_hint = "islands-light"
   elseif cs == "default-dark" or cs == "islands-dark" then
     vim.g._lualine_theme_hint = "islands-dark"

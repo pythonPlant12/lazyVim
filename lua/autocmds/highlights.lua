@@ -60,7 +60,6 @@ local function is_default_theme()
   local cs = vim.g.colors_name or ""
   return cs == "default-dark"
     or cs == "default-light"
-    or cs == "default-white"
     or cs == "islands-rose-pine-light"
     or (cs == "rose-pine" and vim.o.background == "light")
     or cs == "rose-pine-dawn"
@@ -208,6 +207,15 @@ local function apply_default_opaque_hl()
   local panel_bg = c.panel_bg or normal_bg
   local context_bg = c.treesitter_context_bg or c.context_bg or (vim.o.background == "light" and "#F3F3F3" or "#313244")
   local border = c.border or normal_fg
+  -- Pickers can opt onto a different surface than the gray panel (default-light
+  -- puts them on the editor background). Falls back to panel_bg otherwise.
+  local picker_bg = c.picker_bg or panel_bg
+  local picker_groups = {
+    SnacksPickerBox = true, SnacksPickerInput = true, SnacksPickerList = true,
+    SnacksPickerPreview = true, SnacksPickerTitle = true, SnacksPickerFooter = true,
+    SnacksInputNormal = true, SnacksInputTitle = true,
+    SnacksPickerBorder = true, SnacksInputBorder = true,
+  }
 
   local function with_bg(group, group_bg, group_fg)
     local current = vim.api.nvim_get_hl(0, { name = group, link = false }) or {}
@@ -244,7 +252,7 @@ local function apply_default_opaque_hl()
     "SnacksInputNormal",
     "SnacksInputTitle",
   }) do
-    with_bg(group, panel_bg, normal_fg)
+    with_bg(group, picker_groups[group] and picker_bg or panel_bg, normal_fg)
   end
 
   for _, group in ipairs({
@@ -262,7 +270,7 @@ local function apply_default_opaque_hl()
     "SnacksInputBorder",
     "TreesitterContextSeparator",
   }) do
-    with_bg(group, panel_bg, border)
+    with_bg(group, picker_groups[group] and picker_bg or panel_bg, border)
   end
 
   for _, group in ipairs({

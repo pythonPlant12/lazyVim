@@ -184,6 +184,10 @@ return {
           return { fg = "#b0acbc", muted = "#7a7686", border = "#524f67", active_bg = "#26233a", active_fg = "#c7c3d1", bg = "NONE" }
         elseif name:find("rose%-pine") and vim.o.background == "dark" then
           return { fg = "#e0def4", muted = "#908caa", border = "#524f67", active_bg = "#26233a", active_fg = "#e0def4", bg = "NONE" }
+        elseif name == "cursor-light" or name == "default-light" then
+          -- Cover the whole tab bar with the gray panel (not transparent) so it
+          -- reads as a distinct bar; selected tab keeps the soft-blue highlight.
+          return { fg = "#4C4F69", muted = "#7A7880", border = "#D0D0D0", active_bg = "#D2E4F5", active_fg = "#2F496F", bg = "#F3F3F3" }
         elseif vim.o.background == "light" then
           return { fg = "#4C4F69", muted = "#7A7880", border = "#B8B2A8", active_bg = "#D2E4F5", active_fg = "#2F496F", bg = "NONE" }
         end

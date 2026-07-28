@@ -216,6 +216,19 @@ function M.apply(variant)
   hl(0, "NormalFloat",   { fg = p.fg, bg = p.panel })
   hl(0, "FloatBorder",   { fg = p.border, bg = p.panel })
   hl(0, "FloatTitle",    { fg = p.fg, bg = p.panel, bold = true })
+
+  -- Pickers (Snacks) sit on the editor background, not the gray panel, so the
+  -- list and preview read like normal editing rather than a gray overlay.
+  for _, g in ipairs({
+    "SnacksPickerBox", "SnacksPickerInput", "SnacksPickerList",
+    "SnacksPickerPreview", "SnacksPickerTitle", "SnacksPickerFooter",
+    "SnacksInputNormal", "SnacksInputTitle",
+  }) do
+    hl(0, g, { fg = p.fg, bg = p.bg })
+  end
+  hl(0, "SnacksPickerBorder", { fg = p.border, bg = p.bg })
+  hl(0, "SnacksInputBorder",  { fg = p.border, bg = p.bg })
+
   hl(0, "Cursor",        { fg = p.bg, bg = p.fg })
   hl(0, "CursorInsert",  { fg = p.bg, bg = p.accent })
   hl(0, "CursorReplace", { fg = p.bg, bg = p.warn })

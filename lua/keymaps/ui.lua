@@ -219,7 +219,7 @@ end
 local lazygit_cfg_dir = vim.fn.expand("~/Library/Application Support/lazygit")
 -- Map an internal scheme name to the corresponding LazyGit theme name.
 local function lazygit_theme_name(kind)
-  if kind == "default-white" or kind == "default-light" then
+  if kind == "default-light" then
     return "light"
   end
   if kind == "default-dark" then
@@ -302,7 +302,7 @@ end
 
 -- Pick the lualine theme hint that matches the given scheme/background.
 local function lualine_theme_hint(scheme, background)
-  if scheme == "default-white" or scheme == "default-light" or scheme == "islands-white" or scheme == "islands-light" then
+  if scheme == "default-light" or scheme == "islands-white" or scheme == "islands-light" then
     return "islands-light"
   end
   if scheme == "default-dark" or scheme == "islands-dark" then
@@ -340,7 +340,7 @@ local function apply_theme_mode(mode)
 
   local schemes = background == "dark"
       and { "default-dark", "solarized-osaka", "habamax" }
-    or { "default-white", "solarized-osaka", "morning", "habamax" }
+    or { "default-light", "solarized-osaka", "morning", "habamax" }
 
   for _, scheme in ipairs(schemes) do
     vim.g._lualine_theme_hint = lualine_theme_hint(scheme, background)
