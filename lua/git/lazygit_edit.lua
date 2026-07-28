@@ -89,6 +89,8 @@ end
 
 -- Close the diff tab, then either open the target file or restore the origin.
 local function close_diff_tab(origin, opts)
+  -- Capture the cursor in the pane you're leaving; for the worktree pane its
+  -- line maps 1:1 to the real file, so you return to the same content.
   local ok_cursor, cursor = pcall(vim.api.nvim_win_get_cursor, 0)
 
   -- A writable worktree pane with unsaved edits would make tabclose raise E37.
@@ -109,6 +111,11 @@ local function close_diff_tab(origin, opts)
 
   if opts and opts.target_path then
     vim.schedule(function()
+      -- Return to the exact window fd was launched from, so the file reopens
+      -- where you left it instead of some other window in the origin tab.
+      if origin and origin.win and vim.api.nvim_win_is_valid(origin.win) then
+        pcall(vim.api.nvim_set_current_win, origin.win)
+      end
       M.open_same_tab(opts.target_path, ok_cursor and cursor[1] or nil, ok_cursor and cursor[2] or nil)
     end)
   else
@@ -283,14 +290,19 @@ end
 
 -- Same-tab opens reuse a real editing window and avoid terminal/float windows.
 local function normal_window_in_current_tab()
+  local function usable(win)
+    if vim.api.nvim_win_get_config(win).relative ~= "" then return false end
+    local buf = vim.api.nvim_win_get_buf(win)
+    return vim.bo[buf].filetype ~= "snacks_terminal"
+  end
+
+  -- Prefer the current window (e.g. the origin window restored on diff close)
+  -- so the file reopens exactly where it was launched from.
+  local cur = vim.api.nvim_get_current_win()
+  if usable(cur) then return cur end
+
   for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-    local cfg = vim.api.nvim_win_get_config(win)
-    if cfg.relative == "" then
-      local buf = vim.api.nvim_win_get_buf(win)
-      if vim.bo[buf].filetype ~= "snacks_terminal" then
-        return win
-      end
-    end
+    if usable(win) then return win end
   end
 end
 
