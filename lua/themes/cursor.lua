@@ -56,7 +56,7 @@ local themes = {
     selection = "#353b45",
     selection_inactive = "#353b45",
     search = "#353b45",
-    border = "#353b45",
+    border = "#4C566A",
     fg = "#F0F0F0",
     fg_dim = "#D6D6DD",
     muted = "#A4A4A4",
@@ -219,6 +219,9 @@ function M.apply(variant)
     fold_bg = p.panel_alt,
     fold_fg = p.muted,
     blame_fg = p.faint,
+    -- Inline completion preview (blink ghost text). Default links to NonText,
+    -- which is too dark on the midnight background; lift it to a readable gray.
+    ghost_fg = p.name == "cursor-dark-midnight" and "#72767E" or p.faint,
   }
 
   vim.cmd("highlight clear")

@@ -726,7 +726,10 @@ return {
           local styled_comp = style_chip(comp, bg_fn)
           if chip_index == 1 then
             styled_comp.padding = { left = 1, right = 0 }
-            local path_fn = LazyVim.lualine.pretty_path({ filename_hl = "", directory_hl = "" })
+            -- modified_hl "" keeps a modified file's name on the chip's own
+            -- foreground (black) instead of MatchParen, which this config tints
+            -- pink for bracket matching.
+            local path_fn = LazyVim.lualine.pretty_path({ filename_hl = "", directory_hl = "", modified_hl = "" })
             styled_comp[1] = function(self)
               local icon = require("mini.icons").get("file", vim.fn.expand("%:t"))
               local path = type(path_fn) == "function" and path_fn(self) or ""
