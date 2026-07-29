@@ -226,6 +226,9 @@ local function lazygit_theme_name(kind)
   if kind == "default-dark" then
     return "dark"
   end
+  if kind == "cursor-dark-midnight" then
+    return "meteorite-gray"
+  end
   if kind == "islands-white" then
     return "islands-light"
   end
