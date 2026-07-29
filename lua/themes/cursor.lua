@@ -151,8 +151,8 @@ function M.apply(variant)
     diag_warn = p.warn,
     diag_info = p.info,
     diag_hint = p.hint,
-    diff_add = p.name == "cursor-light" and "#D8F0E3" or (p.name == "cursor-dark" and "#1F3327" or "#2B3A32"),
-    diff_del = p.name == "cursor-light" and "#FFDDE3" or (p.name == "cursor-dark" and "#331720" or "#3A2429"),
+    diff_add = p.name == "cursor-light" and "#D8F0E3" or (p.name == "cursor-dark" and "#1F3327" or "#24483D"),
+    diff_del = p.name == "cursor-light" and "#FFDDE3" or (p.name == "cursor-dark" and "#331720" or "#512C3C"),
     diff_change = p.line_alt,
     diff_text = p.selection,
     diff_context = p.bg,
@@ -333,14 +333,16 @@ function M.apply(variant)
   hl(0, "@string.special.url", { fg = p.special, underline = true })
 
   local attribute = p.name == "cursor-dark-midnight" and p.property or p.type
-  local tag_delimiter = p.name == "cursor-dark-midnight" and p.property or p.muted
-  local tag_name = p.name == "cursor-dark-midnight" and p.property or p.keyword
-  hl(0, "@tag",               { fg = p.keyword })
-  hl(0, "@tag.builtin",       { fg = p.keyword })
+  local tag = p.name == "cursor-dark-midnight" and p.blue or p.keyword
+  local tag_delimiter = p.name == "cursor-dark-midnight" and p.blue or p.muted
+  local tag_name = p.name == "cursor-dark-midnight" and p.blue or p.keyword
+  hl(0, "@tag",               { fg = tag })
+  hl(0, "@tag.builtin",       { fg = tag })
   hl(0, "@tag.attribute",     { fg = attribute })
   hl(0, "@tag.delimiter",     { fg = tag_delimiter })
   hl(0, "htmlTag",            { fg = tag_delimiter })
   hl(0, "htmlEndTag",         { fg = tag_delimiter })
+  hl(0, "htmlTagN",           { fg = tag_name })
   hl(0, "htmlTagName",        { fg = tag_name })
   hl(0, "htmlSpecialTagName", { fg = tag_name })
   hl(0, "htmlArg",            { fg = attribute })
