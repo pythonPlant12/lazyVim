@@ -255,6 +255,21 @@ return {
       end
 
       opts.default_component_configs = opts.default_component_configs or {}
+      -- Render file icons through mini.icons so Neo-tree matches the picker
+      -- (<leader><leader>). A real nvim-web-devicons dependency elsewhere can
+      -- defeat LazyVim's mini.icons mock, leaving Neo-tree on a different
+      -- palette; this provider pins files to mini.icons directly. Directories
+      -- fall through so Neo-tree keeps its own folder glyphs.
+      opts.default_component_configs.icon = opts.default_component_configs.icon or {}
+      opts.default_component_configs.icon.provider = function(icon, node)
+        if node.type == "file" or node.type == "terminal" then
+          local ok, mini_icon, mini_hl = pcall(require("mini.icons").get, "file", node.name)
+          if ok then
+            icon.text = mini_icon
+            icon.highlight = mini_hl
+          end
+        end
+      end
       opts.default_component_configs.git_status = {
         symbols = {
           added     = "a",
