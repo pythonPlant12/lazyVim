@@ -211,9 +211,13 @@ function M.apply(variant)
     -- Light theme needs light indent guides: inactive lines are a faint gray
     -- (not near-black), the active scope gets the accent color.
     indent_fg = (p.name == "cursor-light") and "#DCDCDC"
-      or ((p.name == "cursor-dark" or p.name == "cursor-dark-midnight") and "#2C2C2C" or "#272c36"),
+      or (p.name == "cursor-dark-midnight") and "#626262"
+      or (p.name == "cursor-dark") and "#2C2C2C"
+      or "#272c36",
     indent_scope_fg = (p.name == "cursor-light") and p.accent
-      or ((p.name == "cursor-dark" or p.name == "cursor-dark-midnight") and "#626262" or "#4c566a"),
+      or (p.name == "cursor-dark-midnight") and p.property
+      or (p.name == "cursor-dark") and "#626262"
+      or "#4c566a",
     context_bg = p.line_alt,
     treesitter_context_bg = p.line_alt,
     fold_bg = p.panel_alt,
