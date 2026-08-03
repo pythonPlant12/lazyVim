@@ -161,7 +161,20 @@ local function make_rev_buf(name, lines, ft, writable_path)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.bo[buf].bufhidden  = "wipe"
   vim.bo[buf].swapfile   = false
-  if ft then vim.bo[buf].filetype = ft end
+  -- Extension-only detection (vim.filetype.match with just a filename) returns
+  -- nil for content-dispatched types like *.html (html vs htmldjango vs php),
+  -- so those panes arrive with ft == nil. Resolve against the real buffer
+  -- (name + contents) as a fallback so they still get a filetype.
+  ft = ft or vim.filetype.match({ buf = buf })
+  if ft then
+    vim.bo[buf].filetype = ft
+    -- The FileType autocmd that normally starts treesitter can bail on these
+    -- scratch panes (no window attached yet, parser not resolved), leaving the
+    -- buffer with no highlighter so syntax renders as plain Normal-white. Start
+    -- the highlighter explicitly; pcall swallows the case of a missing parser.
+    local lang = vim.treesitter.language.get_lang(ft) or ft
+    pcall(vim.treesitter.start, buf, lang)
+  end
 
   if writable_path and writable_path ~= "" then
     -- acwrite lets :w hit our BufWriteCmd instead of trying to write the
