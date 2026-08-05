@@ -23,6 +23,10 @@ vim.opt.guicursor = table.concat({
 vim.o.winborder = "rounded"
 vim.o.switchbuf = "useopen" -- reuse an open window when switching to a buffer
 
+-- LazyVim fills deleted-line gaps in diffs with "╱"; blank it so those lines
+-- read as a plain red background instead of white diagonal hatching.
+vim.opt.fillchars:append({ diff = " " })
+
 vim.diagnostic.config({ signs = false }) -- no sign-column diagnostic markers
 
 vim.g.root_spec = { "cwd" } -- LazyVim root detection uses cwd only
