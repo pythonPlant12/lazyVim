@@ -10,6 +10,12 @@ data
 # task database (added automatically)
 .dolt
 
+# Claude code
+.omc
+
+# Caching
+.DS_Store
+
 # agent orchestration — durable plans tracked, ephemeral state ignored (added automatically)
 .sisyphus/*
 !.sisyphus/README.md
