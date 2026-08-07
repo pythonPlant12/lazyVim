@@ -6,12 +6,23 @@
 -- Add any additional keymaps here
 local keymaps = vim.keymap
 local opts = { noremap = true, silent = true }
+-- LuaJIT (nvim) only has the global unpack; Lua 5.4 moved it to table.unpack.
+-- Alias it so lua_ls stops flagging the call sites as deprecated.
+local unpack = table.unpack or unpack ---@diagnostic disable-line: deprecated
 local lazygit_edit = require("git.lazygit_edit")
 local tab_jump = require("utils.tab_jump")
 local python_lsp_settings = require("lsp.python_settings")
 local typescript_lsp_settings = require("lsp.typescript_settings")
 
 vim.keymap.set({ "n", "i", "x", "s" }, "<C-s>", "<Nop>", { noremap = true, silent = true })
+
+-- Macro recording moved from q to Q: a stray q<letter> silently started
+-- recording, and blink.cmp disables ALL completion (insert, / and :) while
+-- recording. Q both starts (Q<register>) and stops (Q) a recording; q is a
+-- no-op globally but keeps its buffer-local uses (popups, resize mode,
+-- multicursor layer).
+vim.keymap.set("n", "q", "<Nop>", { noremap = true, silent = true, desc = "Disabled (macro recording is on Q)" })
+vim.keymap.set("n", "Q", "q", { noremap = true, silent = true, desc = "Record macro" })
 
 -- Increment/decrement
 keymaps.set("n", "+", "C-a")

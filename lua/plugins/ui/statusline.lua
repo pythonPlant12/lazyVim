@@ -105,6 +105,9 @@ return {
         {
           "mode",
           fmt = function(mode)
+            -- blink.cmp disables all completion while recording; make it loud.
+            local rec = vim.fn.reg_recording()
+            if rec ~= "" then return "RECORDING @" .. rec end
             if vim.g.multicursor_build_mode then return "M CURSOR" end
             if vim.g.window_resize_mode then return "RESIZE WINDOW" end
 
@@ -113,6 +116,12 @@ return {
             return mode
           end,
           color = function()
+            if vim.fn.reg_recording() ~= "" then
+              return vim.o.background == "light"
+                  and { fg = "#5C1423", bg = "#F2B8C1", gui = "bold" }
+                or { fg = "#2B060D", bg = "#E37B8C", gui = "bold" }
+            end
+
             if vim.g.multicursor_build_mode then
               return vim.o.background == "light"
                   and { fg = "#4F3800", bg = "#F4D58D", gui = "bold" }
