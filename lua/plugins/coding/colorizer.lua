@@ -1,3 +1,4 @@
+-- Colorizer: shows color codes (#RRGGBB, rgb(), names) painted in their color.
 return {
   {
     "catgoose/nvim-colorizer.lua",

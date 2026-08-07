@@ -1,17 +1,12 @@
----@diagnostic disable: undefined-global
-
--- Configure UI-facing plugins: pickers, explorer, statusline, notifications, and borders.
+-- Shared "open picker result" behavior for Snacks and fzf-lua:
+-- jump to the file if it is already visible in some tab instead of reopening it,
+-- land on the exact line/column, and support opening results in a new tab.
 local tab_jump = require("utils.tab_jump")
 
--- Remove LazyVim's default LazyGit key from picker specs; custom Git maps own it.
-local function remove_gl_key(_, keys)
-  return vim.tbl_filter(function(k)
-    local lhs = type(k) == "string" and k or k[1]
-    return lhs ~= "<leader>gl"
-  end, keys)
-end
+local M = {}
 
-local picker_excludes = {
+-- Folders/files every file picker and grep should skip.
+M.excludes = {
   "node_modules/**",
   "venv/**",
   ".venv/**",
@@ -25,7 +20,15 @@ local picker_excludes = {
   "**/shelved.patch",
 }
 
--- Grep starts literal/case-insensitive; this toggles smart/camel-case searching.
+-- Remove LazyVim's default LazyGit key from picker specs; custom Git maps own it.
+function M.remove_gl_key(_, keys)
+  return vim.tbl_filter(function(k)
+    local lhs = type(k) == "string" and k or k[1]
+    return lhs ~= "<leader>gl"
+  end, keys)
+end
+
+-- Grep runs case-insensitive by default; camel mode switches to smart-case.
 local function grep_case_mode_args(args, camel_case)
   local filtered = {}
   for _, arg in ipairs(args or {}) do
@@ -39,7 +42,8 @@ local function grep_case_mode_args(args, camel_case)
   return filtered
 end
 
-local function toggle_grep_camel_case(picker)
+-- Toggle grep between camel/smart-case and insensitive, then rerun the search.
+function M.toggle_grep_camel_case(picker)
   local source = picker and picker.opts and picker.opts.source or nil
   if source ~= "grep" and source ~= "grep_word" then
     return
@@ -57,8 +61,8 @@ local function toggle_grep_camel_case(picker)
   )
 end
 
--- Picker opens are async, so position after Snacks resolves the target location.
-local function apply_item_pos(item)
+-- Picker opens are async: place the cursor once Snacks resolves the target location.
+function M.apply_item_pos(item)
   if not item then
     return
   end
@@ -74,7 +78,6 @@ local function apply_item_pos(item)
     return
   end
 
-  -- Wait for buffer to be loaded before applying position
   vim.schedule(function()
     local line_count = vim.api.nvim_buf_line_count(0)
     local row = math.max(1, math.min(pos[1], line_count))
@@ -84,12 +87,12 @@ local function apply_item_pos(item)
       pcall(vim.api.nvim_win_set_cursor, 0, { row, col })
     end
     pcall(vim.cmd, "normal! zv")
-    pcall(vim.cmd, "normal! zz")  -- Center cursor on screen
+    pcall(vim.cmd, "normal! zz")
   end)
 end
 
--- Shift-Enter opens the current picker item in a new tab without closing the picker.
-local function open_in_tab(picker, item)
+-- Open the picker item in a new tab without auto-closing the picker (Shift-Enter).
+function M.open_in_tab(picker, item)
   if not item then
     return
   end
@@ -117,17 +120,19 @@ local function open_in_tab(picker, item)
   vim.api.nvim_win_call(picker.main, function()
     vim.cmd(("tab sbuffer %d"):format(buf))
   end)
-  apply_item_pos(item)
+  M.apply_item_pos(item)
   picker:focus()
   picker.opts.auto_close = nil
 end
 
--- LSP locations use tab-aware open to avoid duplicate buffers across tabs.
-local function confirm_lsp_location(picker, item)
+-- Confirm an LSP location (references/definitions): tab-aware open plus a
+-- jumplist mark so <C-h>/<C-l> can return to where the jump started.
+function M.confirm_lsp_location(picker, item)
   if not item then
     return
   end
 
+  -- Drop a jumplist mark unless we're sitting in a throwaway empty buffer.
   local function remember_jump_origin()
     local win = vim.api.nvim_get_current_win()
     local buf = vim.api.nvim_get_current_buf()
@@ -146,7 +151,6 @@ local function confirm_lsp_location(picker, item)
   end
 
   remember_jump_origin()
-
   picker:close()
   require("snacks.picker.util").resolve_loc(item)
 
@@ -155,17 +159,42 @@ local function confirm_lsp_location(picker, item)
     return
   end
 
-  -- File not open in any tab, open it in current window
-  local ok, err = tab_jump.edit_or_goto_path(path)
-  if not ok then
-    vim.notify("Failed to open file: " .. (err or "unknown error"), vim.log.levels.ERROR)
-    return
-  end
-  apply_item_pos(item)
+  tab_jump.record(function()
+    local ok, err = tab_jump.edit_or_goto_path(path)
+    if not ok then
+      vim.notify("Failed to open file: " .. (err or "unknown error"), vim.log.levels.ERROR)
+      return
+    end
+    M.apply_item_pos(item)
+  end)
 end
 
--- fzf-lua file actions share the same tab-aware open behavior as Snacks.
-local function fzf_file_switch_or_edit(selected, opts)
+-- Default confirm for file pickers: tab-aware open on Enter.
+function M.confirm_tab_aware(picker, item)
+  if not item then return end
+  picker:close()
+
+  local path = Snacks.picker.util.path(item)
+
+  if path then
+    local ok, err = tab_jump.edit_or_goto_path(path)
+    if not ok then
+      vim.notify("Failed to open file: " .. (err or "unknown error"), vim.log.levels.ERROR)
+      return
+    end
+    M.apply_item_pos(item)
+    return
+  end
+
+  local bufnr = item.buf
+  if not bufnr then return end
+  vim.bo[bufnr].buflisted = true
+  vim.api.nvim_set_current_buf(bufnr)
+  M.apply_item_pos(item)
+end
+
+-- fzf-lua Enter action with the same tab-aware behavior as the Snacks pickers.
+function M.fzf_file_switch_or_edit(selected, opts)
   if not (selected and selected[1]) then
     return
   end
@@ -199,51 +228,4 @@ local function fzf_file_switch_or_edit(selected, opts)
   end
 end
 
-return {
-  {
-    "stevearc/aerial.nvim",
-    opts = {
-      -- Per-filetype allow-list. "_" is the default for all other filetypes.
-      -- Vue/HTML exclude Struct: template elements and custom component tags
-      -- are reported as Struct by the LSP and add noise to the breadcrumb.
-      filter_kind = {
-        _ = { "Class", "Constructor", "Enum", "Function", "Interface", "Module", "Method", "Struct" },
-        vue  = { "Class", "Constructor", "Enum", "Function", "Interface", "Module", "Method" },
-        html = { "Class", "Constructor", "Enum", "Function", "Interface", "Module", "Method" },
-      },
-    },
-  },
-  {
-    "nvim-telescope/telescope.nvim",
-    keys = remove_gl_key,
-    opts = function(_, opts)
-      local actions = require("telescope.actions")
-      opts.defaults = opts.defaults or {}
-      opts.defaults.mappings = opts.defaults.mappings or {}
-      -- Normal-mode j/k follow this config's inverted vertical movement.
-      opts.defaults.mappings.n = vim.tbl_extend("force", opts.defaults.mappings.n or {}, {
-        j = actions.move_selection_previous,
-        k = actions.move_selection_next,
-      })
-    end,
-  },
-  {
-    "ibhagwan/fzf-lua",
-    keys = remove_gl_key,
-    opts = {
-      fzf_colors = true,
-      actions = {
-        files = {
-          -- Enter jumps to an already-visible file instead of always editing a duplicate.
-          ["enter"] = fzf_file_switch_or_edit,
-        },
-      },
-      files = {
-        formatter = { "path.filename_first", 2 },
-      },
-      grep = {
-        formatter = { "path.filename_first", 2 },
-      },
-    },
-  },
-}
+return M

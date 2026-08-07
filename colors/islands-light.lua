@@ -86,6 +86,12 @@ vim.g.theme_custom_hl = {
   fold_bg = "#EEF2F7",
   fold_fg = "#66707C",
   blame_fg = "#7B8491",
+  -- Statusline colors owned by this theme (see themes/statusline_palette.lua).
+  statusline = {
+    surface = "NONE",
+    git = { bg = "#DDD9F7", fg = "#342F67", green = "#3A7A52", yellow = "#8A6B20", peach = "#8E5324", red = "#B54A5C" },
+    path = { fg = "#2F496F", bg = "#D2E4F5" },
+  },
 }
 
 vim.cmd("highlight clear")

@@ -13,13 +13,18 @@ local border = "#D0D0D0"
 local string_fg = "#2F6F4E"
 
 if type(vim.g.theme_custom_hl) == "table" then
-  vim.g.theme_custom_hl = vim.tbl_extend("force", vim.g.theme_custom_hl, {
+  local t = vim.tbl_extend("force", vim.g.theme_custom_hl, {
     name = "default-light",
     string_fg = string_fg,
     snacks_match = "#2366A6",
     panel_bg = panel_bg,
     picker_bg = bg, -- pickers sit on the editor bg, not the gray panel
   })
+  -- Opaque variant: statusline sits on a gray panel instead of transparency.
+  t.statusline = vim.tbl_deep_extend("force", t.statusline or {}, { surface = "#F3F3F3" })
+  -- Tab bar covers the gray panel so it reads as a distinct bar.
+  t.tabline = { fg = "#4C4F69", muted = "#7A7880", border = "#D0D0D0", active_bg = "#D2E4F5", active_fg = "#2F496F", bg = "#F3F3F3" }
+  vim.g.theme_custom_hl = t
 end
 
 vim.o.winblend = 0

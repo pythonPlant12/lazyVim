@@ -41,7 +41,9 @@ local function apply_stub_paths(_, config)
   if user_site and vim.fn.isdirectory(user_site .. "/django-stubs") == 1 then
     add_unique_path(stub_paths, user_site)
   end
-  if #stub_paths == 0 then return end
+  if #stub_paths == 0 then
+    return
+  end
   config.settings = config.settings or {}
   config.settings.basedpyright = config.settings.basedpyright or {}
   config.settings.basedpyright.analysis = config.settings.basedpyright.analysis or {}
@@ -178,16 +180,16 @@ return {
         end,
         -- Strip every non-diagnostic capability so ty never competes with basedpyright.
         on_init = function(client)
-          client.server_capabilities.completionProvider     = nil
-          client.server_capabilities.hoverProvider          = false
-          client.server_capabilities.definitionProvider     = false
-          client.server_capabilities.referencesProvider     = false
+          client.server_capabilities.completionProvider = nil
+          client.server_capabilities.hoverProvider = false
+          client.server_capabilities.definitionProvider = false
+          client.server_capabilities.referencesProvider = false
           client.server_capabilities.documentSymbolProvider = false
-          client.server_capabilities.workspaceSymbolProvider= false
-          client.server_capabilities.renameProvider         = false
-          client.server_capabilities.signatureHelpProvider  = nil
-          client.server_capabilities.codeActionProvider     = false
-          client.server_capabilities.inlayHintProvider      = false
+          client.server_capabilities.workspaceSymbolProvider = false
+          client.server_capabilities.renameProvider = false
+          client.server_capabilities.signatureHelpProvider = nil
+          client.server_capabilities.codeActionProvider = false
+          client.server_capabilities.inlayHintProvider = false
           client.server_capabilities.semanticTokensProvider = nil
         end,
       })

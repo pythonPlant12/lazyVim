@@ -1,6 +1,8 @@
+-- Git keymaps under <C-g>: LazyGit, history/status/diff pickers, hunk actions,
+-- and fullscreen file diffs (native gitsigns view, q to close).
 local keymaps = vim.keymap
 local opts = { noremap = true, silent = true }
-local lazygit_edit = require("git.lazygit_edit")
+local lazygit_edit = require("features.lazygit_edit")
 
 -- Git (<C-g>): custom workflows around LazyGit, Snacks pickers, and gitsigns.
 -- Guard bare <C-g> so it acts only as a prefix; without this, pausing after
@@ -26,13 +28,8 @@ local function git_root_or_cwd()
   return (ok and root and root ~= "") and root or vim.fn.getcwd()
 end
 
--- Real on-disk file behind the current buffer. Inside the scratch diff view the
--- panes carry a git_real_path stamp; everywhere else it's the buffer name.
+-- The file behind the current buffer.
 local function current_real_file()
-  local ok, v = pcall(function() return vim.b.git_real_path end)
-  if ok and type(v) == "string" and v ~= "" then
-    return v
-  end
   return vim.api.nvim_buf_get_name(0)
 end
 
@@ -172,15 +169,10 @@ end
 
 keymaps.set("n", "<C-g>lD", pick_line_diff_base_and_preview, { desc = "Line diff against ref" })
 
--- Treat gitsigns diff as a temporary fullscreen view; q restores the layout.
+-- Native gitsigns diff as a temporary fullscreen view; q restores the layout.
+-- The right pane is the real buffer, so closing the diff leaves the cursor
+-- exactly where it was — no position bookkeeping needed.
 local function open_file_diff_fullscreen(base)
-  -- gitsigns can only diff a real tracked buffer. When invoked from inside the
-  -- scratch diff view, collapse it and load the real file first.
-  local ok, real = pcall(function() return vim.b.git_real_path end)
-  if ok and type(real) == "string" and real ~= "" then
-    vim.cmd("only")
-    vim.cmd("edit " .. vim.fn.fnameescape(real))
-  end
   local orig_win = vim.api.nvim_get_current_win()
   require("gitsigns").diffthis(base)
 
@@ -243,7 +235,8 @@ keymaps.set("n", "<C-g>fd", function()
     vim.notify("No file in current buffer", vim.log.levels.ERROR, { title = "Git Diff" })
     return
   end
-  lazygit_edit.diff(path)
+  -- Same native diff view as fD; respects the gitsigns base (<C-g>lD).
+  open_file_diff_fullscreen()
 end, { desc = "File diff" })
 keymaps.set("n", "<C-g>fD", pick_diff_base_and_open, { desc = "File diff against ref" })
 

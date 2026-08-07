@@ -102,6 +102,11 @@ vim.g.theme_custom_hl = {
   fold_bg = "#242833",
   fold_fg = syn.subtle,
   blame_fg = "#7f849c",
+  -- Statusline colors owned by this theme (see themes/statusline_palette.lua).
+  statusline = {
+    surface = "NONE",
+    git = { bg = "#342F67", fg = "#ECEBFB", green = "#7CA686", yellow = "#D5B778", peach = "#CF8E6D", red = "#F75464" },
+  },
 }
 
 vim.cmd("highlight clear")
@@ -206,7 +211,7 @@ hl(0, "NeoTreeRootName",        { fg = syn.gold,     bold = true })
 hl(0, "NeoTreeFileName",        { fg = ui.fg })
 hl(0, "NeoTreeFileNameOpened",  { fg = ui.fg_bright })
 hl(0, "NeoTreeIndentMarker",    { fg = ui.border })
-hl(0, "NeoTreeActiveIndentMarker", { fg = palette.neotree_active_indent, bold = true })
+hl(0, "NeoTreeActiveIndentMarker", { fg = syn.foam, bold = true })
 hl(0, "NeoTreeNormal",          { fg = ui.fg,        bg = ui.bg })
 hl(0, "NeoTreeNormalNC",        { fg = ui.fg,        bg = ui.bg })
 

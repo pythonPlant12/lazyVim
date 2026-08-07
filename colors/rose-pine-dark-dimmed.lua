@@ -103,6 +103,8 @@ vim.g.theme_custom_hl = {
   fold_bg = ui.line,
   fold_fg = syn.subtle,
   blame_fg = syn.subtle,
+  -- Tab bar colors owned by this theme (see themes/tabline_palette.lua).
+  tabline = { fg = "#b0acbc", muted = "#7a7686", border = "#524f67", active_bg = "#26233a", active_fg = "#c7c3d1", bg = "NONE" },
 }
 
 vim.cmd("highlight clear")

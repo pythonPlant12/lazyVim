@@ -14,18 +14,6 @@ local function get_pyright_client()
   return nil, nil
 end
 
--- Build a settings table that sets the type-checking mode for the given server.
-local function python_type_check_settings_patch(server_name, mode)
-  local root = server_name == "basedpyright" and "basedpyright" or "python"
-  return {
-    [root] = {
-      analysis = {
-        typeCheckingMode = mode,
-      },
-    },
-  }
-end
-
 -- Run fn(client, name) only when the current buffer has a Python LSP attached.
 local function with_python_client(fn)
   if vim.bo.filetype ~= "python" then
@@ -45,16 +33,6 @@ local function apply_python_server_value(client, server_name, path, value)
   -- Runtime Python LSP setting changes are also persisted by python_settings.
   python_lsp_settings.set_value(server_name, path, value)
   return python_lsp_settings.apply_to_client(client, server_name)
-end
-
--- Flip a boolean Python setting and notify the new value.
-local function toggle_python_server_value(path, label)
-  with_python_client(function(client, name)
-    local current = python_lsp_settings.get_value(name, path)
-    local next_value = not current
-    apply_python_server_value(client, name, path, next_value)
-    vim.notify(label .. " = " .. tostring(next_value), vim.log.levels.INFO, { title = name })
-  end)
 end
 
 -- Prompt to pick one of values for a Python setting, marking the current one.

@@ -1,3 +1,5 @@
+-- Cursor-editor-inspired themes (dark / dark-midnight / light): palettes plus
+-- the full highlight application shared by the three colors/cursor-*.lua files.
 local M = {}
 
 local themes = {
@@ -132,6 +134,73 @@ local themes = {
   },
 }
 
+-- Statusline colors per Cursor variant (see themes/statusline_palette.lua).
+local statusline_palettes = {
+  ["cursor-dark"] = {
+    surface = "#141414", fg = "#D6D6DD", muted = "#626262",
+    mode = {
+      normal  = { fg = "#191c22", bg = "#81A1C1" },
+      insert  = { fg = "#191c22", bg = "#70B489" },
+      visual  = { fg = "#191c22", bg = "#AAA0FA" },
+      replace = { fg = "#191c22", bg = "#E34671" },
+      command = { fg = "#191c22", bg = "#F1B467" },
+    },
+    git  = { bg = "#81A1C1", fg = "#191c22", green = "#70B489", yellow = "#F1B467", peach = "#EFB080", red = "#E34671" },
+    diag = { cap = "#181818", cap_bg = "#141414", bg = "#181818", base = "#626262", error = "#E34671", warn = "#F1B467", info = "#88C0D0", hint = "#88C0D0", container = "#141414" },
+    lsp  = { bg = "#181818", base = "#626262", on = "#AAA0FA", spinner = "#F1B467", green = "#70B489", yellow = "#F1B467",
+      servers = {
+        vtsls = "#87C3FF", ts_ls = "#87C3FF", tsserver = "#87C3FF", lua_ls = "#87C3FF",
+        vue_ls = "#70B489", volar = "#70B489", bashls = "#70B489",
+        tailwindcss = "#88C0D0", cssls = "#88C0D0", dockerls = "#88C0D0",
+        pyright = "#88C0D0", basedpyright = "#88C0D0", pylsp = "#88C0D0",
+        jsonls = "#F8C762", yamlls = "#F8C762", html = "#EFB080", emmet_ls = "#EFB080",
+        copilot = "#AAA0FA", ["null-ls"] = "#88C0D0",
+      } },
+  },
+  ["cursor-dark-midnight"] = {
+    surface = "#21252b", fg = "#D6D6DD", muted = "#626262",
+    mode = {
+      normal  = { fg = "#282c34", bg = "#81A1C1" },
+      insert  = { fg = "#282c34", bg = "#70B489" },
+      visual  = { fg = "#282c34", bg = "#AAA0FA" },
+      replace = { fg = "#282c34", bg = "#E34671" },
+      command = { fg = "#282c34", bg = "#F1B467" },
+    },
+    git  = { bg = "#81A1C1", fg = "#191c22", green = "#70B489", yellow = "#F1B467", peach = "#EFB080", red = "#E34671" },
+    diag = { cap = "#353b45", cap_bg = "#21252b", bg = "#353b45", base = "#626262", error = "#E34671", warn = "#F1B467", info = "#88C0D0", hint = "#88C0D0", container = "#21252b" },
+    lsp  = { bg = "#353b45", base = "#626262", on = "#AAA0FA", spinner = "#F1B467", green = "#70B489", yellow = "#F1B467",
+      servers = {
+        vtsls = "#87C3FF", ts_ls = "#87C3FF", tsserver = "#87C3FF", lua_ls = "#87C3FF",
+        vue_ls = "#70B489", volar = "#70B489", bashls = "#70B489",
+        tailwindcss = "#88C0D0", cssls = "#88C0D0", dockerls = "#88C0D0",
+        pyright = "#88C0D0", basedpyright = "#88C0D0", pylsp = "#88C0D0",
+        jsonls = "#F8C762", yamlls = "#F8C762", html = "#EFB080", emmet_ls = "#EFB080",
+        copilot = "#AAA0FA", ["null-ls"] = "#88C0D0",
+      } },
+  },
+  ["cursor-light"] = {
+    surface = "#F3F3F3", fg = "#444444", muted = "#999999",
+    mode = {
+      normal  = { fg = "#FCFCFC", bg = "#2778C1" },
+      insert  = { fg = "#FCFCFC", bg = "#007041" },
+      visual  = { fg = "#FCFCFC", bg = "#654DC0" },
+      replace = { fg = "#FCFCFC", bg = "#BE1744" },
+      command = { fg = "#FCFCFC", bg = "#A8552A" },
+    },
+    git  = { bg = "#2778C1", fg = "#FCFCFC", green = "#007041", yellow = "#A46700", peach = "#A8552A", red = "#BE1744" },
+    diag = { cap = "#EAEAEA", cap_bg = "#F3F3F3", bg = "#EAEAEA", base = "#999999", error = "#BE1744", warn = "#A46700", info = "#176C74", hint = "#176C74", container = "#F3F3F3" },
+    lsp  = { bg = "#EAEAEA", base = "#999999", on = "#654DC0", spinner = "#A46700", green = "#007041", yellow = "#A46700",
+      servers = {
+        vtsls = "#005293", ts_ls = "#005293", tsserver = "#005293", lua_ls = "#005293",
+        vue_ls = "#007041", volar = "#007041", bashls = "#007041",
+        tailwindcss = "#176C74", cssls = "#176C74", dockerls = "#176C74",
+        pyright = "#176C74", basedpyright = "#176C74", pylsp = "#176C74",
+        jsonls = "#A8552A", yamlls = "#A8552A", html = "#A8552A", emmet_ls = "#A8552A",
+        copilot = "#654DC0", ["null-ls"] = "#176C74",
+      } },
+  },
+}
+
 function M.apply(variant)
   local p = assert(themes[variant], "unknown Cursor theme variant: " .. tostring(variant))
 
@@ -144,6 +213,12 @@ function M.apply(variant)
 
   vim.g.theme_custom_hl = {
     name = p.name,
+    statusline = statusline_palettes[p.name],
+    -- Light variant covers the whole tab bar with the gray panel so it reads
+    -- as a distinct bar; dark variants use the engine defaults.
+    tabline = p.name == "cursor-light"
+        and { fg = "#4C4F69", muted = "#7A7880", border = "#D0D0D0", active_bg = "#D2E4F5", active_fg = "#2F496F", bg = "#F3F3F3" }
+      or nil,
     border = p.border,
     select_bg = p.selection,
     ref_bg = p.line_alt,
@@ -153,15 +228,15 @@ function M.apply(variant)
     diag_hint = p.hint,
     diff_add = p.name == "cursor-light" and "#D8F0E3" or (p.name == "cursor-dark" and "#1F3327" or "#24483D"),
     diff_del = p.name == "cursor-light" and "#FFDDE3" or (p.name == "cursor-dark" and "#331720" or "#512C3C"),
-    diff_change = (p.name == "cursor-dark-midnight") and "#463B23" or p.line_alt,
-    diff_text = (p.name == "cursor-dark-midnight") and "#6E592B" or p.selection,
+    diff_change = (p.name == "cursor-dark-midnight") and "#63481E" or p.line_alt,
+    diff_text = (p.name == "cursor-dark-midnight") and "#8A6526" or p.selection,
     diff_context = p.bg,
     gadd_inline = p.green,
     gdel_inline = p.red,
     gchg_inline = p.warn,
     gadd_ln = p.name == "cursor-light" and "#D8F0E3" or (p.name == "cursor-dark" and "#1F3327" or "#2B3A32"),
     gdel_ln = p.name == "cursor-light" and "#FFDDE3" or (p.name == "cursor-dark" and "#331720" or "#3A2429"),
-    gchg_ln = (p.name == "cursor-dark-midnight") and "#3A3223" or p.line_alt,
+    gchg_ln = (p.name == "cursor-dark-midnight") and "#503C1B" or p.line_alt,
     neotree_added = p.green,
     neotree_mod = p.warn,
     neotree_red = p.red,

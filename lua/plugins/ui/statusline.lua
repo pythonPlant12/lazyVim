@@ -1,82 +1,16 @@
--- Lualine statusline: custom mode/git/diagnostics/LSP chips with theme-aware highlights.
+-- Lualine statusline: mode chip, git branch chip, diagnostics pill, LSP/tool chips,
+-- and path breadcrumbs. All colors come from the active theme via themes/statusline_palette.
+local P = require("themes.statusline_palette")
+
 return {
-  -- statusline
   {
     "nvim-lualine/lualine.nvim",
     event = "VeryLazy",
     opts = function(_, opts)
-      -- Match lualine's surface to transparent/opaque theme behavior.
-      -- Islands themes render lualine transparently over the editor background.
-      local function is_transparent_lualine()
-        local cs = vim.g.colors_name or ""
-        return cs == "islands-dark"
-          or cs == "islands-white"
-          or cs == "islands-light"
-          or cs:find("^islands%-rose%-pine") ~= nil
-      end
-      -- Statusline surface color: transparent for islands, else theme-dependent gray.
-      local function lualine_bg()
-        if is_transparent_lualine() then return "NONE" end
-        if vim.g._lualine_theme_hint == "cursor-dark" then return "#141414" end
-        if vim.g._lualine_theme_hint == "cursor-dark-midnight" then return "#21252b" end
-        if vim.g._lualine_theme_hint == "cursor-light" then return "#F3F3F3" end
-        return vim.o.background == "light" and "#F3F3F3" or "#2B2D30"
-      end
-      local surface_bg = lualine_bg()
-      local function cursor_lualine_palette()
-        local hint = vim.g._lualine_theme_hint or ""
-        if hint == "cursor-dark" then
-          return {
-            fg = "#D6D6DD", fg_bright = "#F0F0F0", muted = "#626262", surface = "#141414", badge_fg = "#191c22",
-            normal = "#81A1C1", insert = "#70B489", visual = "#AAA0FA", replace = "#E34671", command = "#F1B467",
-            green = "#70B489", yellow = "#F1B467", peach = "#EFB080", red = "#E34671", info = "#88C0D0",
-            lsp_bg = "#181818", lsp_ts = "#87C3FF", lsp_js = "#F8C762", lsp_py = "#88C0D0", lsp_misc = "#82D2CE",
-          }
-        elseif hint == "cursor-dark-midnight" then
-          return {
-            fg = "#D6D6DD", fg_bright = "#F0F0F0", muted = "#626262", surface = "#21252b", badge_fg = "#282c34",
-            normal = "#81A1C1", insert = "#70B489", visual = "#AAA0FA", replace = "#E34671", command = "#F1B467",
-            green = "#70B489", yellow = "#F1B467", peach = "#EFB080", red = "#E34671", info = "#88C0D0",
-            lsp_bg = "#353b45", lsp_ts = "#87C3FF", lsp_js = "#F8C762", lsp_py = "#88C0D0", lsp_misc = "#82D2CE",
-          }
-        elseif hint == "cursor-light" then
-          return {
-            fg = "#444444", fg_bright = "#141414", muted = "#999999", surface = "#F3F3F3", badge_fg = "#FCFCFC",
-            normal = "#2778C1", insert = "#007041", visual = "#654DC0", replace = "#BE1744", command = "#A8552A",
-            green = "#007041", yellow = "#A46700", peach = "#A8552A", red = "#BE1744", info = "#176C74",
-            lsp_bg = "#EAEAEA", lsp_ts = "#005293", lsp_js = "#A8552A", lsp_py = "#176C74", lsp_misc = "#3B7E84",
-          }
-        end
-      end
-      local lualine_light = {
-        normal   = { a = { fg = "#2F496F", bg = "#D2E4F5", gui = "bold" }, b = { fg = "#4C4F69", bg = surface_bg, gui = "bold" }, c = { fg = "#4C4F69", bg = surface_bg } },
-        insert   = { a = { fg = "#34523E", bg = "#D8E8DA", gui = "bold" }, b = { fg = "#4C4F69", bg = surface_bg, gui = "bold" } },
-        visual   = { a = { fg = "#342F67", bg = "#DDD9F7", gui = "bold" }, b = { fg = "#4C4F69", bg = surface_bg, gui = "bold" } },
-        replace  = { a = { fg = "#672D2D", bg = "#F5DADA", gui = "bold" }, b = { fg = "#4C4F69", bg = surface_bg, gui = "bold" } },
-        command  = { a = { fg = "#5A3A1A", bg = "#F0E0C8", gui = "bold" }, b = { fg = "#4C4F69", bg = surface_bg, gui = "bold" } },
-        inactive = { a = { fg = "#7A7880", bg = surface_bg }, b = { fg = "#7A7880", bg = surface_bg }, c = { fg = "#7A7880", bg = surface_bg } },
-      }
-      local lualine_dark = {
-        normal   = { a = { fg = "#E8F0FA", bg = "#2F496F", gui = "bold" }, b = { fg = "#BCBEC4", bg = surface_bg, gui = "bold" }, c = { fg = "#BCBEC4", bg = surface_bg } },
-        insert   = { a = { fg = "#EFF3F0", bg = "#34523E", gui = "bold" }, b = { fg = "#BCBEC4", bg = surface_bg, gui = "bold" } },
-        visual   = { a = { fg = "#ECEBFB", bg = "#342F67", gui = "bold" }, b = { fg = "#BCBEC4", bg = surface_bg, gui = "bold" } },
-        replace  = { a = { fg = "#FCF0F0", bg = "#672D2D", gui = "bold" }, b = { fg = "#BCBEC4", bg = surface_bg, gui = "bold" } },
-        command  = { a = { fg = "#F5E8D0", bg = "#5A3A1A", gui = "bold" }, b = { fg = "#BCBEC4", bg = surface_bg, gui = "bold" } },
-        inactive = { a = { fg = "#6F737A", bg = surface_bg }, b = { fg = "#6F737A", bg = surface_bg }, c = { fg = "#6F737A", bg = surface_bg } },
-      }
-      local cursor_palette = cursor_lualine_palette()
-      local lualine_cursor = cursor_palette and {
-        normal   = { a = { fg = cursor_palette.badge_fg, bg = cursor_palette.normal, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" }, c = { fg = cursor_palette.fg, bg = surface_bg } },
-        insert   = { a = { fg = cursor_palette.badge_fg, bg = cursor_palette.insert, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" } },
-        visual   = { a = { fg = cursor_palette.badge_fg, bg = cursor_palette.visual, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" } },
-        replace  = { a = { fg = cursor_palette.badge_fg, bg = cursor_palette.replace, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" } },
-        command  = { a = { fg = cursor_palette.badge_fg, bg = cursor_palette.command, gui = "bold" }, b = { fg = cursor_palette.fg, bg = surface_bg, gui = "bold" } },
-        inactive = { a = { fg = cursor_palette.muted, bg = surface_bg }, b = { fg = cursor_palette.muted, bg = surface_bg }, c = { fg = cursor_palette.muted, bg = surface_bg } },
-      } or nil
-      local _hint = vim.g._lualine_theme_hint or ""
-      local mode_theme = lualine_cursor or _hint == "islands-light" and lualine_light or _hint == "islands-dark" and lualine_dark or (vim.o.background == "light" and lualine_light or lualine_dark)
+      require("features.git_status").setup()
+
       opts.options = vim.tbl_extend("force", opts.options or {}, {
-        theme = mode_theme,
+        theme = P.lualine_theme(),
         section_separators = { left = "", right = "" },
         component_separators = { left = "", right = "" },
         -- Avoid CursorMoved refreshes; diagnostics/LSP/git events keep this fresh enough.
@@ -99,9 +33,46 @@ return {
           },
         },
       })
+
       opts.sections = opts.sections or {}
-      local mode_colors = mode_theme
+
+      -- Colors for the mode chip; special editor states override the mode color.
+      -- All colors come from the theme palette (statusline.states / statusline.mode).
+      local function mode_chip_color()
+        local p = P.get()
+        local state = vim.fn.reg_recording() ~= "" and "recording"
+          or vim.g.multicursor_build_mode and "multicursor_build"
+          or vim.g.window_resize_mode and "resize"
+          or vim.g.multicursor_mode_active and "multicursor"
+        if state then
+          return { fg = p.states[state].fg, bg = p.states[state].bg, gui = "bold" }
+        end
+
+        local mode = vim.fn.mode(1)
+        local m = mode:sub(1, 1) == "i" and "insert"
+          or (mode == "v" or mode == "V" or mode == "\22") and "visual"
+          or "normal"
+        return { fg = p.mode[m].fg, bg = p.mode[m].bg, gui = "bold" }
+      end
+
+      -- Rounded pill cap as its own component. Cap glyphs are foreground text, so
+      -- their color is pre-blended (P.blend_cap) to match the translucent pill body.
+      local function chip_cap(glyph, bg_fn, cond)
+        return {
+          function() return glyph end,
+          color = function()
+            return { fg = P.blend_cap(bg_fn()), bg = P.get().surface }
+          end,
+          separator = "",
+          padding = { left = 0, right = 0 },
+          cond = cond,
+        }
+      end
+      local cap_l, cap_r = "\u{E0B6}", "\u{E0B4}"
+
+      -- Mode chip; special editor states (recording/multicursor/resize) override it.
       opts.sections.lualine_a = {
+        chip_cap(cap_l, function() return mode_chip_color().bg end),
         {
           "mode",
           fmt = function(mode)
@@ -110,198 +81,66 @@ return {
             if rec ~= "" then return "RECORDING @" .. rec end
             if vim.g.multicursor_build_mode then return "M CURSOR" end
             if vim.g.window_resize_mode then return "RESIZE WINDOW" end
-
             if vim.g.multicursor_mode_active then return "MULTI SELECT" end
-
             return mode
           end,
-          color = function()
-            if vim.fn.reg_recording() ~= "" then
-              return vim.o.background == "light"
-                  and { fg = "#5C1423", bg = "#F2B8C1", gui = "bold" }
-                or { fg = "#2B060D", bg = "#E37B8C", gui = "bold" }
-            end
-
-            if vim.g.multicursor_build_mode then
-              return vim.o.background == "light"
-                  and { fg = "#4F3800", bg = "#F4D58D", gui = "bold" }
-                or { fg = "#211600", bg = "#F2C14E", gui = "bold" }
-            end
-
-            if vim.g.window_resize_mode then
-              return vim.o.background == "light"
-                  and { fg = "#5A2E00", bg = "#F1C7A6", gui = "bold" }
-                or { fg = "#271000", bg = "#E6985A", gui = "bold" }
-            end
-
-            if vim.g.multicursor_mode_active then
-              return vim.o.background == "light"
-                  and { fg = "#1B4D4A", bg = "#BFE7E3", gui = "bold" }
-                or { fg = "#081F1D", bg = "#7AD7CD", gui = "bold" }
-            end
-
-            local mode = vim.fn.mode(1)
-            if mode:sub(1, 1) == "i" then return mode_colors.insert.a end
-            if mode == "v" or mode == "V" or mode == "\22" then return mode_colors.visual.a end
-            return mode_colors.normal.a
-          end,
-          separator = { left = "\u{E0B6}", right = "\u{E0B4}" },
+          color = mode_chip_color,
+          separator = "",
           padding = { left = 1, right = 1 },
         },
+        chip_cap(cap_r, function() return mode_chip_color().bg end),
       }
       opts.sections.lualine_x = {}
-      -- Git counters update asynchronously so the statusline never blocks on git commands.
-      vim.g._git_ahead = vim.g._git_ahead or 0
-      vim.g._git_behind = vim.g._git_behind or 0
-      vim.g._git_untracked = vim.g._git_untracked or 0
-      vim.g._git_modified = vim.g._git_modified or 0
-      vim.g._git_deleted = vim.g._git_deleted or 0
-      vim.g._git_conflicted = vim.g._git_conflicted or 0
-      -- Async count of commits ahead/behind upstream for the branch chip.
-      local function refresh_git_ab()
-        vim.fn.jobstart({ "git", "rev-list", "--left-right", "--count", "HEAD...@{upstream}" }, {
-          cwd = vim.fn.getcwd(),
-          stdout_buffered = true,
-          on_stdout = function(_, data)
-            if data and data[1] and data[1] ~= "" then
-              local a, b = data[1]:match("(%d+)%s+(%d+)")
-              vim.g._git_ahead = tonumber(a) or 0
-              vim.g._git_behind = tonumber(b) or 0
-            end
-          end,
-          on_exit = function(_, code)
-            if code ~= 0 then
-              vim.g._git_ahead = 0
-              vim.g._git_behind = 0
-            end
-          end,
-        })
-      end
-      -- Async tally of untracked/modified/deleted/conflicted files from git status.
-      local function refresh_git_status()
-        vim.fn.jobstart({ "git", "status", "--porcelain" }, {
-          cwd = vim.fn.getcwd(),
-          stdout_buffered = true,
-          on_stdout = function(_, data)
-            if not data then return end
-            local untracked, modified, deleted, conflicted = 0, 0, 0, 0
-            for _, line in ipairs(data) do
-              if line ~= "" then
-                local x, y = line:sub(1, 1), line:sub(2, 2)
-                if x == "?" then
-                  untracked = untracked + 1
-                elseif x == "U" or y == "U" or (x == "A" and y == "A") or (x == "D" and y == "D") then
-                  conflicted = conflicted + 1
-                else
-                  if y == "M" or x == "M" then modified = modified + 1 end
-                  if y == "D" or x == "D" then deleted = deleted + 1 end
-                end
-              end
-            end
-            vim.g._git_untracked = untracked
-            vim.g._git_modified = modified
-            vim.g._git_deleted = deleted
-            vim.g._git_conflicted = conflicted
-          end,
-          on_exit = function(_, code)
-            if code ~= 0 then
-              vim.g._git_untracked = 0
-              vim.g._git_modified = 0
-              vim.g._git_deleted = 0
-              vim.g._git_conflicted = 0
-            end
-          end,
-        })
-      end
-      local function refresh_git_all()
-        refresh_git_ab()
-        refresh_git_status()
-      end
-      local grp = vim.api.nvim_create_augroup("lualine_git_ab", { clear = true })
-      vim.api.nvim_create_autocmd({ "BufEnter", "FocusGained", "BufWritePost" }, { group = grp, callback = refresh_git_all })
-      refresh_git_all()
 
-      -- Custom chip highlights are reapplied because colorschemes reset them.
+      -- Breadcrumb chip highlights; reapplied because colorschemes reset them.
       local function setup_breadcrumb_hl()
-        local chip_bgs_hl = { lualine_bg(), lualine_bg(), lualine_bg() }
-        local breadcrumb_bg = chip_bgs_hl[2] or chip_bgs_hl[1]
-        local breadcrumb_fg = vim.o.background == "light" and "#4C4F69" or "#CED0D6"
-        local arrow_fg = vim.o.background == "light" and "#2F3147" or "#DCE0E8"
-        for i, bg in ipairs(chip_bgs_hl) do
-          vim.api.nvim_set_hl(0, "LualineBreadcrumbSep" .. i, { fg = arrow_fg, bg = bg })
+        local p = P.get()
+        for i, bg in ipairs(p.chips.bgs) do
+          vim.api.nvim_set_hl(0, "LualineBreadcrumbSep" .. i, { fg = p.chips.arrow, bg = bg })
+          -- Cap + body pair per rotating chip background (caps pre-blended).
+          vim.api.nvim_set_hl(0, "LualineChipCap" .. i, { fg = P.blend_cap(bg), bg = p.surface ~= "NONE" and p.surface or nil })
+          vim.api.nvim_set_hl(0, "LualineChipBody" .. i, { fg = p.chips.fg, bg = bg })
         end
-        vim.api.nvim_set_hl(0, "LualineBreadcrumbStatus", { fg = breadcrumb_fg, bg = breadcrumb_bg })
+        vim.api.nvim_set_hl(0, "LualineBreadcrumbStatus", { fg = p.chips.fg, bg = p.chips.bgs[2] or p.chips.bgs[1] })
       end
       setup_breadcrumb_hl()
-      vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_breadcrumb_hl })
 
-      -- Theme-aware highlights for the git branch chip and its status indicators.
+      -- Git branch chip highlights from the theme palette.
       local function setup_git_hl()
-        local hint = vim.g._lualine_theme_hint or ""
-        if vim.o.background == "light" then
-          local bg = hint == "islands-light" and "#DDD9F7" or "#6B3CC8"
-          local base_fg = hint == "islands-light" and "#342F67" or "#FFFFFF"
-          vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = base_fg, bg = bg, bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = base_fg, bg = bg, bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = hint == "islands-light" and "#3A7A52" or "#7CA686", bg = bg, bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = hint == "islands-light" and "#8A6B20" or "#A8983A", bg = bg, bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = hint == "islands-light" and "#8E5324" or "#C87A3A", bg = bg, bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = hint == "islands-light" and "#B54A5C" or "#B85C5C", bg = bg, bold = true })
-        elseif cursor_lualine_palette() then
-          local c = cursor_lualine_palette()
-          local bg = c.normal
-          vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = "#191c22", bg = bg, bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = "#191c22", bg = bg, bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = c.green, bg = bg, bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = c.yellow, bg = bg, bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = c.peach, bg = bg, bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = c.red, bg = bg, bold = true })
-        else
-          local bg = hint == "islands-dark" and "#342F67" or "#cba6f7"
-          local base_fg = hint == "islands-dark" and "#ECEBFB" or "#151619"
-          vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = base_fg, bg = bg, bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = base_fg, bg = bg, bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = hint == "islands-dark" and "#7CA686" or "#a6e3a1", bg = bg, bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = hint == "islands-dark" and "#D5B778" or "#f9e2af", bg = bg, bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = hint == "islands-dark" and "#CF8E6D" or "#fab387", bg = bg, bold = true })
-          vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = hint == "islands-dark" and "#F75464" or "#f38ba8", bg = bg, bold = true })
-        end
+        local g = P.get().git
+        vim.api.nvim_set_hl(0, "LualineGitBase",   { fg = g.fg, bg = g.bg, bold = true })
+        vim.api.nvim_set_hl(0, "LualineGitBranch", { fg = g.fg, bg = g.bg, bold = true })
+        vim.api.nvim_set_hl(0, "LualineGitGreen",  { fg = g.green, bg = g.bg, bold = true })
+        vim.api.nvim_set_hl(0, "LualineGitYellow", { fg = g.yellow, bg = g.bg, bold = true })
+        vim.api.nvim_set_hl(0, "LualineGitPeach",  { fg = g.peach, bg = g.bg, bold = true })
+        vim.api.nvim_set_hl(0, "LualineGitRed",    { fg = g.red, bg = g.bg, bold = true })
       end
       setup_git_hl()
-      vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_git_hl })
 
-      -- Reapply the lualine mode theme + StatusLine highlights from the theme hint.
+      -- Reapply the lualine mode theme + StatusLine highlights after theme changes.
       local function setup_lualine_theme_hl()
-        local hint = vim.g._lualine_theme_hint or ""
-        local theme
-        if hint == "islands-light" then
-          theme = lualine_light
-        elseif cursor_lualine_palette() then
-          theme = lualine_cursor
-        elseif hint == "islands-dark" then
-          theme = lualine_dark
-        else
-          theme = "auto"
-        end
         local ok, lualine = pcall(require, "lualine")
         if not ok then return end
         local cfg = lualine.get_config()
         cfg.options = cfg.options or {}
-        cfg.options.theme = theme
+        cfg.options.theme = P.lualine_theme()
         lualine.setup(cfg)
-        local c = cursor_lualine_palette()
-        vim.api.nvim_set_hl(0, "StatusLine",   { fg = c and c.fg or (vim.o.background == "light" and "#4C4F69" or "#BCBEC4"), bg = lualine_bg() })
-        vim.api.nvim_set_hl(0, "StatusLineNC", { fg = c and c.muted or (vim.o.background == "light" and "#7A7880" or "#6F737A"), bg = lualine_bg() })
+        local p = P.get()
+        vim.api.nvim_set_hl(0, "StatusLine",   { fg = p.fg, bg = p.surface })
+        vim.api.nvim_set_hl(0, "StatusLineNC", { fg = p.muted, bg = p.surface })
       end
-      vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_lualine_theme_hl })
       vim.defer_fn(function()
-        local hint = vim.g._lualine_theme_hint or ""
-        local c = cursor_lualine_palette()
-        vim.api.nvim_set_hl(0, "StatusLine",   { fg = c and c.fg or (vim.o.background == "light" and "#4C4F69" or "#BCBEC4"), bg = lualine_bg() })
-        vim.api.nvim_set_hl(0, "StatusLineNC", { fg = c and c.muted or (vim.o.background == "light" and "#7A7880" or "#6F737A"), bg = lualine_bg() })
+        local p = P.get()
+        vim.api.nvim_set_hl(0, "StatusLine",   { fg = p.fg, bg = p.surface })
+        vim.api.nvim_set_hl(0, "StatusLineNC", { fg = p.muted, bg = p.surface })
       end, 50)
 
+      -- Git branch + working tree indicators (counts come from features/git_status).
+      local function has_git_branch()
+        return vim.b.gitsigns_head ~= nil and vim.b.gitsigns_head ~= ""
+      end
       opts.sections.lualine_b = {
+        chip_cap(cap_l, function() return P.get().git.bg end, has_git_branch),
         {
           function()
             local branch = vim.b.gitsigns_head
@@ -322,54 +161,36 @@ return {
             end
             return table.concat(parts, "")
           end,
-          cond = function()
-            return vim.b.gitsigns_head ~= nil and vim.b.gitsigns_head ~= ""
+          cond = has_git_branch,
+          padding = { left = 1, right = 1 },
+          separator = "",
+          color = function()
+            return { bg = P.get().git.bg }
           end,
-          padding = { left = 1, right = 0 },
-          separator = { left = "\u{E0B6}", right = "\u{E0B4}" },
         },
+        chip_cap(cap_r, function() return P.get().git.bg end, has_git_branch),
         {
           function() return "|" end,
           padding = { left = 1, right = 1 },
           separator = "",
           color = function()
-            return { fg = vim.o.background == "light" and "#9B9792" or "#6B6F75" }
+            return { fg = P.get().chips.sep }
           end,
-          cond = function()
-            return vim.b.gitsigns_head ~= nil and vim.b.gitsigns_head ~= ""
-          end,
+          cond = has_git_branch,
         },
       }
 
-      -- Highlights for the compact diagnostics pill.
+      -- Diagnostics pill highlights from the theme palette.
       local function setup_diag_hl()
-        local hint = vim.g._lualine_theme_hint or ""
-        local c = cursor_lualine_palette()
-        if c then
-          vim.api.nvim_set_hl(0, "DiagPillCap",   { fg = c.lsp_bg, bg = c.surface })
-          vim.api.nvim_set_hl(0, "DiagPillBase",  { fg = c.muted, bg = c.lsp_bg })
-          vim.api.nvim_set_hl(0, "DiagPillError", { fg = c.red, bg = c.lsp_bg })
-          vim.api.nvim_set_hl(0, "DiagPillWarn",  { fg = c.yellow, bg = c.lsp_bg })
-          vim.api.nvim_set_hl(0, "DiagPillInfo",  { fg = c.info, bg = c.lsp_bg })
-          vim.api.nvim_set_hl(0, "DiagPillHint",  { fg = c.info, bg = c.lsp_bg })
-        elseif vim.o.background == "light" then
-          vim.api.nvim_set_hl(0, "DiagPillCap",   { fg = "#D5D0CA", bg = "#E2DFDB" })
-          vim.api.nvim_set_hl(0, "DiagPillBase",  { fg = "#7A7880", bg = "#D5D0CA" })
-          vim.api.nvim_set_hl(0, "DiagPillError", { fg = "#B85C5C", bg = "#D5D0CA" })
-          vim.api.nvim_set_hl(0, "DiagPillWarn",  { fg = "#A8983A", bg = "#D5D0CA" })
-          vim.api.nvim_set_hl(0, "DiagPillInfo",  { fg = "#5A8FD4", bg = "#D5D0CA" })
-          vim.api.nvim_set_hl(0, "DiagPillHint",  { fg = "#7CA686", bg = "#D5D0CA" })
-        else
-          vim.api.nvim_set_hl(0, "DiagPillCap",   { fg = "#313438", bg = "#2B2D30" })
-          vim.api.nvim_set_hl(0, "DiagPillBase",  { fg = "#BCBEC4", bg = "#313438" })
-          vim.api.nvim_set_hl(0, "DiagPillError", { fg = "#f38ba8", bg = "#313438" })
-          vim.api.nvim_set_hl(0, "DiagPillWarn",  { fg = "#f9e2af", bg = "#313438" })
-          vim.api.nvim_set_hl(0, "DiagPillInfo",  { fg = "#89b4fa", bg = "#313438" })
-          vim.api.nvim_set_hl(0, "DiagPillHint",  { fg = "#a6e3a1", bg = "#313438" })
-        end
+        local d = P.get().diag
+        vim.api.nvim_set_hl(0, "DiagPillCap",   { fg = d.cap, bg = d.cap_bg })
+        vim.api.nvim_set_hl(0, "DiagPillBase",  { fg = d.base, bg = d.bg })
+        vim.api.nvim_set_hl(0, "DiagPillError", { fg = d.error, bg = d.bg })
+        vim.api.nvim_set_hl(0, "DiagPillWarn",  { fg = d.warn, bg = d.bg })
+        vim.api.nvim_set_hl(0, "DiagPillInfo",  { fg = d.info, bg = d.bg })
+        vim.api.nvim_set_hl(0, "DiagPillHint",  { fg = d.hint, bg = d.bg })
       end
       setup_diag_hl()
-      vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_diag_hl })
 
       -- Remove LazyVim defaults before adding custom diagnostics/LSP/tool chips.
       local new_c = {}
@@ -383,23 +204,16 @@ return {
       end
       opts.sections.lualine_c = new_c
 
-      -- Remove LazyVim's Trouble symbols component from the statusline. Keep
-      -- the file path chip, but avoid showing the current code breadcrumb next
-      -- to it.
-      local breadcrumb_symbols = nil
-      do
-        local ok_t = pcall(require, "trouble")
-        if ok_t then
-          for i, comp in ipairs(opts.sections.lualine_c) do
-            if type(comp) == "table" and type(comp[1]) == "function" and type(comp.cond) == "function" then
-              table.remove(opts.sections.lualine_c, i)
-              break
-            end
-          end
-        end
-      end
-
       -- Compact diagnostics pill, hidden when the current buffer has no diagnostics.
+      local function has_diagnostics()
+        local d = vim.diagnostic.count(0)
+        local e = d[vim.diagnostic.severity.ERROR] or 0
+        local w = d[vim.diagnostic.severity.WARN] or 0
+        local inf = d[vim.diagnostic.severity.INFO] or 0
+        local h = d[vim.diagnostic.severity.HINT] or 0
+        return e + w + inf + h > 0
+      end
+      table.insert(opts.sections.lualine_x, 1, chip_cap(cap_r, function() return P.get().diag.container end, has_diagnostics))
       table.insert(opts.sections.lualine_x, 1, {
         function()
           local d = vim.diagnostic.count(0)
@@ -415,27 +229,17 @@ return {
           if h > 0 then table.insert(parts, "%#DiagPillHint#H " .. h) end
           return table.concat(parts, " ")
         end,
-        cond = function()
-          local d = vim.diagnostic.count(0)
-          local e = d[vim.diagnostic.severity.ERROR] or 0
-          local w = d[vim.diagnostic.severity.WARN] or 0
-          local inf = d[vim.diagnostic.severity.INFO] or 0
-          local h = d[vim.diagnostic.severity.HINT] or 0
-          return e + w + inf + h > 0
-        end,
-        separator = { left = "\u{E0B6}", right = "\u{E0B4}" },
+        cond = has_diagnostics,
+        separator = "",
         color = function()
-          local light = vim.o.background == "light"
-          local c = cursor_lualine_palette()
-          if c then
-            return { fg = c.muted, bg = c.surface }
-          end
-          return { fg = light and "#7A7880" or "#7A7E85", bg = light and "#D5D0CA" or "#2B2D30" }
+          local p = P.get()
+          return { fg = p.muted, bg = p.diag.container }
         end,
         padding = { left = 1, right = 1 },
       })
+      table.insert(opts.sections.lualine_x, 1, chip_cap(cap_l, function() return P.get().diag.container end, has_diagnostics))
 
-      -- Status chips render attached tools with stable colors per theme.
+      -- Icons for the LSP/tool chips.
       local lsp_icons = {
         vtsls          = "󰛦 ",
         ts_ls          = "󰛦 ",
@@ -455,102 +259,49 @@ return {
         bashls         = " ",
         dockerls       = "󰡨 ",
         yamlls         = "󰘦 ",
-        copilot        = " ",
+        copilot        = " ",
         ["null-ls"]    = "󱏿 ",
-      }
-
-      local lsp_colors = {
-        vtsls          = "#89b4fa",
-        ts_ls          = "#89b4fa",
-        tsserver       = "#89b4fa",
-        vue_ls         = "#a6e3a1",
-        volar          = "#a6e3a1",
-        tailwindcss    = "#94e2d5",
-        lua_ls         = "#89b4fa",
-        pyright        = "#fab387",
-        basedpyright   = "#fab387",
-        pylsp          = "#fab387",
-        jsonls         = "#f9e2af",
-        html           = "#fab387",
-        cssls          = "#74c7ec",
-        emmet_ls       = "#fab387",
-        bashls         = "#a6e3a1",
-        dockerls       = "#89dceb",
-        yamlls         = "#f9e2af",
-        copilot        = "#cba6f7",
-        ["null-ls"]    = "#94e2d5",
-      }
-
-      local lsp_colors_light = {
-        vtsls          = "#0B74D6",
-        ts_ls          = "#0B74D6",
-        tsserver       = "#0B74D6",
-        vue_ls         = "#2E7D4F",
-        volar          = "#2E7D4F",
-        tailwindcss    = "#1A8894",
-        lua_ls         = "#0B74D6",
-        pyright        = "#A04B10",
-        basedpyright   = "#A04B10",
-        pylsp          = "#A04B10",
-        jsonls         = "#7A5C00",
-        html           = "#A04B10",
-        cssls          = "#1A8894",
-        emmet_ls       = "#A04B10",
-        bashls         = "#2E7D4F",
-        dockerls       = "#1A8894",
-        yamlls         = "#7A5C00",
-        copilot        = "#6B3CC8",
-        ["null-ls"]    = "#1A8894",
+        ruff           = "󰉁 ",
+        ty             = "󰄬 ",
+        jinja_lsp      = "󰅩 ",
+        ["jinja-lsp"]  = "󰅩 ",
+        bacon_ls       = " ",
+        ["bacon-ls"]   = " ",
+        rust_analyzer  = " ",
+        ["rust-analyzer"] = " ",
+        jdtls          = "󰬷 ",
       }
 
       -- Per-server highlight groups for the LSP/tool status chips.
       local function setup_lsp_hl()
-        local light = vim.o.background == "light"
-        local c = cursor_lualine_palette()
-        local lsp_bg = c and c.lsp_bg or (light and "#D5D0CA" or "#45475a")
-        local colors = light and lsp_colors_light or lsp_colors
-        if c then
-          colors = vim.tbl_extend("force", colors, {
-            vtsls = c.lsp_ts, ts_ls = c.lsp_ts, tsserver = c.lsp_ts,
-            vue_ls = c.green, volar = c.green, tailwindcss = c.info,
-            lua_ls = c.lsp_ts, pyright = c.lsp_py, basedpyright = c.lsp_py, pylsp = c.lsp_py,
-            jsonls = c.lsp_js, html = c.peach, cssls = c.info, emmet_ls = c.peach,
-            bashls = c.green, dockerls = c.info, yamlls = c.lsp_js, copilot = c.visual, ["null-ls"] = c.info,
-          })
-        end
-        vim.api.nvim_set_hl(0, "LualineLspBase",        { fg = c and c.muted or (light and "#7A7880" or "#93a1a1"),  bg = lsp_bg })
-        vim.api.nvim_set_hl(0, "LualineCopilotOn",      { fg = c and c.visual or (light and "#7B72C9" or "#cba6f7"),  bg = lsp_bg })
-        vim.api.nvim_set_hl(0, "LualineCopilotSpinner", { fg = c and c.yellow or (light and "#A8983A" or "#f9e2af"),  bg = lsp_bg })
-        vim.api.nvim_set_hl(0, "LualineCopilotOff",     { fg = c and c.muted or (light and "#7A7880" or "#6c7086"),  bg = lsp_bg })
-        for name, fg in pairs(colors) do
+        local p = P.get()
+        local servers = P.lsp_servers()
+        vim.api.nvim_set_hl(0, "LualineLspBase",        { fg = p.lsp.base, bg = p.lsp.bg })
+        vim.api.nvim_set_hl(0, "LualineCopilotOn",      { fg = servers.copilot or p.lsp.on, bg = p.lsp.bg })
+        vim.api.nvim_set_hl(0, "LualineCopilotSpinner", { fg = p.lsp.spinner, bg = p.lsp.bg })
+        vim.api.nvim_set_hl(0, "LualineCopilotOff",     { fg = p.lsp.off, bg = p.lsp.bg })
+        for name, fg in pairs(servers) do
           local hl = "LualineLsp_" .. name:gsub("[%-%.]", "_")
-          vim.api.nvim_set_hl(0, hl, { fg = fg, bg = lsp_bg })
+          vim.api.nvim_set_hl(0, hl, { fg = fg, bg = p.lsp.bg })
         end
       end
       setup_lsp_hl()
-      vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_lsp_hl })
 
       -- One refresh path keeps all statusline highlights in sync after theme/layout changes.
       local function refresh_statusline_colors(full)
+        if full then
+          P.refresh_ghostty() -- terminal theme/opacity may have changed
+          setup_lualine_theme_hl()
+        end
         setup_breadcrumb_hl()
         setup_git_hl()
         setup_diag_hl()
         setup_lsp_hl()
-        if full then
-          setup_lualine_theme_hl()
-          setup_breadcrumb_hl()
-          setup_git_hl()
-          setup_diag_hl()
-          setup_lsp_hl()
-          local ok, lualine = pcall(require, "lualine")
-          if ok then lualine.refresh({ place = { "statusline" } }) end
+        local ok, lualine = pcall(require, "lualine")
+        if ok then
+          lualine.refresh({ place = { "statusline" } })
         else
-          local ok, lualine = pcall(require, "lualine")
-          if ok then
-            lualine.refresh({ place = { "statusline" } })
-          else
-            vim.cmd("redrawstatus")
-          end
+          vim.cmd("redrawstatus")
         end
       end
 
@@ -582,6 +333,7 @@ return {
       })
 
       -- Show attached language servers, excluding standalone ESLint/Copilot chips below.
+      table.insert(opts.sections.lualine_x, chip_cap(cap_l, function() return P.get().lsp.bg end))
       table.insert(opts.sections.lualine_x, {
         function()
           local clients = vim.lsp.get_clients({ bufnr = 0 })
@@ -591,6 +343,7 @@ return {
           local labels = {
             cssls = "css",
           }
+          local servers = P.lsp_servers()
           for _, c in ipairs(clients) do
             if c.name == "eslint" or c.name == "copilot" or c.name == "emmet_language_server" then goto continue end
             if not seen[c.name] then
@@ -598,7 +351,7 @@ return {
               local icon = lsp_icons[c.name] or "󰒋 "
               local hl = "LualineLsp_" .. c.name:gsub("[%-%.]", "_")
               local label = labels[c.name] or c.name
-              if lsp_colors[c.name] then
+              if servers[c.name] then
                 parts[#parts + 1] = "%#" .. hl .. "#" .. icon .. label .. "%#LualineLspBase#"
               else
                 parts[#parts + 1] = icon .. label
@@ -608,41 +361,40 @@ return {
           end
           return table.concat(parts, "  ")
         end,
-        separator = { left = "\u{E0B6}", right = "\u{E0B4}" },
+        separator = "",
         color = function()
-          local light = vim.o.background == "light"
-          return { fg = light and "#7A7880" or "#93a1a1", bg = light and "#D5D0CA" or "#45475a" }
+          local p = P.get()
+          return { fg = p.lsp.base, bg = p.lsp.bg }
         end,
       })
 
-      -- Copilot gets a separate status chip so progress/off states are visible.
+      -- Copilot chip: purple when available, yellow while generating, gray only
+      -- when copilot is not attached to the buffer at all.
       table.insert(opts.sections.lualine_x, {
         function()
-          local icon = " "
+          local icon = " "
           local ok, status = pcall(require, "copilot.status")
-          if not ok then
-            return "%#LualineCopilotOff#" .. icon .. "copilot%#LualineLspBase#"
-          end
-          local s = status.data and status.data.status or ""
+          local s = ok and status.data and status.data.status or ""
           if s == "InProgress" then
             return "%#LualineCopilotSpinner#" .. icon .. "copilot%#LualineLspBase#"
-          elseif s == "Normal" then
-            return "%#LualineCopilotOn#" .. icon .. "copilot%#LualineLspBase#"
-          else
-            return "%#LualineCopilotOff#" .. icon .. "copilot%#LualineLspBase#"
           end
+          local attached = #vim.lsp.get_clients({ name = "copilot", bufnr = 0 }) > 0
+          if attached then
+            return "%#LualineCopilotOn#" .. icon .. "copilot%#LualineLspBase#"
+          end
+          return "%#LualineCopilotOff#" .. icon .. "copilot%#LualineLspBase#"
         end,
         separator = { left = "", right = "" },
         color = function()
-          local light = vim.o.background == "light"
-          return { fg = light and "#9BA5B0" or "#6c7086", bg = light and "#C8CCD1" or "#45475a" }
+          local p = P.get()
+          return { fg = p.lsp.off, bg = p.lsp.bg }
         end,
         cond = function()
           return LazyVim.has("copilot.lua")
         end,
       })
 
-      -- Format chip mirrors the global autoformat toggle.
+      -- Format chip mirrors the global autoformat toggle: green + (A) when on.
       table.insert(opts.sections.lualine_x, {
         function()
           local fmt_active = vim.g.autoformat == nil or vim.g.autoformat
@@ -650,45 +402,39 @@ return {
         end,
         separator = { left = "", right = "" },
         color = function()
-          local light = vim.o.background == "light"
-          local lsp_bg = light and "#C8CCD1" or "#45475a"
+          local p = P.get()
           return (vim.g.autoformat == nil or vim.g.autoformat)
-            and { fg = light and "#7CA686" or "#a6e3a1", bg = lsp_bg }
-            or  { fg = light and "#7A7880" or "#586e75", bg = lsp_bg }
+            and { fg = p.lsp.green, bg = p.lsp.bg }
+            or  { fg = p.lsp.off, bg = p.lsp.bg }
         end,
       })
 
-      -- ESLint chip shows both attachment and autosave-fix state.
+      -- ESLint chip shows the autosave-fix state; hidden when ESLint does not
+      -- apply to the current file (not attached).
       table.insert(opts.sections.lualine_x, {
         function()
-          local eslint_attached = #vim.lsp.get_clients({ name = "eslint", bufnr = 0 }) > 0
           local autosave_on = vim.g.eslint_autosave == nil or vim.g.eslint_autosave
-          if not eslint_attached then return "󰅪 eslint" end
           return "󰅪 eslint" .. (autosave_on and " (A)" or "")
         end,
-        separator = { left = "\u{E0B6}", right = "\u{E0B4}" },
+        separator = "",
+        cond = function()
+          return #vim.lsp.get_clients({ name = "eslint", bufnr = 0 }) > 0
+        end,
         color = function()
-          local light = vim.o.background == "light"
-          local lsp_bg = light and "#D5D0CA" or "#45475a"
-          local eslint_attached = #vim.lsp.get_clients({ name = "eslint", bufnr = 0 }) > 0
+          local p = P.get()
           local autosave_on = vim.g.eslint_autosave == nil or vim.g.eslint_autosave
-          if not eslint_attached then return { fg = light and "#7A7880" or "#586e75", bg = lsp_bg } end
+          -- ESLint keeps its identity color; (A) in the text signals autosave.
+          local eslint_fg = P.lsp_servers().eslint or p.lsp.yellow
           return autosave_on
-            and { fg = light and "#A8983A" or "#f9e2af", bg = lsp_bg }
-            or  { fg = light and "#7A7880" or "#93a1a1", bg = lsp_bg }
+            and { fg = eslint_fg, bg = p.lsp.bg }
+            or  { fg = p.lsp.off, bg = p.lsp.bg }
         end,
       })
+      -- Right edge of the tool pill (fmt is always visible, so the pill never collapses).
+      table.insert(opts.sections.lualine_x, chip_cap(cap_r, function() return P.get().lsp.bg end))
 
       opts.sections.lualine_z = {}
       opts.sections.lualine_y = {}
-
-      -- Path/breadcrumb components are wrapped into rounded chips and truncated safely.
-      -- Rotating chip background colors for the path/breadcrumb segments.
-      local function chip_bgs()
-        return vim.o.background == "light"
-          and { "#D5D0CA", "#D5D0CA", "#D5D0CA" }
-          or  { "#3A3D41", "#42464D", "#4A4F57" }
-      end
 
       -- Wrap a component into a rounded chip with the given background color.
       local function style_chip(component, bg_fn)
@@ -704,7 +450,7 @@ return {
         end
 
         local existing_color = comp.color
-        comp.separator = { left = "", right = "" }
+        comp.separator = ""
         comp.padding = comp.padding or { left = 1, right = 1 }
         comp.color = function()
           local color
@@ -713,7 +459,7 @@ return {
           else
             color = existing_color or {}
           end
-          color.fg = color.fg or (vim.o.background == "light" and "#4C4F69" or "#CED0D6")
+          color.fg = color.fg or P.get().chips.fg
           color.bg = bg_fn()
           return color
         end
@@ -721,6 +467,7 @@ return {
         return comp
       end
 
+      -- Path/breadcrumb components are wrapped into rounded chips and truncated safely.
       opts.sections.lualine_c = opts.sections.lualine_c or {}
       local chip_index = 1
       local styled_c = {}
@@ -729,15 +476,14 @@ return {
         local is_path_like = type(head) == "function" or head == "filename"
         if is_path_like then
           local bg_fn = function()
-            local bgs = chip_bgs()
+            local bgs = P.get().chips.bgs
             return bgs[((chip_index - 1) % #bgs) + 1]
           end
           local styled_comp = style_chip(comp, bg_fn)
           if chip_index == 1 then
             styled_comp.padding = { left = 1, right = 0 }
             -- modified_hl "" keeps a modified file's name on the chip's own
-            -- foreground (black) instead of MatchParen, which this config tints
-            -- pink for bracket matching.
+            -- foreground instead of MatchParen, which this config tints pink.
             local path_fn = LazyVim.lualine.pretty_path({ filename_hl = "", directory_hl = "", modified_hl = "" })
             styled_comp[1] = function(self)
               local icon = require("mini.icons").get("file", vim.fn.expand("%:t"))
@@ -748,26 +494,30 @@ return {
             local existing_color_fn = styled_comp.color
             styled_comp.color = function()
               local c = type(existing_color_fn) == "function" and existing_color_fn() or {}
-              local cs = vim.g.colors_name or ""
-              local is_light = vim.o.background == "light"
-              local is_default_white = cs == "default-light"
-              local is_islands_white = cs == "islands-white" or cs == "islands-light"
-              c.fg = is_light and ((is_default_white or is_islands_white) and "#2F496F" or "#FFFFFF") or "#151619"
-              c.bg = is_light and ((is_default_white or is_islands_white) and "#D2E4F5" or "#2A6296") or "#9ccfd8"
+              local p = P.get()
+              c.fg = p.path.fg
+              c.bg = p.path.bg
               c.gui = (c.gui and c.gui .. ",bold" or "bold")
               return c
             end
           end
           if chip_index > 1 then
             local sep_hl = "LualineBreadcrumbSep" .. (((chip_index - 1) % 3) + 1)
+            local cap_idx = ((chip_index - 1) % 3) + 1
             styled_comp.padding = { left = 0, right = 0 }
             local original = styled_comp[1]
             if type(original) == "function" then
               styled_comp[1] = function(self)
                 local str = (original(self) or ""):gsub("^%s+", ""):gsub("%s+$", "")
-                return str:gsub(" %%#", "%%#" .. sep_hl .. "#> %%#")
+                if str == "" then return "" end
+                str = str:gsub(" %%#", "%%#" .. sep_hl .. "#> %%#")
+                -- Bracket the chip with pre-blended rounded caps (see chip_cap).
+                return "%#LualineChipCap" .. cap_idx .. "#" .. cap_l
+                  .. "%#LualineChipBody" .. cap_idx .. "#" .. str
+                  .. "%#LualineChipCap" .. cap_idx .. "#" .. cap_r
               end
             end
+            -- Truncate long breadcrumbs to the window width, keeping highlight codes intact.
             styled_comp.fmt = function(str)
               local max = math.max(0, vim.o.columns - 100)
               local visible = str:gsub("%%#[^#]*#", "")
@@ -788,22 +538,13 @@ return {
               return table.concat(out) .. "..."
             end
           end
-          table.insert(styled_c, styled_comp)
           if chip_index == 1 then
-            local sep_bg_fn = function()
-              return chip_bgs()[1]
-            end
-            local sep_comp = style_chip({ function() return "|" end }, sep_bg_fn)
-            sep_comp.padding = { left = 0, right = 1 }
-            sep_comp.color = function()
-              return { fg = vim.o.background == "light" and "#9B9792" or "#6B6F75", bg = sep_bg_fn() }
-            end
-            sep_comp.cond = function()
-              return breadcrumb_symbols ~= nil
-                and vim.b.trouble_lualine ~= false
-                and breadcrumb_symbols.has()
-            end
-            table.insert(styled_c, sep_comp)
+            -- First chip (file path) is always visible; caps as own components.
+            table.insert(styled_c, chip_cap(cap_l, function() return P.get().path.bg end))
+            table.insert(styled_c, styled_comp)
+            table.insert(styled_c, chip_cap(cap_r, function() return P.get().path.bg end))
+          else
+            table.insert(styled_c, styled_comp)
           end
           chip_index = chip_index + 1
         else

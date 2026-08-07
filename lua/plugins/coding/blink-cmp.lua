@@ -1,63 +1,7 @@
----@diagnostic disable: undefined-global
-
--- Coding editor plugins: commenting, LSP rename, surround, treesitter context, and blink.cmp tweaks.
+-- blink.cmp completion tweaks: Enter-only accept, custom menu layout, Tab navigation.
 return {
-  -- Robust linewise/blockwise comments without relying on Neovim's builtin vim._comment module.
-  {
-    "numToStr/Comment.nvim",
-    event = "VeryLazy",
-    opts = {
-      padding = true,
-      sticky = true,
-      ignore = nil,
-      toggler = {
-        line = "gcc",
-        block = "gbc",
-      },
-      opleader = {
-        line = "gc",
-        block = "gb",
-      },
-      extra = {
-        above = "gcO",
-        below = "gco",
-        eol = "gcA",
-      },
-    },
-  },
-  -- Inline rename command for LSP symbols.
-  {
-    "smjonas/inc-rename.nvim",
-    cmd = "IncRename",
-    config = true,
-  },
-  -- Surround mappings are loaded lazily but keep visual `as` available.
-  {
-    "tpope/vim-surround",
-    event = "VeryLazy",
-    config = function()
-      vim.keymap.set("x", "as", "<Plug>VSurround", { remap = true, silent = true, desc = "Add surround" })
-    end,
-  },
-  -- Shows the containing function/class at the top while scrolling deep code.
-  {
-    "nvim-treesitter/nvim-treesitter-context",
-    event = "VeryLazy",
-    opts = {
-      max_lines = 6,
-      trim_scope = "outer",
-    },
-    keys = {
-      {
-        "[C",
-        function() require("treesitter-context").go_to_context(vim.v.count1) end,
-        desc = "Jump to context",
-      },
-    },
-  },
   {
     "saghen/blink.cmp",
-    -- Extend LazyVim's blink.cmp: remap interface kinds, customize menu columns, and Tab handling.
     opts = function(_, opts)
       opts.sources = opts.sources or {}
       opts.sources.transform_items = function(_, items)
@@ -72,8 +16,7 @@ return {
 
       opts.completion = opts.completion or {}
       -- Only commit a completion on <CR>. Highlight the top item (preselect) but
-      -- never insert its text while navigating/typing (auto_insert = false), so
-      -- continuing to type leaves the buffer untouched until Enter is pressed.
+      -- never insert its text while navigating/typing (auto_insert = false).
       opts.completion.list = opts.completion.list or {}
       opts.completion.list.selection = vim.tbl_deep_extend("force", opts.completion.list.selection or {}, {
         preselect = true,
@@ -114,8 +57,6 @@ return {
       }
 
       -- Escape always drops straight to normal mode, even with the menu open.
-      -- Hide the menu, then return nothing so it falls through to the default
-      -- <Esc> (which leaves insert mode) in the same keypress.
       opts.keymap["<Esc>"] = {
         function(cmp)
           if cmp.is_menu_visible() then cmp.hide() end

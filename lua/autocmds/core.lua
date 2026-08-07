@@ -2,7 +2,7 @@
 require("autocmds.window")
 require("autocmds.formatting")
 require("autocmds.window_state")
-require("autocmds.highlights")
+require("themes.engine") -- applies theme colors to plugin UIs (was autocmds/highlights.lua)
 require("autocmds.matchpairs")
 require("autocmds.winbar")
 require("autocmds.integrations")

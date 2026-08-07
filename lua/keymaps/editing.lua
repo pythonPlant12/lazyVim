@@ -9,7 +9,7 @@ local opts = { noremap = true, silent = true }
 -- LuaJIT (nvim) only has the global unpack; Lua 5.4 moved it to table.unpack.
 -- Alias it so lua_ls stops flagging the call sites as deprecated.
 local unpack = table.unpack or unpack ---@diagnostic disable-line: deprecated
-local lazygit_edit = require("git.lazygit_edit")
+local lazygit_edit = require("features.lazygit_edit")
 local tab_jump = require("utils.tab_jump")
 local python_lsp_settings = require("lsp.python_settings")
 local typescript_lsp_settings = require("lsp.typescript_settings")
@@ -59,62 +59,8 @@ vim.api.nvim_set_keymap("n", "tq", ":tabclose<CR>", opts)
 keymaps.set("n", "ss", ":split<Return>", opts)
 keymaps.set("n", "sv", ":vsplit<Return>", opts)
 
-local resize_mode_active = false
-
--- Asynchronously redraw lualine's statusline (e.g. after resize-mode toggles).
-local function refresh_statusline()
-  vim.schedule(function()
-    local ok, lualine = pcall(require, "lualine")
-    if ok then lualine.refresh({ place = { "statusline" } }) end
-  end)
-end
-
--- Resize mode installs temporary global maps, then restores inverted j/k on exit.
-local function exit_resize_mode()
-  if not resize_mode_active then return end
-  resize_mode_active = false
-  vim.g.window_resize_mode = false
-  local resize_keys = { "h", "l", "j", "k", "<Left>", "<Right>", "<Up>", "<Down>", "<Esc>", "q", "=" }
-  for _, k in ipairs(resize_keys) do
-    pcall(vim.keymap.del, "n", k, { buffer = false })
-  end
-  vim.keymap.set("n", "j", "k", { silent = true })
-  vim.keymap.set("n", "k", "j", { silent = true })
-  vim.api.nvim_echo({}, false, {})
-  refresh_statusline()
-end
-
-local function enter_resize_mode()
-  if resize_mode_active then return end
-  resize_mode_active = true
-  vim.g.window_resize_mode = true
-  local step = 3
-  local map = vim.keymap.set
-  local o = { nowait = true, silent = true }
-
-  local function resize(cmd)
-    return function()
-      for _ = 1, step do vim.cmd("wincmd " .. cmd) end
-    end
-  end
-
-  map("n", "h",       resize(">"), o)
-  map("n", "l",       resize("<"), o)
-  map("n", "j",       resize("+"), o)
-  map("n", "k",       resize("-"), o)
-  map("n", "<Left>",  resize(">"), o)
-  map("n", "<Right>", resize("<"), o)
-  map("n", "<Up>",    resize("+"), o)
-  map("n", "<Down>",  resize("-"), o)
-  map("n", "<Esc>",   exit_resize_mode, o)
-  map("n", "q",       exit_resize_mode, o)
-  map("n", "=",       function() vim.cmd("wincmd =") end, o)
-
-  vim.api.nvim_echo({ { "-- RESIZE -- (h/l/j/k, <Esc> to exit)", "ModeMsg" } }, false, {})
-  refresh_statusline()
-end
-
-keymaps.set("n", "<C-w>r", enter_resize_mode, { desc = "Enter resize mode" })
+-- Window resize mode lives in features/window_resize.
+keymaps.set("n", "<C-w>r", function() require("features.window_resize").enter() end, { desc = "Enter resize mode" })
 
 -- Diagnostics
 
