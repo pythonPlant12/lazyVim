@@ -14,6 +14,13 @@ return {
         return items
       end
 
+      -- The copilot extra boosts its source above LSP (+100); invert so Copilot
+      -- suggestions always sort after every LSP item.
+      opts.sources.providers = opts.sources.providers or {}
+      opts.sources.providers.copilot = vim.tbl_deep_extend("force", opts.sources.providers.copilot or {}, {
+        score_offset = -100,
+      })
+
       opts.completion = opts.completion or {}
       -- Only commit a completion on <CR>. Highlight the top item (preselect) but
       -- never insert its text while navigating/typing (auto_insert = false).

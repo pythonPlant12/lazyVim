@@ -412,6 +412,10 @@ end, { desc = "Open file externally" })
 
 keymaps.set("n", "<C-m>", vim.lsp.buf.hover, { desc = "Show hover information" })
 keymaps.set("i", "<C-n>", function() require("blink.cmp").show() end, { desc = "Show suggestions" })
+keymaps.set("i", "<C-a>", function() require("blink.cmp").show({ providers = { "copilot" } }) end, { desc = "Show Copilot suggestions only" })
+-- Shift+Enter: open a new line below and land on it, like `o` but staying in
+-- normal mode. Needs a terminal that disambiguates <S-CR> from <CR> (CSI u).
+keymaps.set("n", "<S-CR>", "o<Esc>", { desc = "New line below (stay in normal mode)" })
 
 keymaps.set("n", "<leader>ce", function()
   vim.lsp.buf.code_action({

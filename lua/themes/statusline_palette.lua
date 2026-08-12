@@ -71,10 +71,10 @@ M.lsp_servers_dark = {
   jsonls = "#f9e2af", html = "#fab387", cssls = "#74c7ec", emmet_ls = "#fab387",
   bashls = "#a6e3a1", dockerls = "#89dceb", yamlls = "#f9e2af",
   copilot = "#cba6f7", ["null-ls"] = "#94e2d5",
-  ruff = "#e5c07b", ty = "#7dc4e4", jinja_lsp = "#c6a0f6", ["jinja-lsp"] = "#c6a0f6",
+  ruff = "#e5c07b", ruff_lsp = "#e5c07b", ty = "#7dc4e4", jinja_lsp = "#c6a0f6", ["jinja-lsp"] = "#c6a0f6",
   bacon_ls = "#ed8796", ["bacon-ls"] = "#ed8796",
   rust_analyzer = "#e78a76", ["rust-analyzer"] = "#e78a76", jdtls = "#CC7832",
-  eslint = "#a78bfa",
+  eslint = "#a78bfa", taplo = "#f9e2af", marksman = "#89b4fa", fmt = "#a6e3a1",
 }
 M.lsp_servers_light = {
   vtsls = "#0B74D6", ts_ls = "#0B74D6", tsserver = "#0B74D6",
@@ -83,10 +83,10 @@ M.lsp_servers_light = {
   jsonls = "#7A5C00", html = "#A04B10", cssls = "#1A8894", emmet_ls = "#A04B10",
   bashls = "#2E7D4F", dockerls = "#1A8894", yamlls = "#7A5C00",
   copilot = "#6B3CC8", ["null-ls"] = "#1A8894",
-  ruff = "#8A6B20", ty = "#155E9E", jinja_lsp = "#6B3CC8", ["jinja-lsp"] = "#6B3CC8",
+  ruff = "#8A6B20", ruff_lsp = "#8A6B20", ty = "#155E9E", jinja_lsp = "#6B3CC8", ["jinja-lsp"] = "#6B3CC8",
   bacon_ls = "#B54A5C", ["bacon-ls"] = "#B54A5C",
   rust_analyzer = "#A0430A", ["rust-analyzer"] = "#A0430A", jdtls = "#8E5324",
-  eslint = "#4B32C3",
+  eslint = "#4B32C3", taplo = "#7A5C00", marksman = "#155E9E", fmt = "#2E7D4F",
 }
 
 -- Ghostty renders colored cell backgrounds translucent (background-opacity-cells)

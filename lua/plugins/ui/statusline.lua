@@ -246,7 +246,7 @@ return {
         tsserver       = "󰛦 ",
         vue_ls         = "󰡄 ",
         volar          = "󰡄 ",
-        eslint         = "󰅪 ",
+        eslint         = " ",
         tailwindcss    = "󱏿 ",
         lua_ls         = "󰢱 ",
         pyright        = "󰌠 ",
@@ -259,9 +259,12 @@ return {
         bashls         = " ",
         dockerls       = "󰡨 ",
         yamlls         = "󰘦 ",
-        copilot        = " ",
+        copilot        = " ",
         ["null-ls"]    = "󱏿 ",
         ruff           = "󰉁 ",
+        ruff_lsp       = "󰉁 ",
+        taplo          = "󰒓 ",
+        marksman       = "󰍔 ",
         ty             = "󰄬 ",
         jinja_lsp      = "󰅩 ",
         ["jinja-lsp"]  = "󰅩 ",
@@ -280,6 +283,13 @@ return {
         vim.api.nvim_set_hl(0, "LualineCopilotOn",      { fg = servers.copilot or p.lsp.on, bg = p.lsp.bg })
         vim.api.nvim_set_hl(0, "LualineCopilotSpinner", { fg = p.lsp.spinner, bg = p.lsp.bg })
         vim.api.nvim_set_hl(0, "LualineCopilotOff",     { fg = p.lsp.off, bg = p.lsp.bg })
+        -- Servers without an explicit palette entry still get a theme accent.
+        vim.api.nvim_set_hl(0, "LualineLspFallback",    { fg = p.lsp.on, bg = p.lsp.bg })
+        -- Tool chips (fmt/eslint) color their own text; lualine function colors
+        -- resolve to empty groups here, so the chips embed these instead.
+        vim.api.nvim_set_hl(0, "LualineFmtOn",    { fg = servers.fmt or p.lsp.green, bg = p.lsp.bg })
+        vim.api.nvim_set_hl(0, "LualineEslintOn", { fg = servers.eslint or p.lsp.yellow, bg = p.lsp.bg })
+        vim.api.nvim_set_hl(0, "LualineToolOff",  { fg = p.lsp.off, bg = p.lsp.bg })
         for name, fg in pairs(servers) do
           local hl = "LualineLsp_" .. name:gsub("[%-%.]", "_")
           vim.api.nvim_set_hl(0, hl, { fg = fg, bg = p.lsp.bg })
@@ -354,7 +364,7 @@ return {
               if servers[c.name] then
                 parts[#parts + 1] = "%#" .. hl .. "#" .. icon .. label .. "%#LualineLspBase#"
               else
-                parts[#parts + 1] = icon .. label
+                parts[#parts + 1] = "%#LualineLspFallback#" .. icon .. label .. "%#LualineLspBase#"
               end
             end
             ::continue::
@@ -372,7 +382,7 @@ return {
       -- when copilot is not attached to the buffer at all.
       table.insert(opts.sections.lualine_x, {
         function()
-          local icon = " "
+          local icon = " "
           local ok, status = pcall(require, "copilot.status")
           local s = ok and status.data and status.data.status or ""
           if s == "InProgress" then
@@ -398,13 +408,15 @@ return {
       table.insert(opts.sections.lualine_x, {
         function()
           local fmt_active = vim.g.autoformat == nil or vim.g.autoformat
-          return "󰉼 fmt" .. (fmt_active and " (A)" or "")
+          return "%#" .. (fmt_active and "LualineFmtOn" or "LualineToolOff") .. "#󰉼 fmt" .. (fmt_active and " (A)" or "") .. "%#LualineLspBase#"
         end,
         separator = { left = "", right = "" },
         color = function()
           local p = P.get()
+          -- fmt takes its identity color from the theme's server palette too.
+          local fmt_fg = P.lsp_servers().fmt or p.lsp.green
           return (vim.g.autoformat == nil or vim.g.autoformat)
-            and { fg = p.lsp.green, bg = p.lsp.bg }
+            and { fg = fmt_fg, bg = p.lsp.bg }
             or  { fg = p.lsp.off, bg = p.lsp.bg }
         end,
       })
@@ -414,7 +426,7 @@ return {
       table.insert(opts.sections.lualine_x, {
         function()
           local autosave_on = vim.g.eslint_autosave == nil or vim.g.eslint_autosave
-          return "󰅪 eslint" .. (autosave_on and " (A)" or "")
+          return "%#" .. (autosave_on and "LualineEslintOn" or "LualineToolOff") .. "# eslint" .. (autosave_on and " (A)" or "") .. "%#LualineLspBase#"
         end,
         separator = "",
         cond = function()
