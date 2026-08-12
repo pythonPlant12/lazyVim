@@ -143,15 +143,25 @@ local function visual_search_set()
   set_exact_visual_search(text)
 end
 
-keymaps.set("v", "n", function()
+-- In a diff view (or gitsigns inline preview) normal-mode n/N navigate hunks,
+-- so falling back to normal mode after a visual search would silently change
+-- what n means. There, re-select the landed match (gn/gN) so n/N keep walking
+-- occurrences while the selection lasts; <Esc> returns n/N to hunk navigation.
+local ns_inline = vim.api.nvim_create_namespace("gitsigns_preview_inline")
+local function hunk_nav_active()
+  return vim.wo.diff
+    or #vim.api.nvim_buf_get_extmarks(0, ns_inline, 0, -1, { limit = 1 }) > 0
+end
+
+local function visual_search_jump(key)
   visual_search_set()
-  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("n", true, false, true), "n", false)
-end, { desc = "Search selected text forward" })
-keymaps.set("v", "/", function()
-  visual_search_set()
-  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("n", true, false, true), "n", false)
-end, { desc = "Search selected text" })
-keymaps.set("v", "N", function()
-  visual_search_set()
-  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("N", true, false, true), "n", false)
-end, { desc = "Search selected text backward" })
+  local keys = key
+  if hunk_nav_active() then
+    keys = "<Esc>" .. key .. (key == "n" and "gn" or "gN")
+  end
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(keys, true, false, true), "n", false)
+end
+
+keymaps.set("v", "n", function() visual_search_jump("n") end, { desc = "Search selected text forward" })
+keymaps.set("v", "/", function() visual_search_jump("n") end, { desc = "Search selected text" })
+keymaps.set("v", "N", function() visual_search_jump("N") end, { desc = "Search selected text backward" })
