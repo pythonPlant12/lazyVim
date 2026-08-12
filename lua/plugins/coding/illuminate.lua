@@ -8,16 +8,18 @@ return {
     -- Highlight references under cursor, but delay/disable noisy filetypes to avoid movement lag.
     opts = {
       delay = 300,
+      -- Large files and vue keep LSP-only highlighting: the server computes
+      -- references, so no regex/treesitter scanning on every cursor move.
       large_file_cutoff = 2000,
       large_file_overrides = {
-        providers = {},
+        providers = { "lsp" },
       },
       filetype_overrides = {
         html = { providers = {} },
         htmldjango = { providers = {} },
         jinja = { providers = {} },
         jinja2 = { providers = {} },
-        vue = { providers = {} },
+        vue = { providers = { "lsp" } },
       },
       modes_allowlist = { "n" },
     },
