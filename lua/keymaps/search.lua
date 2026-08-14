@@ -107,6 +107,16 @@ end
 
 keymaps.set("n", "<Esc>", "<cmd>nohlsearch<cr><Esc>", { desc = "Clear search highlight" })
 
+-- In a diff view (or gitsigns inline preview) normal-mode n/N navigate hunks,
+-- so landing on a search match in normal mode would silently change what n
+-- means. There, select the landed match (gn/gN): the visual n/N mappings keep
+-- walking occurrences while the selection lasts; <Esc> returns n/N to hunks.
+local ns_inline = vim.api.nvim_create_namespace("gitsigns_preview_inline")
+local function hunk_nav_active()
+  return vim.wo.diff
+    or #vim.api.nvim_buf_get_extmarks(0, ns_inline, 0, -1, { limit = 1 }) > 0
+end
+
 keymaps.set("n", "/", function()
   local input = vim.fn.input("/ ")
   if not set_prefixed_search(input) then
@@ -131,6 +141,10 @@ keymaps.set("n", "/", function()
   end
 
   pcall(vim.cmd, "normal! zv")
+  -- In diff views, select the match so n/N continue the search (see above).
+  if hunk_nav_active() then
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("gn", true, false, true), "n", false)
+  end
 end, { desc = "Search (prefix flags before ':' e.g. re:, c:, w:, cw:, wcre:)" })
 
 -- Yank the visual selection (restoring the register) and search for it exactly.
@@ -143,16 +157,9 @@ local function visual_search_set()
   set_exact_visual_search(text)
 end
 
--- In a diff view (or gitsigns inline preview) normal-mode n/N navigate hunks,
--- so falling back to normal mode after a visual search would silently change
--- what n means. There, re-select the landed match (gn/gN) so n/N keep walking
+-- Visual n/N: jump to the next/previous occurrence of the selection. In diff
+-- views the landed match is re-selected (gn/gN) so n/N keep walking
 -- occurrences while the selection lasts; <Esc> returns n/N to hunk navigation.
-local ns_inline = vim.api.nvim_create_namespace("gitsigns_preview_inline")
-local function hunk_nav_active()
-  return vim.wo.diff
-    or #vim.api.nvim_buf_get_extmarks(0, ns_inline, 0, -1, { limit = 1 }) > 0
-end
-
 local function visual_search_jump(key)
   visual_search_set()
   local keys = key
