@@ -108,18 +108,36 @@ local function list_branches(active_branch, cwd)
   return items, nil
 end
 
+-- "Nikita Petrov" -> "NP"; single-word names use their first two characters.
+local function author_initials(name)
+  local words = {}
+  for w in (name or ""):gmatch("%S+") do
+    words[#words + 1] = w
+  end
+  if #words == 0 then
+    return "??"
+  end
+  if #words == 1 then
+    return vim.fn.strcharpart(words[1], 0, 2):upper()
+  end
+  return (vim.fn.strcharpart(words[1], 0, 1) .. vim.fn.strcharpart(words[#words], 0, 1)):upper()
+end
+
 -- Return recent commits for a ref as selectable items (marking HEAD).
 local function list_commits(ref, limit, cwd)
-  local lines, err = git_lines({ "log", ref, "--pretty=format:%h\t%s", ("--max-count=%d"):format(limit or 150) }, cwd)
+  local lines, err = git_lines({ "log", ref, "--pretty=format:%h\t%an\t%s", ("--max-count=%d"):format(limit or 150) }, cwd)
   if not lines then
     return nil, err
   end
   local items = {}
   for i, line in ipairs(lines) do
-    local sha, subj = line:match("^(%S+)%s+(.+)$")
+    local sha, author, subj = line:match("^([^\t]+)\t([^\t]*)\t(.*)$")
     if sha then
       local head = i == 1 and "HEAD" or "    "
-      items[#items + 1] = { ref = sha, label = string.format("%s %s  %s", head, sha, subj or "") }
+      items[#items + 1] = {
+        ref = sha,
+        label = string.format("%s %-3s %s  %s", head, author_initials(author), sha, subj or ""),
+      }
     end
   end
   return items, nil
@@ -300,6 +318,111 @@ local function pick_ref_and_restore_file()
 end
 
 keymaps.set("n", "<C-g>fR", pick_ref_and_restore_file, { desc = "Restore file to ref" })
+
+-- Map a buffer line to its line number in the gitsigns base (usually HEAD) by
+-- undoing the line-count shifts of the hunks above it. Inside a changed block
+-- the base block start is used.
+local function buf_line_to_base(lnum)
+  local ok, gs = pcall(require, "gitsigns")
+  if not ok then
+    return lnum
+  end
+  local hunks = gs.get_hunks(0) or {}
+  local delta = 0
+  for _, h in ipairs(hunks) do
+    local a, r = h.added, h.removed
+    local a_end = a.start + math.max(a.count, 1) - 1
+    if a.count > 0 and lnum >= a.start and lnum <= a_end then
+      return math.max(r.start, 1)
+    end
+    if a_end < lnum then
+      delta = delta + (a.count - r.count)
+    end
+  end
+  return math.max(lnum - delta, 1)
+end
+
+-- Commits that changed one specific line (git log -L follows the line as it
+-- moves through history). Each item carries the line's content as of that
+-- commit (post-image of the -L hunk), used to restore it.
+local function list_line_commits(path, lnum, cwd)
+  local rel = (vim.fs.relpath and vim.fs.relpath(cwd, path)) or path
+  local result = vim.system({
+    "git", "log", "--no-color",
+    "--format=%x01%h%x09%an%x09%s",
+    ("-L%d,%d:%s"):format(lnum, lnum, rel),
+  }, { cwd = cwd, text = true }):wait()
+  if result.code ~= 0 then
+    local err = vim.trim(result.stderr or "")
+    return nil, err ~= "" and err or "git log -L failed"
+  end
+
+  local items = {}
+  local cur, in_hunk
+  for _, line in ipairs(vim.split(result.stdout or "", "\n")) do
+    local header = line:match("^\1(.*)$")
+    if header then
+      local sha, author, subj = header:match("^([^\t]+)\t([^\t]*)\t(.*)$")
+      if sha then
+        cur = {
+          ref = sha,
+          label = string.format("%-3s %s  %s", author_initials(author), sha, subj or ""),
+          lines = {},
+        }
+        items[#items + 1] = cur
+      end
+      in_hunk = false
+    elseif cur then
+      if line:match("^@@") then
+        in_hunk = true
+      elseif line:match("^diff %-%-git") then
+        in_hunk = false
+      elseif in_hunk then
+        local first = line:sub(1, 1)
+        if first == "+" or first == " " then
+          cur.lines[#cur.lines + 1] = line:sub(2)
+        end
+      end
+    end
+  end
+  return items, nil
+end
+
+-- Pick from the commits that touched the current line and restore the line's
+-- content from the chosen commit (buffer edit only; nothing is written).
+local function pick_line_commit_and_restore()
+  local path = current_real_file()
+  if path == "" then
+    vim.notify("No file in current buffer", vim.log.levels.ERROR, { title = "Git Restore Line" })
+    return
+  end
+
+  local buf_lnum = vim.api.nvim_win_get_cursor(0)[1]
+  local base_lnum = buf_line_to_base(buf_lnum)
+  local cwd = current_file_git_root()
+
+  local items, err = list_line_commits(path, base_lnum, cwd)
+  if not items then
+    vim.notify("Could not get line history: " .. err, vim.log.levels.ERROR, { title = "Git Restore Line" })
+    return
+  end
+  if #items == 0 then
+    vim.notify("No commits changed this line", vim.log.levels.WARN, { title = "Git Restore Line" })
+    return
+  end
+
+  vim.ui.select(items, {
+    prompt = ("Restore line %d from:"):format(buf_lnum),
+    format_item = function(item) return item.label end,
+  }, function(item)
+    if not item then return end
+    vim.api.nvim_buf_set_lines(0, buf_lnum - 1, buf_lnum, false, item.lines)
+    local what = #item.lines == 1 and "line" or (#item.lines .. " lines")
+    vim.notify(("Restored %s from %s"):format(what, item.ref), vim.log.levels.INFO, { title = "Git Restore Line" })
+  end)
+end
+
+keymaps.set("n", "<C-g>lR", pick_line_commit_and_restore, { desc = "Restore line from commit" })
 
 keymaps.set("n", "<C-g>fh", function() Snacks.picker.git_log_file() end, { desc = "File history" })
 keymaps.set("n", "<C-g>fr", function() require("gitsigns").reset_buffer() end, { desc = "Revert file to HEAD" })
