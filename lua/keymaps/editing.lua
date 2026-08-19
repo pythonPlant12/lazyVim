@@ -89,7 +89,6 @@ keymaps.set("v", "D", '"_D', opts)
 keymaps.set("v", "c", '"_c', opts)
 keymaps.set("v", "C", '"_C', opts)
 keymaps.set("v", "x", '"+x', opts)
-keymaps.set("v", "s", '"_s', opts)
 -- Paste over selection without yanking the replaced text
 keymaps.set("v", "p", '"_dP', opts)
 keymaps.set("v", "P", '"_dP', opts)
