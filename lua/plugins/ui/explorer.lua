@@ -315,6 +315,29 @@ return {
           },
         })
       end
+      -- Run grug-far scoped to the selected node's DIRECTORY: a directory node
+      -- searches itself, a file node searches its parent directory.
+      opts.filesystem.commands.grug_far_search_node_dir = function(state)
+        local node = state.tree:get_node()
+        if not node or node.type == "message" then
+          return
+        end
+
+        local path = node:get_id()
+        if not path or path == "" then
+          return
+        end
+        if node.type ~= "directory" then
+          path = vim.fn.fnamemodify(path, ":h")
+        end
+
+        grug_far_reuse.open_for_buffer(vim.api.nvim_get_current_buf(), {
+          prefills = {
+            paths = path:gsub(" ", "\\ "),
+            flags = "--fixed-strings --ignore-case",
+          },
+        })
+      end
       -- Search for the selected node's bare filename across the project.
       opts.filesystem.commands.grug_far_search_node_filename = function(state)
         local node = state.tree:get_node()
@@ -371,7 +394,24 @@ return {
       opts.filesystem.window.mappings["F"] = "reveal_node_in_finder"
       opts.filesystem.window.mappings["<C-s>f"] = "grug_far_search_node"
       opts.filesystem.window.mappings["<C-s>F"] = "grug_far_search_node_filename"
-      opts.filesystem.window.mappings["<C-s>d"] = "grug_far_search_node"
+      opts.filesystem.window.mappings["<C-s>d"] = "grug_far_search_node_dir"
+      -- Typing <C-s> and pausing past timeoutlen would abandon the chord and
+      -- feed the next key alone (d = delete!). This bare <C-s> handler catches
+      -- the timeout case and waits for the second key with no time limit.
+      opts.filesystem.window.mappings["<C-s>"] = function(state)
+        local ok, ch = pcall(vim.fn.getcharstr)
+        if not ok then
+          return
+        end
+        local cmd = ({
+          d = "grug_far_search_node_dir",
+          f = "grug_far_search_node",
+          F = "grug_far_search_node_filename",
+        })[ch]
+        if cmd then
+          opts.filesystem.commands[cmd](state)
+        end
+      end
 
       return opts
     end,
