@@ -58,6 +58,10 @@ return {
     "MagicDuck/grug-far.nvim",
     opts = {
       windowCreationCommand = "botright vsplit",
+      -- Never trim long result lines. Syncing (e.g. <S-CR>) writes the
+      -- displayed line back to the file, so a trimmed line would corrupt it
+      -- with truncated text plus the "... (very long line ...)" marker.
+      maxLineLength = -1,
       keymaps = {
         -- grug-far's default <enter> action is gotoLocation, which calls
         -- nvim_win_set_cursor without guarding against stale result line
@@ -70,6 +74,13 @@ return {
         close       = { n = "<localleader>C" },
       },
       prefills = { flags = "--fixed-strings" },
+      -- Search hidden files/folders (.github, dotfiles, ...) too; .git itself
+      -- stays excluded. Gitignore rules still apply.
+      engines = {
+        ripgrep = {
+          extraArgs = "--hidden -g !.git",
+        },
+      },
       -- Result folding hides context while editing replacements.
       folding = { enabled = false },
     },
