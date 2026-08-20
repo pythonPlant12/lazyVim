@@ -187,21 +187,55 @@ end
 
 keymaps.set("n", "<C-g>lD", pick_line_diff_base_and_preview, { desc = "Line diff against ref" })
 
--- Native gitsigns diff as a temporary fullscreen view; q restores the layout.
--- The right pane is the real buffer, so closing the diff leaves the cursor
--- exactly where it was — no position bookkeeping needed.
+-- Native gitsigns diff; q closes only the diff (scratch pane + diff mode),
+-- leaving every other split untouched. The right pane is the real buffer, so
+-- closing the diff leaves the cursor exactly where it was.
 local function open_file_diff_fullscreen(base)
   local orig_win = vim.api.nvim_get_current_win()
+  local orig_buf = vim.api.nvim_get_current_buf()
   require("gitsigns").diffthis(base)
 
   vim.defer_fn(function()
+    -- Only the two windows gitsigns put into diff mode take part.
+    local diff_wins = {}
     for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-      local buf = vim.api.nvim_win_get_buf(win)
-      vim.keymap.set("n", "q", function()
-        vim.cmd("diffoff!")
+      if vim.wo[win].diff then
+        diff_wins[#diff_wins + 1] = win
+      end
+    end
+    if #diff_wins == 0 then return end
+
+    local function close_diff()
+      for _, win in ipairs(diff_wins) do
+        if vim.api.nvim_win_is_valid(win) then
+          local buf = vim.api.nvim_win_get_buf(win)
+          if vim.api.nvim_buf_get_name(buf):match("^gitsigns://") then
+            pcall(vim.api.nvim_win_close, win, true)
+          else
+            vim.api.nvim_win_call(win, function() vim.cmd("diffoff") end)
+          end
+        end
+      end
+      pcall(vim.keymap.del, "n", "q", { buffer = orig_buf })
+      if vim.api.nvim_win_is_valid(orig_win) then
         vim.api.nvim_set_current_win(orig_win)
-        vim.cmd("only")
-      end, { buffer = buf, silent = true })
+      end
+    end
+
+    for _, win in ipairs(diff_wins) do
+      vim.keymap.set("n", "q", close_diff, { buffer = vim.api.nvim_win_get_buf(win), silent = true })
+    end
+
+    -- If the scratch pane is closed by other means (:q, :close), still clean up.
+    for _, win in ipairs(diff_wins) do
+      local buf = vim.api.nvim_win_get_buf(win)
+      if vim.api.nvim_buf_get_name(buf):match("^gitsigns://") then
+        vim.api.nvim_create_autocmd("WinClosed", {
+          pattern = tostring(win),
+          once = true,
+          callback = function() vim.schedule(close_diff) end,
+        })
+      end
     end
   end, 50)
 end
