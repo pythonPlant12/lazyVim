@@ -124,8 +124,15 @@ local function author_initials(name)
 end
 
 -- Return recent commits for a ref as selectable items (marking HEAD).
-local function list_commits(ref, limit, cwd)
-  local lines, err = git_lines({ "log", ref, "--pretty=format:%h\t%an\t%s", ("--max-count=%d"):format(limit or 150) }, cwd)
+local function list_commits(ref, limit, cwd, path)
+  local args = { "log", ref, "--pretty=format:%h\t%an\t%s", ("--max-count=%d"):format(limit or 150) }
+  -- With a path only commits that touched that file are listed (following renames).
+  if path and path ~= "" then
+    local base = cwd or git_root_or_cwd()
+    local rel = (vim.fs.relpath and vim.fs.relpath(base, path)) or path
+    vim.list_extend(args, { "--follow", "--", rel })
+  end
+  local lines, err = git_lines(args, cwd)
   if not lines then
     return nil, err
   end
@@ -133,7 +140,8 @@ local function list_commits(ref, limit, cwd)
   for i, line in ipairs(lines) do
     local sha, author, subj = line:match("^([^\t]+)\t([^\t]*)\t(.*)$")
     if sha then
-      local head = i == 1 and "HEAD" or "    "
+      -- Path-filtered lists rarely start at HEAD, so the marker would lie.
+      local head = (i == 1 and not path) and "HEAD" or "    "
       items[#items + 1] = {
         ref = sha,
         label = string.format("%s %-3s %s  %s", head, author_initials(author), sha, subj or ""),
@@ -143,8 +151,85 @@ local function list_commits(ref, limit, cwd)
   return items, nil
 end
 
+-- Map a buffer line to its line number in the gitsigns base (usually HEAD) by
+-- undoing the line-count shifts of the hunks above it. Inside a changed block
+-- the base block start is used.
+local function buf_line_to_base(lnum)
+  local ok, gs = pcall(require, "gitsigns")
+  if not ok then
+    return lnum
+  end
+  local hunks = gs.get_hunks(0) or {}
+  local delta = 0
+  for _, h in ipairs(hunks) do
+    local a, r = h.added, h.removed
+    local a_end = a.start + math.max(a.count, 1) - 1
+    if a.count > 0 and lnum >= a.start and lnum <= a_end then
+      return math.max(r.start, 1)
+    end
+    if a_end < lnum then
+      delta = delta + (a.count - r.count)
+    end
+  end
+  return math.max(lnum - delta, 1)
+end
+
+-- Commits that changed one specific line (git log -L follows the line as it
+-- moves through history). Each item carries the line's content as of that
+-- commit (post-image of the -L hunk), used to restore it.
+local function list_line_commits(path, lnum, cwd, ref)
+  local rel = (vim.fs.relpath and vim.fs.relpath(cwd, path)) or path
+  local cmd = { "git", "log", "--no-color", "--format=%x01%h%x09%an%x09%s" }
+  if ref then
+    cmd[#cmd + 1] = ref
+  end
+  cmd[#cmd + 1] = ("-L%d,%d:%s"):format(lnum, lnum, rel)
+  local result = vim.system(cmd, { cwd = cwd, text = true }):wait()
+  if result.code ~= 0 then
+    local err = vim.trim(result.stderr or "")
+    return nil, err ~= "" and err or "git log -L failed"
+  end
+
+  local items = {}
+  local cur, in_hunk
+  for _, line in ipairs(vim.split(result.stdout or "", "\n")) do
+    local header = line:match("^\1(.*)$")
+    if header then
+      local sha, author, subj = header:match("^([^\t]+)\t([^\t]*)\t(.*)$")
+      if sha then
+        cur = {
+          ref = sha,
+          label = string.format("%-3s %s  %s", author_initials(author), sha, subj or ""),
+          lines = {},
+        }
+        items[#items + 1] = cur
+      end
+      in_hunk = false
+    elseif cur then
+      if line:match("^@@") then
+        in_hunk = true
+      elseif line:match("^diff %-%-git") then
+        in_hunk = false
+      elseif in_hunk then
+        local first = line:sub(1, 1)
+        if first == "+" or first == " " then
+          cur.lines[#cur.lines + 1] = line:sub(2)
+        end
+      end
+    end
+  end
+  return items, nil
+end
+
 -- Pick a ref, set gitsigns' diff base, and preview the current hunk inline.
+-- Only commits that changed the current line are offered.
 local function pick_line_diff_base_and_preview()
+  local path = current_real_file()
+  if path == "" then
+    vim.notify("No file in current buffer", vim.log.levels.ERROR, { title = "Git Diff" })
+    return
+  end
+  local base_lnum = buf_line_to_base(vim.api.nvim_win_get_cursor(0)[1])
   local cwd = current_file_git_root()
   local active = current_branch(cwd)
   local branches, err = list_branches(active, cwd)
@@ -163,13 +248,13 @@ local function pick_line_diff_base_and_preview()
   }, function(branch_item)
     if not branch_item then return end
 
-    local commits, commits_err = list_commits(branch_item.ref, 150, cwd)
+    local commits, commits_err = list_line_commits(path, base_lnum, cwd, branch_item.ref)
     if not commits then
       vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Diff" })
       return
     end
     if #commits == 0 then
-      vim.notify("No commits found for " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Diff" })
+      vim.notify("No commits changed this line on " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Diff" })
       return
     end
 
@@ -240,8 +325,172 @@ local function open_file_diff_fullscreen(base)
   end, 50)
 end
 
+-- Content of path at ref as lines, or nil when the file didn't exist there.
+local function git_show_lines(ref, path, cwd)
+  local rel = (vim.fs.relpath and vim.fs.relpath(cwd, path)) or path
+  local result = vim.system({ "git", "show", ref .. ":" .. rel }, { cwd = cwd, text = true }):wait()
+  if result.code ~= 0 then
+    return nil
+  end
+  return vim.split((result.stdout or ""):gsub("\n$", ""), "\n", { plain = true })
+end
+
+-- Commit picker with a live background diff: moving through the list diffs
+-- the current buffer against the hovered commit without closing the list.
+--   items       list_commits items ({ ref, label })
+--   title       picker title
+--   keep_diff   keep the diff open after <CR> (q closes it); otherwise the
+--               preview closes and on_confirm handles the pick
+--   on_confirm  called with the picked item after the picker closes
+local function pick_commit_with_live_diff(opts)
+  local main_win = vim.api.nvim_get_current_win()
+  local main_buf = vim.api.nvim_get_current_buf()
+  local path = vim.api.nvim_buf_get_name(main_buf)
+  local cwd = current_file_git_root()
+  local ft = vim.bo[main_buf].filetype
+
+  local preview = { win = nil, buf = nil, ref = nil }
+
+  local function preview_close()
+    if preview.scroll_autocmd then
+      pcall(vim.api.nvim_del_autocmd, preview.scroll_autocmd)
+      preview.scroll_autocmd = nil
+    end
+    if preview.win and vim.api.nvim_win_is_valid(preview.win) then
+      pcall(vim.api.nvim_win_close, preview.win, true)
+    end
+    if preview.buf and vim.api.nvim_buf_is_valid(preview.buf) then
+      pcall(vim.api.nvim_buf_delete, preview.buf, { force = true })
+    end
+    if vim.api.nvim_win_is_valid(main_win) then
+      vim.api.nvim_win_call(main_win, function() vim.cmd("diffoff") end)
+    end
+    preview.win, preview.buf, preview.ref = nil, nil, nil
+    pcall(vim.keymap.del, "n", "q", { buffer = main_buf })
+  end
+
+  local function preview_show(ref)
+    if ref == preview.ref then
+      return
+    end
+    preview.ref = ref
+    local lines = git_show_lines(ref, path, cwd) or { "(file did not exist at " .. ref .. ")" }
+    if not (preview.buf and vim.api.nvim_buf_is_valid(preview.buf)) then
+      preview.buf = vim.api.nvim_create_buf(false, true)
+      vim.bo[preview.buf].buftype = "nofile"
+      vim.bo[preview.buf].swapfile = false
+      vim.bo[preview.buf].filetype = ft
+    end
+    vim.bo[preview.buf].modifiable = true
+    vim.api.nvim_buf_set_lines(preview.buf, 0, -1, false, lines)
+    vim.bo[preview.buf].modifiable = false
+    if not (preview.win and vim.api.nvim_win_is_valid(preview.win)) then
+      preview.win = vim.api.nvim_open_win(preview.buf, false, { split = "left", win = main_win })
+      vim.api.nvim_win_call(preview.win, function() vim.cmd("diffthis") end)
+      vim.api.nvim_win_call(main_win, function() vim.cmd("diffthis") end)
+      -- Both panes scroll together, same as the plain <C-g>fd diff.
+      for _, w in ipairs({ preview.win, main_win }) do
+        vim.wo[w].scrollbind = true
+        vim.wo[w].cursorbind = true
+      end
+      -- While the picker has focus, scrollbind doesn't act on mouse scrolls
+      -- of the (unfocused) file pane; mirror them to the preview manually.
+      preview.scroll_autocmd = vim.api.nvim_create_autocmd("WinScrolled", {
+        pattern = tostring(main_win),
+        callback = function()
+          if vim.api.nvim_win_is_valid(main_win) and vim.api.nvim_get_current_win() ~= main_win then
+            vim.api.nvim_win_call(main_win, function() vim.cmd("syncbind") end)
+          end
+        end,
+      })
+    else
+      -- Content changed under an existing diff; recompute it.
+      vim.api.nvim_win_call(main_win, function() vim.cmd("diffupdate") end)
+    end
+  end
+
+  local sitems = {}
+  for i, it in ipairs(opts.items) do
+    sitems[#sitems + 1] = { idx = i, text = it.label, ref = it.ref, label = it.label }
+  end
+
+  local confirmed = false
+  Snacks.picker.pick({
+    title = opts.title,
+    items = sitems,
+    -- Full-width strip pinned to the bottom (ivy-style, no snacks preview pane
+    -- — the live diff behind the picker is the preview).
+    layout = {
+      layout = {
+        box = "vertical",
+        backdrop = false,
+        row = -1,
+        width = 0,
+        height = 0.3,
+        border = "top",
+        title = " {title} ",
+        title_pos = "left",
+        { win = "input", height = 1, border = "bottom" },
+        { win = "list", border = "none" },
+      },
+    },
+    format = function(item)
+      return { { item.label } }
+    end,
+    on_change = function(_, item)
+      if item then
+        vim.schedule(function() preview_show(item.ref) end)
+      end
+    end,
+    confirm = function(picker, item)
+      confirmed = true
+      picker:close()
+      vim.schedule(function()
+        if not item then
+          preview_close()
+          return
+        end
+        if opts.keep_diff then
+          -- Ensure the preview matches the picked commit, then hand q the close.
+          preview_show(item.ref)
+          for _, b in ipairs({ main_buf, preview.buf }) do
+            if b and vim.api.nvim_buf_is_valid(b) then
+              vim.keymap.set("n", "q", preview_close, { buffer = b, silent = true })
+            end
+          end
+          if preview.win then
+            vim.api.nvim_create_autocmd("WinClosed", {
+              pattern = tostring(preview.win),
+              once = true,
+              callback = function() vim.schedule(preview_close) end,
+            })
+          end
+        else
+          preview_close()
+        end
+        if opts.on_confirm then
+          opts.on_confirm({ ref = item.ref, label = item.label })
+        end
+      end)
+    end,
+    on_close = function()
+      vim.schedule(function()
+        if not confirmed then
+          preview_close()
+        end
+      end)
+    end,
+  })
+end
+
 -- Pick a branch then commit and open that ref's diff in fullscreen.
+-- Only commits that touched the current file are offered.
 local function pick_diff_base_and_open()
+  local fpath = current_real_file()
+  if fpath == "" then
+    vim.notify("No file in current buffer", vim.log.levels.ERROR, { title = "Git Diff" })
+    return
+  end
   local cwd = current_file_git_root()
   local active = current_branch(cwd)
   local branches, err = list_branches(active, cwd)
@@ -260,24 +509,23 @@ local function pick_diff_base_and_open()
   }, function(branch_item)
     if not branch_item then return end
 
-    local commits, commits_err = list_commits(branch_item.ref, 150, cwd)
+    local commits, commits_err = list_commits(branch_item.ref, 150, cwd, fpath)
     if not commits then
       vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Diff" })
       return
     end
     if #commits == 0 then
-      vim.notify("No commits found for " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Diff" })
+      vim.notify("No commits changed this file on " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Diff" })
       return
     end
 
-    vim.ui.select(commits, {
-      prompt = "Select commit from " .. branch_item.ref .. ":",
-      format_item = function(item) return item.label end,
-    }, function(commit_item)
-      if commit_item then
-        open_file_diff_fullscreen(commit_item.ref)
-      end
-    end)
+    -- Hovering a commit shows the diff live in the background; <CR> keeps it
+    -- open (q closes), <Esc> restores the previous layout.
+    pick_commit_with_live_diff({
+      items = commits,
+      title = "Diff against commit (" .. branch_item.ref .. ")",
+      keep_diff = true,
+    })
   end)
 end
 
@@ -293,7 +541,13 @@ end, { desc = "File diff" })
 keymaps.set("n", "<C-g>fD", pick_diff_base_and_open, { desc = "File diff against ref" })
 
 -- Restore only the current file from the selected commit/ref.
+-- Only commits that touched the current file are offered.
 local function pick_ref_and_restore_file()
+  local fpath = current_real_file()
+  if fpath == "" then
+    vim.notify("No file in current buffer", vim.log.levels.ERROR, { title = "Git Restore" })
+    return
+  end
   local cwd = current_file_git_root()
   local active = current_branch(cwd)
   local branches, err = list_branches(active, cwd)
@@ -312,115 +566,48 @@ local function pick_ref_and_restore_file()
   }, function(branch_item)
     if not branch_item then return end
 
-    local commits, commits_err = list_commits(branch_item.ref, 150, cwd)
+    local commits, commits_err = list_commits(branch_item.ref, 150, cwd, fpath)
     if not commits then
       vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Restore" })
       return
     end
     if #commits == 0 then
-      vim.notify("No commits found for " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Restore" })
+      vim.notify("No commits changed this file on " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Restore" })
       return
     end
 
-    vim.ui.select(commits, {
-      prompt = "Select commit from " .. branch_item.ref .. ":",
-      format_item = function(item) return item.label end,
-    }, function(commit_item)
-      if not commit_item then return end
+    -- Hovering a commit previews the diff live; <CR> closes the preview and
+    -- actually restores the file, <Esc> cancels without touching anything.
+    pick_commit_with_live_diff({
+      items = commits,
+      title = "Restore file from (" .. branch_item.ref .. ")",
+      keep_diff = false,
+      on_confirm = function(commit_item)
+        local filepath = current_real_file()
+        if not filepath or filepath == "" then
+          vim.notify("No file in current buffer", vim.log.levels.ERROR, { title = "Git Restore" })
+          return
+        end
 
-      local filepath = current_real_file()
-      if not filepath or filepath == "" then
-        vim.notify("No file in current buffer", vim.log.levels.ERROR, { title = "Git Restore" })
-        return
-      end
+        local git_root = LazyVim.root.git()
+        local lock = git_root .. "/.git/index.lock"
+        if vim.uv.fs_stat(lock) then
+          vim.uv.fs_unlink(lock)
+        end
+        local result = vim.system({ "git", "checkout", commit_item.ref, "--", filepath }, { cwd = git_root }):wait()
+        if result.code ~= 0 then
+          vim.notify("git checkout failed:\n" .. (result.stderr or ""), vim.log.levels.ERROR, { title = "Git Restore" })
+          return
+        end
 
-      local git_root = LazyVim.root.git()
-      local lock = git_root .. "/.git/index.lock"
-      if vim.uv.fs_stat(lock) then
-        vim.uv.fs_unlink(lock)
-      end
-      local result = vim.system({ "git", "checkout", commit_item.ref, "--", filepath }, { cwd = git_root }):wait()
-      if result.code ~= 0 then
-        vim.notify("git checkout failed:\n" .. (result.stderr or ""), vim.log.levels.ERROR, { title = "Git Restore" })
-        return
-      end
-
-      vim.cmd("edit!")
-      vim.notify("Restored to " .. commit_item.ref, vim.log.levels.INFO, { title = "Git Restore" })
-    end)
+        vim.cmd("edit!")
+        vim.notify("Restored to " .. commit_item.ref, vim.log.levels.INFO, { title = "Git Restore" })
+      end,
+    })
   end)
 end
 
 keymaps.set("n", "<C-g>fR", pick_ref_and_restore_file, { desc = "Restore file to ref" })
-
--- Map a buffer line to its line number in the gitsigns base (usually HEAD) by
--- undoing the line-count shifts of the hunks above it. Inside a changed block
--- the base block start is used.
-local function buf_line_to_base(lnum)
-  local ok, gs = pcall(require, "gitsigns")
-  if not ok then
-    return lnum
-  end
-  local hunks = gs.get_hunks(0) or {}
-  local delta = 0
-  for _, h in ipairs(hunks) do
-    local a, r = h.added, h.removed
-    local a_end = a.start + math.max(a.count, 1) - 1
-    if a.count > 0 and lnum >= a.start and lnum <= a_end then
-      return math.max(r.start, 1)
-    end
-    if a_end < lnum then
-      delta = delta + (a.count - r.count)
-    end
-  end
-  return math.max(lnum - delta, 1)
-end
-
--- Commits that changed one specific line (git log -L follows the line as it
--- moves through history). Each item carries the line's content as of that
--- commit (post-image of the -L hunk), used to restore it.
-local function list_line_commits(path, lnum, cwd)
-  local rel = (vim.fs.relpath and vim.fs.relpath(cwd, path)) or path
-  local result = vim.system({
-    "git", "log", "--no-color",
-    "--format=%x01%h%x09%an%x09%s",
-    ("-L%d,%d:%s"):format(lnum, lnum, rel),
-  }, { cwd = cwd, text = true }):wait()
-  if result.code ~= 0 then
-    local err = vim.trim(result.stderr or "")
-    return nil, err ~= "" and err or "git log -L failed"
-  end
-
-  local items = {}
-  local cur, in_hunk
-  for _, line in ipairs(vim.split(result.stdout or "", "\n")) do
-    local header = line:match("^\1(.*)$")
-    if header then
-      local sha, author, subj = header:match("^([^\t]+)\t([^\t]*)\t(.*)$")
-      if sha then
-        cur = {
-          ref = sha,
-          label = string.format("%-3s %s  %s", author_initials(author), sha, subj or ""),
-          lines = {},
-        }
-        items[#items + 1] = cur
-      end
-      in_hunk = false
-    elseif cur then
-      if line:match("^@@") then
-        in_hunk = true
-      elseif line:match("^diff %-%-git") then
-        in_hunk = false
-      elseif in_hunk then
-        local first = line:sub(1, 1)
-        if first == "+" or first == " " then
-          cur.lines[#cur.lines + 1] = line:sub(2)
-        end
-      end
-    end
-  end
-  return items, nil
-end
 
 -- Pick from the commits that touched the current line and restore the line's
 -- content from the chosen commit (buffer edit only; nothing is written).
