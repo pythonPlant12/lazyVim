@@ -325,16 +325,6 @@ local function open_file_diff_fullscreen(base)
   end, 50)
 end
 
--- Content of path at ref as lines, or nil when the file didn't exist there.
-local function git_show_lines(ref, path, cwd)
-  local rel = (vim.fs.relpath and vim.fs.relpath(cwd, path)) or path
-  local result = vim.system({ "git", "show", ref .. ":" .. rel }, { cwd = cwd, text = true }):wait()
-  if result.code ~= 0 then
-    return nil
-  end
-  return vim.split((result.stdout or ""):gsub("\n$", ""), "\n", { plain = true })
-end
-
 -- Commit picker with a live background diff: moving through the list diffs
 -- the current buffer against the hovered commit without closing the list.
 --   items       list_commits items ({ ref, label })
@@ -342,7 +332,7 @@ end
 --   keep_diff   keep the diff open after <CR> (q closes it); otherwise the
 --               preview closes and on_confirm handles the pick
 --   on_confirm  called with the picked item after the picker closes
-local function pick_commit_with_live_diff(opts)
+local function pick_commit_with_live_diff(picker_opts)
   local main_win = vim.api.nvim_get_current_win()
   local main_buf = vim.api.nvim_get_current_buf()
   local path = vim.api.nvim_buf_get_name(main_buf)
@@ -350,8 +340,58 @@ local function pick_commit_with_live_diff(opts)
   local ft = vim.bo[main_buf].filetype
 
   local preview = { win = nil, buf = nil, ref = nil }
+  -- Debounce timer for the async preview fetch (see preview_show below).
+  local show_timer = assert(vim.uv.new_timer())
+  -- Original view of the file window, restored when the picker is cancelled.
+  local orig_view = vim.api.nvim_win_call(main_win, vim.fn.winsaveview)
+
+  -- Windows already in diff mode before the preview (unrelated diffs stay
+  -- untouched by the close-time cleanup below).
+  local preexisting_diff = {}
+  for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if vim.wo[w].diff then
+      preexisting_diff[w] = true
+    end
+  end
+
+  -- New windows copy the current window's local options. Any window born
+  -- while the diff binds are active (snacks list floats, neo-tree, splits)
+  -- would inherit diff/scrollbind/cursorbind: the commit list then scrolls
+  -- with the diff, and small buffers hit E19 via cursorbind. Strip the
+  -- inherited options the moment such a window appears.
+  local function strip_inherited(w)
+    if not vim.api.nvim_win_is_valid(w) or w == main_win or w == preview.win or preexisting_diff[w] then
+      return
+    end
+    if vim.wo[w].diff then
+      vim.api.nvim_win_call(w, function() vim.cmd("diffoff") end)
+    end
+    if vim.wo[w].scrollbind then vim.wo[w].scrollbind = false end
+    if vim.wo[w].cursorbind then vim.wo[w].cursorbind = false end
+  end
+  local winnew_autocmd = vim.api.nvim_create_autocmd("WinNew", {
+    callback = function()
+      -- The new window is current inside the event; also sweep on the next
+      -- tick to catch windows created without entering (enter=false floats).
+      strip_inherited(vim.api.nvim_get_current_win())
+      vim.schedule(function()
+        for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+          strip_inherited(w)
+        end
+      end)
+    end,
+  })
 
   local function preview_close()
+    preview.closed = true
+    if show_timer and not show_timer:is_closing() then
+      show_timer:stop()
+      show_timer:close()
+    end
+    if winnew_autocmd then
+      pcall(vim.api.nvim_del_autocmd, winnew_autocmd)
+      winnew_autocmd = nil
+    end
     if preview.scroll_autocmd then
       pcall(vim.api.nvim_del_autocmd, preview.scroll_autocmd)
       preview.scroll_autocmd = nil
@@ -362,19 +402,27 @@ local function pick_commit_with_live_diff(opts)
     if preview.buf and vim.api.nvim_buf_is_valid(preview.buf) then
       pcall(vim.api.nvim_buf_delete, preview.buf, { force = true })
     end
-    if vim.api.nvim_win_is_valid(main_win) then
-      vim.api.nvim_win_call(main_win, function() vim.cmd("diffoff") end)
+    -- Splits made while the diff was active (neo-tree, vsplits...) inherit the
+    -- window-local diff/scrollbind/cursorbind options. Turn diff mode off in
+    -- every window our preview put (or leaked) it into, then drop stray binds.
+    -- Diffs that existed before the preview opened are left alone.
+    for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+      if vim.api.nvim_win_is_valid(w) then
+        if vim.wo[w].diff and not preexisting_diff[w] then
+          vim.api.nvim_win_call(w, function() vim.cmd("diffoff") end)
+        end
+        if not vim.wo[w].diff then
+          if vim.wo[w].scrollbind then vim.wo[w].scrollbind = false end
+          if vim.wo[w].cursorbind then vim.wo[w].cursorbind = false end
+        end
+      end
     end
     preview.win, preview.buf, preview.ref = nil, nil, nil
     pcall(vim.keymap.del, "n", "q", { buffer = main_buf })
   end
 
-  local function preview_show(ref)
-    if ref == preview.ref then
-      return
-    end
-    preview.ref = ref
-    local lines = git_show_lines(ref, path, cwd) or { "(file did not exist at " .. ref .. ")" }
+  -- Put `lines` (the file at some ref) into the preview pane and refresh the diff.
+  local function apply_preview(lines)
     if not (preview.buf and vim.api.nvim_buf_is_valid(preview.buf)) then
       preview.buf = vim.api.nvim_create_buf(false, true)
       vim.bo[preview.buf].buftype = "nofile"
@@ -407,24 +455,95 @@ local function pick_commit_with_live_diff(opts)
       -- Content changed under an existing diff; recompute it.
       vim.api.nvim_win_call(main_win, function() vim.cmd("diffupdate") end)
     end
+    -- Land on the first hunk instead of the top of the file on every hover.
+    vim.api.nvim_win_call(main_win, function()
+      vim.cmd("normal! gg")
+      local first_main = vim.api.nvim_buf_get_lines(main_buf, 0, 1, false)[1]
+      local first_prev = vim.api.nvim_buf_get_lines(preview.buf, 0, 1, false)[1]
+      -- If line 1 already differs it IS the first hunk; ]c would skip past it.
+      if first_main == first_prev then
+        pcall(vim.cmd, "normal! ]c")
+      end
+    end)
+  end
+
+  -- Debounced async preview: a synchronous git show (:wait) pumps the event
+  -- loop, so held-down j/k got processed re-entrantly mid-render and made the
+  -- list cursor jump around. Fetch the hovered ref's content in the
+  -- background and only apply the newest request.
+  local function preview_show(ref)
+    if ref == preview.ref or preview.closed then
+      return
+    end
+    preview.want = ref
+    show_timer:stop()
+    show_timer:start(90, 0, vim.schedule_wrap(function()
+      local want = preview.want
+      if not want or want == preview.ref or preview.closed then
+        return
+      end
+      local rel = (vim.fs.relpath and vim.fs.relpath(cwd, path)) or path
+      vim.system(
+        { "git", "show", want .. ":" .. rel },
+        { cwd = cwd, text = true },
+        vim.schedule_wrap(function(res)
+          if preview.want ~= want or preview.closed then
+            return -- superseded by a newer hover or the picker closed
+          end
+          local lines
+          if res.code == 0 then
+            lines = vim.split((res.stdout or ""):gsub("\n$", ""), "\n", { plain = true })
+          else
+            lines = { "(file did not exist at " .. want .. ")" }
+          end
+          preview.ref = want
+          apply_preview(lines)
+        end)
+      )
+    end))
   end
 
   local sitems = {}
-  for i, it in ipairs(opts.items) do
+  for i, it in ipairs(picker_opts.items) do
     sitems[#sitems + 1] = { idx = i, text = it.label, ref = it.ref, label = it.label }
   end
 
   local confirmed = false
   Snacks.picker.pick({
-    title = opts.title,
+    title = picker_opts.title,
     items = sitems,
-    -- Full-width strip pinned to the bottom (ivy-style, no snacks preview pane
-    -- — the live diff behind the picker is the preview).
+    -- Keep the list open while inspecting the diff windows; it closes only on
+    -- q/<Esc> (cancel) or <CR> (confirm), never by losing focus.
+    auto_close = false,
+    -- Start focused on the list in normal mode (j/k navigate immediately);
+    -- press i or / to reach the filter input.
+    focus = "list",
+    -- The global snacks config swaps j/k for its reversed pickers; this list
+    -- is top-down, so restore natural direction here.
+    win = {
+      input = {
+        keys = {
+          ["j"] = { "list_down", mode = { "n" } },
+          ["k"] = { "list_up", mode = { "n" } },
+        },
+      },
+      list = {
+        keys = {
+          ["j"] = "list_down",
+          ["k"] = "list_up",
+        },
+      },
+    },
+    -- Full-width strip as a real BOTTOM SPLIT (not a float), so it never
+    -- covers the diff windows — the file stays fully visible above it.
     layout = {
+      -- snacks reads cycle from the resolved layout: j/k stop at the
+      -- first/last commit instead of wrapping around.
+      cycle = false,
       layout = {
         box = "vertical",
+        position = "bottom",
         backdrop = false,
-        row = -1,
         width = 0,
         height = 0.3,
         border = "top",
@@ -448,9 +567,12 @@ local function pick_commit_with_live_diff(opts)
       vim.schedule(function()
         if not item then
           preview_close()
+          if vim.api.nvim_win_is_valid(main_win) then
+            vim.api.nvim_win_call(main_win, function() vim.fn.winrestview(orig_view) end)
+          end
           return
         end
-        if opts.keep_diff then
+        if picker_opts.keep_diff then
           -- Ensure the preview matches the picked commit, then hand q the close.
           preview_show(item.ref)
           for _, b in ipairs({ main_buf, preview.buf }) do
@@ -468,8 +590,8 @@ local function pick_commit_with_live_diff(opts)
         else
           preview_close()
         end
-        if opts.on_confirm then
-          opts.on_confirm({ ref = item.ref, label = item.label })
+        if picker_opts.on_confirm then
+          picker_opts.on_confirm({ ref = item.ref, label = item.label })
         end
       end)
     end,
@@ -477,6 +599,9 @@ local function pick_commit_with_live_diff(opts)
       vim.schedule(function()
         if not confirmed then
           preview_close()
+          if vim.api.nvim_win_is_valid(main_win) then
+            vim.api.nvim_win_call(main_win, function() vim.fn.winrestview(orig_view) end)
+          end
         end
       end)
     end,
