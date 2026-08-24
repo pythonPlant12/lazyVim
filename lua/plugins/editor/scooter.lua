@@ -105,7 +105,14 @@ return {
         callback = function(ev)
           -- Keep the search panel narrow enough to leave code visible.
           local width = math.max(40, math.floor(vim.o.columns * 0.25))
-          pcall(vim.api.nvim_win_set_width, vim.fn.bufwinid(ev.buf), width)
+          local grug_win = vim.fn.bufwinid(ev.buf)
+          pcall(vim.api.nvim_win_set_width, grug_win, width)
+          -- LazyVim's global conceallevel=2 lets the result lines' syntax
+          -- highlighting conceal characters (JSON quotes, markdown markup...),
+          -- which looks like grug-far shows wrong file content. Show verbatim.
+          if grug_win ~= -1 then
+            vim.api.nvim_set_option_value("conceallevel", 0, { win = grug_win })
+          end
 
           local map = function(lhs, fn, desc)
             vim.keymap.set({ "n", "i" }, lhs, fn, { buffer = ev.buf, silent = true, desc = desc })
