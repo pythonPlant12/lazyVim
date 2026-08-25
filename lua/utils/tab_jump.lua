@@ -173,15 +173,13 @@ local function snapshot()
   }
 end
 
--- True if we're currently sitting exactly where `snap` points (same win, buf, line).
+-- True if we're currently in the window+buffer `snap` points at. The cursor
+-- line is deliberately not compared: after a cross-tab jump the user reads
+-- around before going back, and a moved cursor must not break the return hop.
 local function loc_matches(snap)
   if not snap or not vim.api.nvim_win_is_valid(snap.win) then return false end
   if vim.api.nvim_get_current_win() ~= snap.win then return false end
   if vim.api.nvim_win_get_buf(snap.win) ~= snap.buf then return false end
-  if snap.pos then
-    local cur = vim.api.nvim_win_get_cursor(snap.win)
-    if cur[1] ~= snap.pos[1] then return false end -- match by line; column may drift
-  end
   return true
 end
 
@@ -205,15 +203,20 @@ end
 
 -- Run a navigation `fn`, recording the origin->destination hop if it crossed
 -- windows/tabs so <C-h> can bring us back. Clears the redo (forward) stack.
+-- The destination is snapshotted on the next tick: picker opens place the
+-- cursor via vim.schedule (apply_item_pos), so a synchronous snapshot would
+-- record a stale position and the back-hop would never match.
 function M.record(fn)
   local origin = snapshot()
   fn()
-  local dest = snapshot()
-  if dest.win ~= origin.win or dest.buf ~= origin.buf then
-    M._back[#M._back + 1] = { origin = origin, dest = dest }
-    if #M._back > 100 then table.remove(M._back, 1) end
-    M._forward = {}
-  end
+  vim.schedule(function()
+    local dest = snapshot()
+    if dest.win ~= origin.win or dest.buf ~= origin.buf then
+      M._back[#M._back + 1] = { origin = origin, dest = dest }
+      if #M._back > 100 then table.remove(M._back, 1) end
+      M._forward = {}
+    end
+  end)
 end
 
 -- Go back: if we're at a recorded cross-tab destination, return to its origin;
