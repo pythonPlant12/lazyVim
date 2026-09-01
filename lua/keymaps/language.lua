@@ -354,7 +354,20 @@ local function detect_indent()
   return best
 end
 
-keymaps.set("n", "<leader>Lpt", function()
+-- Python config keymaps are owned by the tool they configure. Only the tools
+-- enabled for the project (see <leader>Lpf) keep their keymaps, so <leader>Lp
+-- lists just the options that currently apply.
+local python_tool_maps = { basedpyright = {}, ruff = {} }
+
+-- Register a normal-mode keymap owned by a Python tool.
+local function python_tool_keymap(tool, lhs, fn, desc)
+  table.insert(python_tool_maps[tool], {
+    lhs = lhs,
+    apply = function() keymaps.set("n", lhs, fn, { desc = desc }) end,
+  })
+end
+
+python_tool_keymap("basedpyright", "<leader>Lpt", function()
   -- Python type-check level can override project config without editing files.
   with_python_client(function(client, name)
     local modes = { "off", "basic", "standard", "strict" }
@@ -378,7 +391,7 @@ keymaps.set("n", "<leader>Lpt", function()
       vim.notify("typeCheckingMode = " .. choice.value, vim.log.levels.INFO, { title = name })
     end)
   end)
-end, { desc = "Type check level" })
+end, "Type check level")
 
 keymaps.set("n", "<leader>LTt", function()
   -- TypeScript type-checking is a per-project-root runtime setting.
@@ -423,22 +436,22 @@ keymaps.set({ "n", "v" }, "<leader>Lpc", function()
   end)
 end, { desc = "Python code actions" })
 
-keymaps.set("n", "<leader>Lpi", function()
+python_tool_keymap("basedpyright", "<leader>Lpi", function()
   run_basedpyright_command("basedpyright.organizeimports", { vim.uri_from_bufnr(0) })
-end, { desc = "Python organize imports" })
+end, "Python organize imports")
 
-keymaps.set("n", "<leader>Lpr", function()
+python_tool_keymap("basedpyright", "<leader>Lpr", function()
   run_basedpyright_command("basedpyright.restartserver")
-end, { desc = "Python restart server" })
+end, "Python restart server")
 
-keymaps.set("n", "<leader>Lpb", function()
+python_tool_keymap("basedpyright", "<leader>Lpb", function()
   run_basedpyright_command("basedpyright.writeBaseline")
-end, { desc = "Python write baseline" })
+end, "Python write baseline")
 
 -- Register a Snacks toggle for a persisted basedpyright boolean setting.
 local function python_snacks_toggle(path, name, lhs)
   -- Snack toggles share the same persistence path as manual selectors.
-  Snacks.toggle({
+  local toggle = Snacks.toggle({
     name = name,
     get = function()
       return python_lsp_settings.get_value("basedpyright", path) == true
@@ -448,11 +461,15 @@ local function python_snacks_toggle(path, name, lhs)
         apply_python_server_value(client, server_name, path, state)
       end)
     end,
-  }):map(lhs)
+  })
+  table.insert(python_tool_maps.basedpyright, {
+    lhs = lhs,
+    apply = function() toggle:map(lhs) end,
+  })
 end
 
 python_snacks_toggle({ "analysis", "autoImportCompletions" },        "Auto import completions",     "<leader>Lpa")
-python_snacks_toggle({ "analysis", "autoFormatStrings" },            "Auto format strings",         "<leader>Lpf")
+python_snacks_toggle({ "analysis", "autoFormatStrings" },            "Auto format strings",         "<leader>LpS")
 python_snacks_toggle({ "analysis", "useTypingExtensions" },          "Typing extensions",           "<leader>Lpy")
 python_snacks_toggle({ "disableTaggedHints" },                       "Tagged hints",                "<leader>Lph")
 python_snacks_toggle({ "analysis", "inlayHints", "variableTypes" },  "Variable type hints",         "<leader>Lpv")
@@ -460,6 +477,182 @@ python_snacks_toggle({ "analysis", "inlayHints", "callArgumentNames" },         
 python_snacks_toggle({ "analysis", "inlayHints", "callArgumentNamesMatching" }, "Matching argument hints",     "<leader>Lpm")
 python_snacks_toggle({ "analysis", "inlayHints", "functionReturnTypes" },       "Function return type hints",  "<leader>LpR")
 python_snacks_toggle({ "analysis", "inlayHints", "genericTypes" },              "Generic type hints",          "<leader>Lpg")
+
+-- The Python tools <leader>Lpf can enable/disable. Each keeps its own config
+-- precedence: the nearest project config wins, and the global config covers
+-- projects that ship none.
+local python_tools = {
+  {
+    name = "basedpyright",
+    label = "basedpyright",
+    role = "type checking, inlay hints",
+    project_config_dir = function(bufnr) return require("utils.lsp_resolver").pyright_project_config_dir(bufnr) end,
+    global_config = function() return "nvim Python settings (<leader>Lpt and friends)" end,
+  },
+  {
+    name = "ruff",
+    label = "Ruff",
+    role = "lint + format",
+    project_config_dir = function(bufnr) return require("utils.lsp_resolver").ruff_project_config_dir(bufnr) end,
+    global_config = function() return vim.fn.fnamemodify(require("utils.lsp_resolver").global_ruff_config_file, ":~") end,
+  },
+}
+
+-- Which config a tool actually uses right now, for messages and the Ruff menu.
+local function python_config_source(spec, bufnr)
+  local project_dir = spec.project_config_dir(bufnr)
+  if project_dir then
+    return "project config in " .. vim.fn.fnamemodify(project_dir, ":~"), project_dir
+  end
+  return "global config (" .. spec.global_config() .. ")", nil
+end
+
+-- Add/remove each tool's keymaps so <leader>Lp only lists what applies.
+local function sync_python_tool_keymaps()
+  local root = require("utils.lsp_resolver").workspace_root()
+  for tool, entries in pairs(python_tool_maps) do
+    local enabled = python_lsp_settings.project_server_enabled(tool, root)
+    for _, entry in ipairs(entries) do
+      if enabled then
+        entry.apply()
+      else
+        pcall(vim.keymap.del, "n", entry.lhs)
+      end
+    end
+  end
+end
+
+-- Ruff's real config lives in TOML, so the option here is to open the file
+-- that is actually in effect (project config when present, else the global one).
+python_tool_keymap("ruff", "<leader>Lpu", function()
+  local resolver = require("utils.lsp_resolver")
+  local spec = python_tools[2]
+  local _, project_dir = python_config_source(spec, vim.api.nvim_get_current_buf())
+
+  local items = {}
+  if project_dir then
+    for _, name in ipairs({ "ruff.toml", ".ruff.toml", "pyproject.toml" }) do
+      local path = project_dir .. "/" .. name
+      if vim.fn.filereadable(path) == 1 then
+        items[#items + 1] = { label = "project " .. name .. " \u{25cf}", path = path }
+      end
+    end
+  end
+  items[#items + 1] = { label = "global ruff.toml", path = resolver.global_ruff_config_file }
+
+  vim.ui.select(items, {
+    prompt = "Open Ruff config:",
+    format_item = function(item) return item.label end,
+  }, function(choice)
+    if choice then
+      vim.cmd("edit " .. vim.fn.fnameescape(choice.path))
+    end
+  end)
+end, "Ruff config")
+
+-- <leader>Lpf: multi-select which Python tools run in this project. Tab marks a
+-- tool, Enter applies the marked set; unmarked tools are disabled.
+local function select_python_tools()
+  local resolver = require("utils.lsp_resolver")
+  local root = resolver.workspace_root()
+  local bufnr = vim.api.nvim_get_current_buf()
+
+  local items = {}
+  for i, spec in ipairs(python_tools) do
+    local enabled = python_lsp_settings.project_server_enabled(spec.name, root)
+    local source = python_config_source(spec, bufnr)
+    items[#items + 1] = {
+      idx = i,
+      spec = spec,
+      enabled = enabled,
+      text = spec.name,
+      label = ("%-14s %-22s %s"):format(spec.label, spec.role, source),
+    }
+  end
+
+  Snacks.picker.pick({
+    title = "Python tools — " .. vim.fn.fnamemodify(root, ":~"),
+    items = items,
+    layout = { preset = "select" },
+    format = function(item) return { { item.label } } end,
+    -- Start on the list in normal mode so <Space> marks tools instead of
+    -- typing into the filter (press i or / to filter).
+    focus = "list",
+    win = {
+      list = {
+        keys = {
+          ["<Space>"] = "select_and_next",
+          -- The global snacks config swaps j/k for its reversed pickers; this
+          -- list reads top-down, so keep the natural direction here.
+          ["j"] = "list_down",
+          ["k"] = "list_up",
+        },
+      },
+      input = {
+        keys = {
+          ["<Space>"] = { "select_and_next", mode = { "n" } },
+          ["j"] = { "list_down", mode = { "n" } },
+          ["k"] = { "list_up", mode = { "n" } },
+        },
+      },
+    },
+    -- Pre-mark the tools that are already enabled, so Enter without changes
+    -- keeps the current state instead of disabling everything.
+    on_show = function(picker)
+      local preselected = vim.tbl_filter(function(item) return item.enabled end, picker:items())
+      picker.list:set_selected(preselected)
+    end,
+    confirm = function(picker)
+      local keep = {}
+      for _, item in ipairs(picker:selected({ fallback = false })) do
+        keep[item.spec.name] = true
+      end
+      picker:close()
+
+      local changes = {}
+      for _, spec in ipairs(python_tools) do
+        local enable = keep[spec.name] == true
+        local was = python_lsp_settings.project_server_enabled(spec.name, root)
+        python_lsp_settings.set_project_server_enabled(spec.name, root, enable)
+        if enable ~= was then
+          changes[#changes + 1] = spec.label .. (enable and " enabled" or " disabled")
+        end
+        if not enable then
+          -- root_dir returns nil now, so only running clients need stopping.
+          for _, client in ipairs(vim.lsp.get_clients({ name = spec.name })) do
+            client:stop()
+          end
+        end
+      end
+
+      sync_python_tool_keymaps()
+
+      -- Re-run attach autocmds so open Python buffers pick up newly enabled tools.
+      vim.schedule(function()
+        for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+          if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].filetype == "python" then
+            vim.api.nvim_exec_autocmds("FileType", { buffer = buf, modeline = false })
+          end
+        end
+      end)
+
+      local lines = {}
+      for _, spec in ipairs(python_tools) do
+        local enable = keep[spec.name] == true
+        local mark = enable and "\u{2713}" or "\u{2717}"
+        local detail = enable and (" — " .. python_config_source(spec, bufnr)) or ""
+        lines[#lines + 1] = mark .. " " .. spec.label .. detail
+      end
+      vim.notify(
+        table.concat(lines, "\n"),
+        #changes > 0 and vim.log.levels.INFO or vim.log.levels.DEBUG,
+        { title = "Python tools" }
+      )
+    end,
+  })
+end
+
+keymaps.set("n", "<leader>Lpf", select_python_tools, { desc = "Python tools (linters/formatters)" })
 
 keymaps.set("n", "<leader>LpV", function()
   -- Python environment picker updates basedpyright and restarts ty if needed.
@@ -607,9 +800,9 @@ keymaps.set("n", "<leader>LpL", function()
   end)
 end, { desc = "Python LSP manager" })
 
-keymaps.set("n", "<leader>Lpd", function()
+python_tool_keymap("basedpyright", "<leader>Lpd", function()
   select_python_server_value({ "analysis", "diagnosticMode" }, { "openFilesOnly", "workspace" }, "diagnosticMode")
-end, { desc = "Diagnostic mode" })
+end, "Diagnostic mode")
 
 keymaps.set("n", "<leader>Lsi", function()
   -- Manual indent override is buffer-local; auto uses project config/detection.
@@ -866,3 +1059,12 @@ keymaps.set("n", "<leader>Lje", function()
     vim.notify("ESLint global config disabled", vim.log.levels.WARN, { title = "ESLint" })
   end
 end, { desc = "Toggle ESLint global config" })
+
+-- Apply the project's Python tool selection once every tool-owned keymap above
+-- is registered, and again when the cwd moves to another project (the
+-- selection is stored per root).
+sync_python_tool_keymaps()
+vim.api.nvim_create_autocmd("DirChanged", {
+  group = vim.api.nvim_create_augroup("PythonToolKeymaps", { clear = true }),
+  callback = function() sync_python_tool_keymaps() end,
+})

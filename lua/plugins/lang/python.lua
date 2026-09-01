@@ -150,19 +150,39 @@ return {
       opts.servers.pylsp = { enabled = false }
       opts.servers.pyright = { enabled = false }
 
+      -- Nvim resolves root_dir functions by calling on_dir; never calling it
+      -- skips the server entirely, which is how the <leader>Lpf tool selection
+      -- disables one. (Returning a value instead is ignored, and the server
+      -- would fall back to its root_markers.)
+      local function python_root_resolver(server_name)
+        return function(bufnr, on_dir)
+          if not python_lsp_settings.project_server_enabled(server_name, resolver.workspace_root()) then
+            return
+          end
+          on_dir(resolver.python_root(bufnr))
+        end
+      end
+
       opts.servers.basedpyright = vim.tbl_deep_extend("force", opts.servers.basedpyright or {}, {
-        root_dir = function(fname)
-          return resolver.python_root(fname)
-        end,
+        root_dir = python_root_resolver("basedpyright"),
+        -- basedpyright gives pyrightconfig.json / [tool.basedpyright] precedence
+        -- over these, so a project config already wins where it sets a key.
         settings = python_lsp_settings.server_settings("basedpyright"),
       })
       merge_before_init(opts.servers.basedpyright, apply_python_path_from_venv)
       merge_before_init(opts.servers.basedpyright, apply_stub_paths)
 
       opts.servers.ruff = vim.tbl_deep_extend("force", opts.servers.ruff or {}, {
-        root_dir = function(fname)
-          return resolver.python_root(fname)
-        end,
+        root_dir = python_root_resolver("ruff"),
+        -- Ruff takes its settings through init_options. filesystemFirst makes a
+        -- project ruff.toml / [tool.ruff] win; the global config fills in for
+        -- projects that ship none.
+        init_options = {
+          settings = {
+            configuration = resolver.global_ruff_config_file,
+            configurationPreference = "filesystemFirst",
+          },
+        },
       })
       merge_before_init(opts.servers.ruff, apply_ruff_cmd_from_venv)
 
@@ -203,14 +223,10 @@ return {
       })
 
       local lspconfig = require("lspconfig")
-      opts.setup.basedpyright = function(_, server_opts)
-        lspconfig.basedpyright.setup(server_opts)
-        return true
-      end
-      opts.setup.ruff = function(_, server_opts)
-        lspconfig.ruff.setup(server_opts)
-        return true
-      end
+      -- basedpyright and ruff deliberately have no opts.setup shim: LazyVim
+      -- skips vim.lsp.config for servers that own one, and the deprecated
+      -- lspconfig.setup() path ignores root_dir(bufnr, on_dir), which is what
+      -- resolves their project roots and applies the <leader>Lpf selection.
       opts.setup.ruff_lsp = function(_, server_opts)
         lspconfig.ruff_lsp.setup(server_opts)
         return true
