@@ -412,6 +412,10 @@ local function pick_commit_with_live_diff(picker_opts)
       pcall(vim.api.nvim_del_autocmd, preview.scroll_autocmd)
       preview.scroll_autocmd = nil
     end
+    if preview.list_autocmd then
+      pcall(vim.api.nvim_del_autocmd, preview.list_autocmd)
+      preview.list_autocmd = nil
+    end
     -- Tear down so the file window survives no matter which side was closed:
     -- if the file window is gone, the preview window becomes the file window.
     if preview.win and vim.api.nvim_win_is_valid(preview.win) then
@@ -547,19 +551,21 @@ local function pick_commit_with_live_diff(picker_opts)
     -- Start focused on the list in normal mode (j/k navigate immediately);
     -- press i or / to reach the filter input.
     focus = "list",
-    -- The global snacks config swaps j/k for its reversed pickers; this list
-    -- is top-down, so restore natural direction here.
+    -- Leaving the list upwards lands on the file (right pane). Without this
+    -- nvim picks the window above by screen position, which is the preview.
+    actions = {
+      focus_diff_file = function()
+        if vim.api.nvim_win_is_valid(main_win) then
+          vim.api.nvim_set_current_win(main_win)
+        end
+      end,
+    },
     win = {
+      list = { keys = { ["<C-w>k"] = "focus_diff_file", ["<C-w><C-k>"] = "focus_diff_file" } },
       input = {
         keys = {
-          ["j"] = { "list_down", mode = { "n" } },
-          ["k"] = { "list_up", mode = { "n" } },
-        },
-      },
-      list = {
-        keys = {
-          ["j"] = "list_down",
-          ["k"] = "list_up",
+          ["<C-w>k"] = { "focus_diff_file", mode = { "i", "n" } },
+          ["<C-w><C-k>"] = { "focus_diff_file", mode = { "i", "n" } },
         },
       },
     },
@@ -584,6 +590,41 @@ local function pick_commit_with_live_diff(picker_opts)
     },
     format = function(item)
       return { { item.label } }
+    end,
+    -- Give the commit list its full height only while it has focus. Once focus
+    -- moves to the diff windows it shrinks to a couple of rows, so the file
+    -- gets the space back without losing the list.
+    on_show = function(picker)
+      local list_win = picker.list.win.win
+      if not (list_win and vim.api.nvim_win_is_valid(list_win)) then
+        return
+      end
+      local full_height = vim.api.nvim_win_get_height(list_win)
+      local collapsed_height = 2
+
+      local function picker_focused()
+        local current = vim.api.nvim_get_current_win()
+        for _, w in ipairs({ picker.input.win.win, picker.list.win.win, picker.preview.win.win }) do
+          if w == current then
+            return true
+          end
+        end
+        return false
+      end
+
+      local function fit_list()
+        if not vim.api.nvim_win_is_valid(list_win) then
+          return
+        end
+        local target = picker_focused() and full_height or collapsed_height
+        if vim.api.nvim_win_get_height(list_win) ~= target then
+          pcall(vim.api.nvim_win_set_height, list_win, target)
+        end
+      end
+
+      preview.list_autocmd = vim.api.nvim_create_autocmd("WinEnter", {
+        callback = function() vim.schedule(fit_list) end,
+      })
     end,
     on_change = function(_, item)
       if item then
