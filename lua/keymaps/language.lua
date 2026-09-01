@@ -579,22 +579,8 @@ local function select_python_tools()
     -- typing into the filter (press i or / to filter).
     focus = "list",
     win = {
-      list = {
-        keys = {
-          ["<Space>"] = "select_and_next",
-          -- The global snacks config swaps j/k for its reversed pickers; this
-          -- list reads top-down, so keep the natural direction here.
-          ["j"] = "list_down",
-          ["k"] = "list_up",
-        },
-      },
-      input = {
-        keys = {
-          ["<Space>"] = { "select_and_next", mode = { "n" } },
-          ["j"] = { "list_down", mode = { "n" } },
-          ["k"] = { "list_up", mode = { "n" } },
-        },
-      },
+      list = { keys = { ["<Space>"] = "select_and_next" } },
+      input = { keys = { ["<Space>"] = { "select_and_next", mode = { "n" } } } },
     },
     -- Pre-mark the tools that are already enabled, so Enter without changes
     -- keeps the current state instead of disabling everything.

@@ -249,7 +249,8 @@ return {
           tab_open = picker_open.open_in_tab,
           confirm = picker_open.confirm_tab_aware,
         },
-        -- Shift-Enter opens picker results in a new tab; j/k follow inverted navigation.
+        -- Shift-Enter opens picker results in a new tab. j moves up and k moves
+        -- down in every picker, custom lists included — deliberate, keep it.
         -- The wo blocks make picker windows immune to window-local options
         -- inherited from the launching window (a window stuck in diff mode /
         -- scrollbind would otherwise break or flicker the picker + preview).
