@@ -211,7 +211,13 @@ function M.record(fn)
   fn()
   vim.schedule(function()
     local dest = snapshot()
-    if dest.win ~= origin.win or dest.buf ~= origin.buf then
+    -- Same-buffer jumps are recorded too. Without them, a later intra-file
+    -- jump would leave the previous cross-file entry on top of the stack, and
+    -- since entries match by window+buffer, one <C-h> would skip a step.
+    local moved = dest.win ~= origin.win
+      or dest.buf ~= origin.buf
+      or dest.pos[1] ~= origin.pos[1]
+    if moved then
       M._back[#M._back + 1] = { origin = origin, dest = dest }
       if #M._back > 100 then table.remove(M._back, 1) end
       M._forward = {}
@@ -219,31 +225,52 @@ function M.record(fn)
   end)
 end
 
+local function push(stack, entry)
+  stack[#stack + 1] = entry
+  if #stack > 100 then table.remove(stack, 1) end
+end
+
 -- Go back: if we're at a recorded cross-tab destination, return to its origin;
--- otherwise fall back to the normal (tab-aware) jumplist motion.
+-- otherwise fall back to the normal (tab-aware) jumplist motion. When that
+-- fallback itself lands in another window/buffer (e.g. it switched tabs), the
+-- hop is recorded so <C-l> can reverse it — the jumplist alone can't, because
+-- the forward entry lives in the window we just left.
 function M.back()
   local entry = M._back[#M._back]
   if entry and loc_matches(entry.dest) then
     M._back[#M._back] = nil
     entry.dest.pos = vim.api.nvim_win_get_cursor(0) -- remember spot for redo
-    M._forward[#M._forward + 1] = entry
+    push(M._forward, entry)
     restore(entry.origin)
     return
   end
+  local pre = snapshot()
   M.jump("<C-o>")
+  local post = snapshot()
+  if post.win ~= pre.win or post.buf ~= pre.buf then
+    -- Reversal entry: forward() at `post` (origin) returns to `pre` (dest).
+    push(M._forward, { origin = post, dest = pre })
+  end
 end
 
--- Go forward: redo the most recent cross-tab back, else normal jumplist forward.
+-- Go forward: redo the most recent cross-tab back, else normal jumplist
+-- forward (recording its own cross-window hops for back(), symmetrically).
 function M.forward()
   local entry = M._forward[#M._forward]
   if entry and loc_matches(entry.origin) then
     M._forward[#M._forward] = nil
     entry.origin.pos = vim.api.nvim_win_get_cursor(0)
-    M._back[#M._back + 1] = entry
+    push(M._back, entry)
     restore(entry.dest)
     return
   end
+  local pre = snapshot()
   M.jump("<C-i>")
+  local post = snapshot()
+  if post.win ~= pre.win or post.buf ~= pre.buf then
+    -- Reversal entry: back() at `post` (dest) returns to `pre` (origin).
+    push(M._back, { origin = pre, dest = post })
+  end
 end
 
 -- Open a Snacks picker item (an LSP location) in a brand-new tab, closing the
