@@ -146,6 +146,40 @@ function M.set_value(server_name, path, value)
   return M.server_settings(server_name)
 end
 
+-- Per-project server enable/disable, persisted under a "projects" key so it
+-- survives restarts (the settings above are shared by every project).
+local function normalize_root(root)
+  local path = vim.fs.normalize(root and root ~= "" and root or vim.fn.getcwd())
+  return (path:gsub("/+$", ""))
+end
+
+-- False only when the user explicitly disabled `server_name` for this root.
+function M.project_server_enabled(server_name, root)
+  local projects = load_state().projects or {}
+  local entry = projects[normalize_root(root)]
+  return not (entry and entry[server_name] == false)
+end
+
+-- Persist the enable/disable choice for `server_name` in this root.
+function M.set_project_server_enabled(server_name, root, enabled)
+  local state = load_state()
+  state.projects = state.projects or {}
+  local key = normalize_root(root)
+  state.projects[key] = state.projects[key] or {}
+  -- Store only the disabled case; enabling is the default, so drop the entry.
+  -- Written as if/else because `cond and false or nil` always yields nil.
+  if enabled == false then
+    state.projects[key][server_name] = false
+  else
+    state.projects[key][server_name] = nil
+  end
+  if next(state.projects[key]) == nil then
+    state.projects[key] = nil
+  end
+  save_state(state)
+  return enabled
+end
+
 -- Push runtime setting changes to already-attached Python clients.
 function M.apply_to_client(client, server_name)
   local settings = M.server_settings(server_name)

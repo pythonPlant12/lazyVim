@@ -1,0 +1,30 @@
+# Global Ruff fallback config — used when a project ships no ruff.toml,
+# .ruff.toml or [tool.ruff] section. A project config always wins
+# (configurationPreference = "filesystemFirst" in lua/plugins/lang/python.lua).
+# Toggle Ruff per project with <leader>LpR.
+
+line-length = 100
+target-version = "py311"
+
+[lint]
+# Conservative core set: real bugs and dead code, no style bikeshedding.
+select = [
+  "E4",   # imports
+  "E7",   # statement style errors
+  "E9",   # syntax/runtime errors
+  "F",    # pyflakes: undefined names, unused imports/variables
+  "B",    # flake8-bugbear: likely bugs
+  "UP",   # pyupgrade: outdated syntax
+  "I",    # isort: import order
+]
+ignore = [
+  "B008",  # function call in argument default (FastAPI/Django idiom)
+]
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401"]        # re-exports are intentional
+"**/{test,tests}/**" = ["B011"] # asserts are the point in tests
+
+[format]
+quote-style = "double"
+indent-style = "space"

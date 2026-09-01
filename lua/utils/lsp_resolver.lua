@@ -316,4 +316,53 @@ function M.python_root(bufnr)
   return root
 end
 
+-- Ruff reads these directly; pyproject.toml only counts with a [tool.ruff] table.
+local ruff_config_names = { "ruff.toml", ".ruff.toml" }
+-- basedpyright reads pyrightconfig.json, or a [tool.basedpyright]/[tool.pyright] table.
+local pyright_config_names = { "pyrightconfig.json" }
+
+-- Global Python tool configs, used when a project has none of its own.
+M.global_ruff_config_dir  = vim.fn.stdpath("config") .. "/ruff"
+M.global_ruff_config_file = vim.fn.stdpath("config") .. "/ruff/ruff.toml"
+
+-- True if dir's pyproject.toml declares any of the given [tool.*] sections.
+local function pyproject_has_tool(dir, tools)
+  local content = read_file(join_path(dir, "pyproject.toml"))
+  if not content then
+    return false
+  end
+  for _, tool in ipairs(tools) do
+    -- Match a real section header so a mention in a comment/string doesn't count.
+    if content:find("\n%s*%[tool%." .. tool .. "[%.%]]") or content:find("^%s*%[tool%." .. tool .. "[%.%]]") then
+      return true
+    end
+  end
+  return false
+end
+
+-- Nearest ancestor (file's dir up to the workspace root) holding a config for
+-- `names`/`tools`, or nil when the project relies on the global config.
+local function nearest_config_dir(bufnr, names, tools)
+  local fname = type(bufnr) == "string" and bufnr or vim.api.nvim_buf_get_name(bufnr)
+  local file_dir = dir_of(fname)
+  local root = M.workspace_root()
+
+  for _, dir in ipairs(ancestors_until(file_dir, root)) do
+    if has_any_file(dir, names) or pyproject_has_tool(dir, tools) then
+      return dir
+    end
+  end
+  return nil
+end
+
+-- Directory of the nearest project Ruff config, or nil (global config applies).
+function M.ruff_project_config_dir(bufnr)
+  return nearest_config_dir(bufnr, ruff_config_names, { "ruff" })
+end
+
+-- Directory of the nearest project basedpyright/pyright config, or nil.
+function M.pyright_project_config_dir(bufnr)
+  return nearest_config_dir(bufnr, pyright_config_names, { "basedpyright", "pyright" })
+end
+
 return M
