@@ -250,6 +250,9 @@ return {
           confirm = picker_open.confirm_tab_aware,
         },
         -- Shift-Enter opens picker results in a new tab; j/k follow inverted navigation.
+        -- The wo blocks make picker windows immune to window-local options
+        -- inherited from the launching window (a window stuck in diff mode /
+        -- scrollbind would otherwise break or flicker the picker + preview).
         win = {
           input = {
             keys = {
@@ -257,6 +260,7 @@ return {
               ["k"] = { "list_down", mode = { "n" } },
               ["<S-CR>"] = { "tab_open", mode = { "i", "n" } },
             },
+            wo = { diff = false, scrollbind = false, cursorbind = false },
           },
           list = {
             keys = {
@@ -264,6 +268,10 @@ return {
               ["k"] = "list_down",
               ["<S-CR>"] = "tab_open",
             },
+            wo = { diff = false, scrollbind = false, cursorbind = false },
+          },
+          preview = {
+            wo = { diff = false, scrollbind = false, cursorbind = false },
           },
         },
         formatters = {
