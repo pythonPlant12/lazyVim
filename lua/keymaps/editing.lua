@@ -604,49 +604,15 @@ keymaps.set("v", "<S-Tab>", "<gv", { desc = "Unindent selection" })
 keymaps.set("i", "<Tab>", "<C-t>", { desc = "Indent" })
 keymaps.set("i", "<S-Tab>", "<C-d>", { desc = "Unindent" })
 
--- Move the current line up/down by one and reindent it.
-local function move_current_line(delta)
-  vim.cmd(delta < 0 and "move .-2" or "move .+1")
-  vim.cmd("normal! ==")
-end
 
--- Move the visually selected lines up/down by one, keeping the selection and reindenting.
-local function move_selected_lines(delta)
-  local start_line = vim.fn.line("v")
-  local end_line = vim.fn.line(".")
-  if start_line == 0 or end_line == 0 then
-    return
-  end
-  if start_line > end_line then
-    start_line, end_line = end_line, start_line
-  end
-
-  local line_count = vim.api.nvim_buf_line_count(0)
-  if delta < 0 and start_line == 1 then
-    return
-  end
-  if delta > 0 and end_line == line_count then
-    return
-  end
-
-  local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
-  vim.api.nvim_buf_set_lines(0, start_line - 1, end_line, false, {})
-
-  local target = delta < 0 and (start_line - 2) or start_line
-  vim.api.nvim_buf_set_lines(0, target, target, false, lines)
-
-  local new_start = start_line + delta
-  local new_end = end_line + delta
-  vim.fn.setpos("'<", { 0, new_start, 1, 0 })
-  vim.fn.setpos("'>", { 0, new_end, 1, 0 })
-  vim.api.nvim_win_set_cursor(0, { new_end, 0 })
-  vim.cmd("normal! gv=gv")
-end
-
-keymaps.set("n", "<C-S-Up>", function() move_current_line(-1) end, { desc = "Move line up" })
-keymaps.set("n", "<C-S-Down>", function() move_current_line(1) end, { desc = "Move line down" })
-keymaps.set("v", "<C-S-Up>", function() move_selected_lines(-1) end, { desc = "Move selection up" })
-keymaps.set("v", "<C-S-Down>", function() move_selected_lines(1) end, { desc = "Move selection down" })
+-- Ctrl+Shift+arrow used to MOVE lines, one held Ctrl away from Shift+arrow
+-- (select lines): typing fast with Ctrl not yet released from a previous
+-- chord reordered lines instead of selecting. Both chords now select; line
+-- moving stays on LazyVim's <A-j>/<A-k>.
+keymaps.set("n", "<C-S-Up>",   "Vk", { desc = "Select line upward" })
+keymaps.set("n", "<C-S-Down>", "Vj", { desc = "Select line downward" })
+keymaps.set("v", "<C-S-Up>",   "k",  { desc = "Extend selection up" })
+keymaps.set("v", "<C-S-Down>", "j",  { desc = "Extend selection down" })
 
 keymaps.set("n", "<C-e>", vim.diagnostic.open_float, { desc = "Show line diagnostics" })
 
