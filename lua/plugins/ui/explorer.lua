@@ -171,7 +171,10 @@ return {
           require("neo-tree.sources.filesystem").toggle_directory(state, node)
         end
       end
-      opts.window.mappings["<S-CR>"]    = "open_vsplit"
+      -- Shift-Enter opens in a new tab, Ctrl-Enter in a split to the right
+      -- (splitright is on), matching the file picker's bindings.
+      opts.window.mappings["<S-CR>"]    = "open_tabnew"
+      opts.window.mappings["<C-CR>"]    = "open_vsplit"
       opts.window.mappings["["]         = "prev_source"
       opts.window.mappings["]"]         = "next_source"
       opts.window.mappings["<"]         = false

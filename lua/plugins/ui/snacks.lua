@@ -247,10 +247,12 @@ return {
             require("utils.search_grep").toggle_word(picker)
           end,
           tab_open = picker_open.open_in_tab,
+          vsplit_open = picker_open.open_in_vsplit,
           confirm = picker_open.confirm_tab_aware,
         },
-        -- Shift-Enter opens picker results in a new tab. j moves up and k moves
-        -- down in every picker, custom lists included — deliberate, keep it.
+        -- Shift-Enter opens picker results in a new tab, Ctrl-Enter in a split
+        -- to the right (same pair as neo-tree). j moves up and k moves down in
+        -- every picker, custom lists included — deliberate, keep it.
         -- The wo blocks make picker windows immune to window-local options
         -- inherited from the launching window (a window stuck in diff mode /
         -- scrollbind would otherwise break or flicker the picker + preview).
@@ -260,6 +262,7 @@ return {
               ["j"] = { "list_up", mode = { "n" } },
               ["k"] = { "list_down", mode = { "n" } },
               ["<S-CR>"] = { "tab_open", mode = { "i", "n" } },
+              ["<C-CR>"] = { "vsplit_open", mode = { "i", "n" } },
             },
             wo = { diff = false, scrollbind = false, cursorbind = false },
           },
@@ -268,6 +271,7 @@ return {
               ["j"] = "list_up",
               ["k"] = "list_down",
               ["<S-CR>"] = "tab_open",
+              ["<C-CR>"] = "vsplit_open",
             },
             wo = { diff = false, scrollbind = false, cursorbind = false },
           },

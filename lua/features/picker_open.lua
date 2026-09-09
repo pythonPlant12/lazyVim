@@ -125,6 +125,46 @@ function M.open_in_tab(picker, item)
   picker.opts.auto_close = nil
 end
 
+-- Open the picker item in a vertical split to the right (Ctrl-Enter).
+-- Snacks' own edit_vsplit is `{ action = "confirm", cmd = "vsplit" }`, and the
+-- confirm action is overridden here with a tab-aware open that has no notion of
+-- cmd, so the split has to be done explicitly.
+function M.open_in_vsplit(picker, item)
+  if not item then
+    return
+  end
+
+  require("snacks.picker.util").resolve_loc(item)
+
+  local main = picker.main
+  local path = Snacks.picker.util.path(item) or item.file
+  local bufnr = item.buf
+  if (not path or path == "") and not bufnr then
+    return
+  end
+
+  picker:close()
+
+  local target_win
+  vim.api.nvim_win_call(main, function()
+    -- splitright puts the new window on the right.
+    vim.cmd("vsplit")
+    target_win = vim.api.nvim_get_current_win()
+    if path and path ~= "" then
+      local buf = vim.fn.bufadd(path)
+      vim.bo[buf].buflisted = true
+      vim.api.nvim_set_current_buf(buf)
+    else
+      vim.api.nvim_set_current_buf(bufnr)
+    end
+  end)
+
+  if target_win and vim.api.nvim_win_is_valid(target_win) then
+    vim.api.nvim_set_current_win(target_win)
+  end
+  M.apply_item_pos(item)
+end
+
 -- Confirm an LSP location (references/definitions): tab-aware open plus a
 -- jumplist mark so <C-h>/<C-l> can return to where the jump started.
 function M.confirm_lsp_location(picker, item)
