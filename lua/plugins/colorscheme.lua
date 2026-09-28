@@ -66,12 +66,7 @@ do
 end
 
 -- Transparent themes need blended popups; opaque themes should stay solid.
-local function is_transparent_theme_name(name)
-  return name == "islands-dark"
-    or name == "islands-white"
-    or name == "islands-light"
-    or name == "islands-rose-pine-dark"
-end
+local is_transparent_theme_name = require("themes.engine.transparency").is_transparent_name
 
 do
   local blend = is_transparent_theme_name(cs) and 10 or 0

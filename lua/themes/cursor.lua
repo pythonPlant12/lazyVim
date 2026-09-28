@@ -235,6 +235,8 @@ function M.apply(variant)
         and { fg = "#4C4F69", muted = "#7A7880", border = "#D0D0D0", active_bg = "#D2E4F5", active_fg = "#2F496F", bg = "#F3F3F3" }
       or nil,
     border = p.border,
+    -- Keeps neo-tree slightly darker than the editor, also on transparent variants.
+    sidebar_bg = p.sidebar,
     select_bg = p.selection,
     ref_bg = p.line_alt,
     diag_err = p.red,

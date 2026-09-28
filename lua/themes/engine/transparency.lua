@@ -2,13 +2,23 @@
 -- and clearing backgrounds that plugins keep reintroducing.
 local M = {}
 
--- True only for the fully transparent theme variants that need blended floats.
+-- Theme names that render see-through (terminal opacity shows) and need blended floats.
+local transparent_names = {
+  ["islands-dark"] = true,
+  ["islands-white"] = true,
+  ["islands-light"] = true,
+  ["islands-rose-pine-dark"] = true,
+  ["cursor-dark-midnight"] = true,
+}
+
+-- True when the given colorscheme name is a transparent variant.
+function M.is_transparent_name(name)
+  return transparent_names[name or ""] == true
+end
+
+-- True only for the active theme when it is a transparent variant.
 function M.is_transparent_theme()
-  local cs = vim.g.colors_name or ""
-  return cs == "islands-dark"
-    or cs == "islands-white"
-    or cs == "islands-light"
-    or cs == "islands-rose-pine-dark"
+  return M.is_transparent_name(vim.g.colors_name)
 end
 
 -- Transparent themes keep floats blended; opaque themes force normal backgrounds.
@@ -116,10 +126,15 @@ function M.apply_transparent_hl()
     "Terminal",
   }
 
+  -- A theme that publishes `sidebar_bg` keeps neo-tree on that surface.
+  local c = type(vim.g.theme_custom_hl) == "table" and vim.g.theme_custom_hl or {}
+  local keep_sidebar = c.sidebar_bg ~= nil
   for _, group in ipairs(bgless_groups) do
-    local current = vim.api.nvim_get_hl(0, { name = group, link = false })
-    current.bg = "NONE"
-    hl(0, group, current)
+    if not (keep_sidebar and group:find("^NeoTree")) then
+      local current = vim.api.nvim_get_hl(0, { name = group, link = false })
+      current.bg = "NONE"
+      hl(0, group, current)
+    end
   end
 end
 
