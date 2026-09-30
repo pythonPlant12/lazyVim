@@ -426,6 +426,22 @@ Snacks.toggle({
   end,
 }):map("<leader>ui")
 
+-- Toggle rounded chip caps in the statusline; persisted across sessions.
+local statusline_rounded_file = vim.fn.stdpath("state") .. "/statusline_rounded"
+if vim.g.statusline_rounded == nil then
+  local ok, lines = pcall(vim.fn.readfile, statusline_rounded_file)
+  vim.g.statusline_rounded = not (ok and lines[1] == "false")
+end
+Snacks.toggle({
+  name = "Rounded Statusline",
+  get = function() return vim.g.statusline_rounded ~= false end,
+  set = function(enabled)
+    vim.g.statusline_rounded = enabled
+    pcall(vim.fn.writefile, { enabled and "true" or "false" }, statusline_rounded_file)
+    pcall(function() require("lualine").refresh() end)
+  end,
+}):map("<leader>uR")
+
 -- Keep inlay hints as one global state across buffers and filetypes.
 local inlay_hints_state_file = vim.fn.stdpath("state") .. "/inlay_hints_enabled"
 

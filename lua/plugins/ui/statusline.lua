@@ -55,12 +55,16 @@ return {
         return { fg = p.mode[m].fg, bg = p.mode[m].bg, gui = "bold" }
       end
 
+      local function rounded() return vim.g.statusline_rounded ~= false end
+
       -- Rounded pill cap as its own component. Cap glyphs are foreground text, so
       -- their color is pre-blended (P.blend_cap) to match the translucent pill body.
       local function chip_cap(glyph, bg_fn, cond)
         return {
-          function() return glyph end,
+          glyph,
           color = function()
+            -- Square mode: the cap cell becomes chip padding (chip bg).
+            if not rounded() then return { bg = bg_fn() } end
             return { fg = P.blend_cap(bg_fn()), bg = P.get().surface }
           end,
           separator = "",
@@ -68,7 +72,10 @@ return {
           cond = cond,
         }
       end
-      local cap_l, cap_r = "\u{E0B6}", "\u{E0B4}"
+      -- Cap glyphs are resolved at render time so <leader>uR can toggle them.
+      -- Square mode uses a space painted in the chip bg, so widths stay the same.
+      local function cap_l() return rounded() and "\u{E0B6}" or " " end
+      local function cap_r() return rounded() and "\u{E0B4}" or " " end
 
       -- Mode chip; special editor states (recording/multicursor/resize) override it.
       opts.sections.lualine_a = {
@@ -524,9 +531,10 @@ return {
                 if str == "" then return "" end
                 str = str:gsub(" %%#", "%%#" .. sep_hl .. "#> %%#")
                 -- Bracket the chip with pre-blended rounded caps (see chip_cap).
-                return "%#LualineChipCap" .. cap_idx .. "#" .. cap_l
+                local cap_hl = "%#" .. (rounded() and "LualineChipCap" or "LualineChipBody") .. cap_idx .. "#"
+                return cap_hl .. cap_l()
                   .. "%#LualineChipBody" .. cap_idx .. "#" .. str
-                  .. "%#LualineChipCap" .. cap_idx .. "#" .. cap_r
+                  .. cap_hl .. cap_r()
               end
             end
             -- Truncate long breadcrumbs to the window width, keeping highlight codes intact.
