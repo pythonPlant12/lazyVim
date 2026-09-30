@@ -174,6 +174,23 @@ return {
         return vim.api.nvim_buf_get_name(0)
       end
 
+      -- Path under the cursor relative to cwd, e.g. "lua/plugins/foo.lua".
+      local function current_relpath()
+        local path = current_path()
+        if path == "" then return "" end
+        return vim.fn.fnamemodify(path, ":.")
+      end
+
+      -- grug-far opts that search the current relative path, or false if none.
+      local function relpath_search_opts()
+        local rel = current_relpath()
+        if rel == "" then
+          vim.notify("No current file path", vim.log.levels.WARN, { title = "grug-far" })
+          return false
+        end
+        return { prefills = { search = rel, flags = "--fixed-strings --ignore-case", paths = "" } }
+      end
+
       local function current_dir()
         local path = current_path()
         if path == "" then return "" end
@@ -351,6 +368,19 @@ return {
           function() grug_visual({ paths = escape_path(vim.fn.expand("%:h")), flags = "--fixed-strings --ignore-case" }) end,
           mode = "v",
           desc = "Search selected text in current directory (grug-far)",
+        },
+        {
+          "<C-s>p",
+          function()
+            local opts = relpath_search_opts()
+            if opts then open_grug(opts) end
+          end,
+          desc = "Search current relative path (grug-far)",
+        },
+        {
+          "<C-s>P",
+          function() in_new_tab(relpath_search_opts) end,
+          desc = "Search current relative path in new tab (grug-far)",
         },
         {
           "<C-s>w",

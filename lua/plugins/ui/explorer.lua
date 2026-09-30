@@ -363,6 +363,37 @@ return {
           },
         })
       end
+      -- Search for the selected node's cwd-relative path across the project.
+      local function search_node_relpath(state, new_tab)
+        local node = state.tree:get_node()
+        if not node or node.type == "message" then
+          return
+        end
+
+        local path = node:get_id()
+        local rel = path and vim.fn.fnamemodify(path, ":.") or ""
+        if rel == "" then
+          vim.notify("No selected file path", vim.log.levels.WARN, { title = "grug-far" })
+          return
+        end
+
+        if new_tab then
+          vim.cmd("tabnew")
+        end
+        grug_far_reuse.open_for_buffer(vim.api.nvim_get_current_buf(), {
+          prefills = {
+            search = rel,
+            paths = "",
+            flags = "--fixed-strings --ignore-case",
+          },
+        })
+      end
+      opts.filesystem.commands.grug_far_search_node_relpath = function(state)
+        search_node_relpath(state, false)
+      end
+      opts.filesystem.commands.grug_far_search_node_relpath_tab = function(state)
+        search_node_relpath(state, true)
+      end
       -- Reveal the selected node in macOS Finder.
       opts.filesystem.commands.reveal_node_in_finder = function(state)
         local node = state.tree:get_node()
@@ -398,6 +429,8 @@ return {
       opts.filesystem.window.mappings["<C-s>f"] = "grug_far_search_node"
       opts.filesystem.window.mappings["<C-s>F"] = "grug_far_search_node_filename"
       opts.filesystem.window.mappings["<C-s>d"] = "grug_far_search_node_dir"
+      opts.filesystem.window.mappings["<C-s>p"] = "grug_far_search_node_relpath"
+      opts.filesystem.window.mappings["<C-s>P"] = "grug_far_search_node_relpath_tab"
       -- Typing <C-s> and pausing past timeoutlen would abandon the chord and
       -- feed the next key alone (d = delete!). This bare <C-s> handler catches
       -- the timeout case and waits for the second key with no time limit.
@@ -410,6 +443,8 @@ return {
           d = "grug_far_search_node_dir",
           f = "grug_far_search_node",
           F = "grug_far_search_node_filename",
+          p = "grug_far_search_node_relpath",
+          P = "grug_far_search_node_relpath_tab",
         })[ch]
         if cmd then
           opts.filesystem.commands[cmd](state)
