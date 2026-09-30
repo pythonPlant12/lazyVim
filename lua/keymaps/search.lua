@@ -117,8 +117,10 @@ local function hunk_nav_active()
     or #vim.api.nvim_buf_get_extmarks(0, ns_inline, 0, -1, { limit = 1 }) > 0
 end
 
-keymaps.set("n", "/", function()
-  local input = vim.fn.input("/ ")
+-- Prompt for a pattern and jump to the next match. `backward` mirrors Vim's
+-- `?`: search up, and flip n/N via v:searchforward.
+local function prompt_search(backward)
+  local input = vim.fn.input(backward and "? " or "/ ")
   if not set_prefixed_search(input) then
     return
   end
@@ -129,7 +131,8 @@ keymaps.set("n", "/", function()
     return
   end
 
-  local ok, match_line = pcall(vim.fn.search, pattern, "sw")
+  vim.v.searchforward = backward and 0 or 1
+  local ok, match_line = pcall(vim.fn.search, pattern, backward and "bsw" or "sw")
   if not ok then
     vim.notify("Invalid search pattern", vim.log.levels.WARN, { title = "Search" })
     return
@@ -143,9 +146,14 @@ keymaps.set("n", "/", function()
   pcall(vim.cmd, "normal! zv")
   -- In diff views, select the match so n/N continue the search (see above).
   if hunk_nav_active() then
-    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("gn", true, false, true), "n", false)
+    local keys = backward and "gN" or "gn"
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(keys, true, false, true), "n", false)
   end
-end, { desc = "Search (prefix flags before ':' e.g. re:, c:, w:, cw:, wcre:)" })
+end
+
+local search_desc = " (prefix flags before ':' e.g. re:, c:, w:, cw:, wcre:)"
+keymaps.set("n", "/", function() prompt_search(false) end, { desc = "Search forward" .. search_desc })
+keymaps.set("n", "?", function() prompt_search(true) end, { desc = "Search backward" .. search_desc })
 
 -- Yank the visual selection (restoring the register) and search for it exactly.
 local function visual_search_set()
@@ -172,3 +180,4 @@ end
 keymaps.set("v", "n", function() visual_search_jump("n") end, { desc = "Search selected text forward" })
 keymaps.set("v", "/", function() visual_search_jump("n") end, { desc = "Search selected text" })
 keymaps.set("v", "N", function() visual_search_jump("N") end, { desc = "Search selected text backward" })
+keymaps.set("v", "?", function() visual_search_jump("N") end, { desc = "Search selected text backward" })
