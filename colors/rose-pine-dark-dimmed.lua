@@ -13,7 +13,7 @@ local ui = {
   line_alt = "#1f1d2e",
   selection = "#403d52",
   search = "#2d4d59",
-  border = "#524f67",
+  border = "#6e6a86",
 }
 
 local syn = {

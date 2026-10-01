@@ -12,7 +12,7 @@ local ui = {
   line_alt = "#1F2024",
   selection = "#253A63",
   search = "#114957",
-  border = "#393B40",
+  border = "#4A4D55",
 }
 
 local syn = {
@@ -43,7 +43,7 @@ local syn = {
 
 vim.g.theme_custom_hl = {
   name = "islands-rose-pine-dark",
-  border = "#585b70",
+  border = "#6C7086",
   select_bg = ui.selection,
   ref_bg = "#2a2d31",
   diag_err = syn.red,
@@ -123,13 +123,13 @@ hl(0, "CursorReplace", { fg = ui.bg,        bg = syn.rose })
 hl(0, "lCursor",       { link = "CursorInsert" })
 hl(0, "CursorIM",      { link = "CursorInsert" })
 hl(0, "TermCursor",    { link = "Cursor" })
-hl(0, "FloatBorder",   { fg = "#585b70",    bg = ui.bg })
+hl(0, "FloatBorder",   { fg = "#6C7086",    bg = ui.bg })
 hl(0, "CursorLine",    { bg = ui.line_alt })
 hl(0, "CursorLineNr",  { fg = ui.fg_bright, bg = ui.line_alt, bold = true })
 hl(0, "LineNr",        { fg = ui.muted })
 hl(0, "SignColumn",    { fg = ui.muted,     bg = ui.bg })
-hl(0, "VertSplit",     { fg = "#3E4248",    bg = ui.bg })
-hl(0, "WinSeparator",  { fg = "#3E4248",    bg = ui.bg })
+hl(0, "VertSplit",     { fg = ui.border,    bg = ui.bg })
+hl(0, "WinSeparator",  { fg = ui.border,    bg = ui.bg })
 hl(0, "Pmenu",         { fg = ui.fg,        bg = ui.bg })
 hl(0, "PmenuSel",      { fg = ui.fg_bright, bg = ui.selection })
 hl(0, "PmenuSbar",     { bg = ui.line })

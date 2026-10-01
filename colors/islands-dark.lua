@@ -22,12 +22,12 @@ local palette = {
   purple = "#B189F5",
   selection = "#253A63",
   search = "#114957",
-  border = "#393B40",
+  border = "#4A4D55",
 }
 
 vim.g.theme_custom_hl = {
   name = "islands-dark",
-  border = "#585b70",
+  border = "#6C7086",
   select_bg = "#253A63",
   ref_bg = "#2a2d31",
   diag_err = "#c44455",
@@ -107,13 +107,13 @@ hl(0, "CursorReplace", { fg = palette.bg, bg = palette.amber })
 hl(0, "lCursor", { link = "CursorInsert" })
 hl(0, "CursorIM", { link = "CursorInsert" })
 hl(0, "TermCursor", { link = "Cursor" })
-hl(0, "FloatBorder", { fg = "#585b70", bg = palette.bg })
+hl(0, "FloatBorder", { fg = "#6C7086", bg = palette.bg })
 hl(0, "CursorLine", { bg = palette.line_alt })
 hl(0, "CursorLineNr", { fg = palette.fg_bright, bg = palette.line_alt, bold = true })
 hl(0, "LineNr", { fg = palette.muted })
 hl(0, "SignColumn", { fg = palette.muted, bg = palette.bg })
-hl(0, "VertSplit",    { fg = "#3E4248", bg = palette.bg })
-hl(0, "WinSeparator", { fg = "#3E4248", bg = palette.bg })
+hl(0, "VertSplit",    { fg = palette.border, bg = palette.bg })
+hl(0, "WinSeparator", { fg = palette.border, bg = palette.bg })
 hl(0, "Pmenu", { fg = palette.fg, bg = palette.bg })
 hl(0, "PmenuSel", { fg = palette.fg_bright, bg = palette.selection })
 hl(0, "PmenuSbar", { bg = palette.line })

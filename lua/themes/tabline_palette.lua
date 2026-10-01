@@ -18,7 +18,7 @@ function M.get()
   if vim.o.background == "light" then
     return { fg = "#4C4F69", muted = "#7A7880", border = "#B8B2A8", active_bg = "#D2E4F5", active_fg = "#2F496F", bg = "NONE" }
   end
-  return { fg = "#BCBEC4", muted = "#6F737A", border = "#4A4F57", active_bg = "#2F496F", active_fg = "#E8F0FA", bg = "NONE" }
+  return { fg = "#BCBEC4", muted = "#6F737A", border = "#5C6270", active_bg = "#2F496F", active_fg = "#E8F0FA", bg = "NONE" }
 end
 
 return M
