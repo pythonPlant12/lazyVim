@@ -106,8 +106,12 @@ function M.apply_custom_hl()
   hl(0, "WhichKeyBorder",            { fg = c.border, bg = border_bg })
   hl(0, "Visual",                    { bg = c.select_bg })
   hl(0, "VisualNOS",                 { bg = c.select_bg })
-  hl(0, "PmenuSel",                  { bg = c.select_bg })
-  hl(0, "BlinkCmpMenuSelection",     { bg = c.select_bg })
+  -- Every list, menu, and picker cursor row uses the buffer cursorline color.
+  local list_bg = c.context_bg
+  hl(0, "PmenuSel",                  { bg = list_bg })
+  hl(0, "BlinkCmpMenuSelection",     { bg = list_bg })
+  hl(0, "NoicePopupmenuSelected",    { bg = list_bg })
+  hl(0, "AerialLine",                { bg = list_bg })
   hl(0, "BlinkCmpGhostText",         { fg = c.ghost_fg or c.blame_fg })
   hl(0, "LspReferenceText",          { bg = c.ref_bg })
   hl(0, "LspReferenceRead",          { bg = c.ref_bg })
@@ -154,16 +158,16 @@ function M.apply_custom_hl()
   hl(0, "NeoTreeGitUnstaged",  { fg = c.neotree_mod,   bold = true })
   hl(0, "NeoTreeGitDeleted",   { fg = c.neotree_red,   bold = true })
   hl(0, "NeoTreeGitConflict",  { fg = c.neotree_red,   bold = true })
-  hl(0, "NeoTreeCursorLine",   { bg = c.neotree_cursor_bg, bold = true })
+  hl(0, "NeoTreeCursorLine",   { bg = list_bg, bold = true })
 
-  hl(0, "NeoTreeGitAddedCursorLine",     { bg = c.neotree_cursor_bg, bold = true })
-  hl(0, "NeoTreeGitUntrackedCursorLine", { bg = c.neotree_cursor_bg, bold = true })
-  hl(0, "NeoTreeGitStagedCursorLine",    { bg = c.neotree_cursor_bg, bold = true })
-  hl(0, "NeoTreeGitModifiedCursorLine",  { bg = c.neotree_cursor_bg, bold = true })
-  hl(0, "NeoTreeGitRenamedCursorLine",   { bg = c.neotree_cursor_bg, bold = true })
-  hl(0, "NeoTreeGitUnstagedCursorLine",  { bg = c.neotree_cursor_bg, bold = true })
-  hl(0, "NeoTreeGitDeletedCursorLine",   { bg = c.neotree_cursor_bg, bold = true })
-  hl(0, "NeoTreeGitConflictCursorLine",  { bg = c.neotree_cursor_bg, bold = true })
+  hl(0, "NeoTreeGitAddedCursorLine",     { bg = list_bg, bold = true })
+  hl(0, "NeoTreeGitUntrackedCursorLine", { bg = list_bg, bold = true })
+  hl(0, "NeoTreeGitStagedCursorLine",    { bg = list_bg, bold = true })
+  hl(0, "NeoTreeGitModifiedCursorLine",  { bg = list_bg, bold = true })
+  hl(0, "NeoTreeGitRenamedCursorLine",   { bg = list_bg, bold = true })
+  hl(0, "NeoTreeGitUnstagedCursorLine",  { bg = list_bg, bold = true })
+  hl(0, "NeoTreeGitDeletedCursorLine",   { bg = list_bg, bold = true })
+  hl(0, "NeoTreeGitConflictCursorLine",  { bg = list_bg, bold = true })
   hl(0, "NeoTreeActiveIndentMarker",     { fg = c.neotree_active_indent, bold = true })
 
   if c.neotree_fg then
@@ -172,7 +176,7 @@ function M.apply_custom_hl()
   end
 
   local picker_colors = {
-    line_fg = c.snacks_line_fg, line_bg = c.snacks_line_bg,
+    line_fg = c.snacks_line_fg, line_bg = list_bg,
     file = c.snacks_file, dir = c.snacks_dir, match = c.snacks_match,
     search_bg = c.snacks_search_bg, row = c.snacks_row, col = c.snacks_col,
     directory = c.snacks_directory, prompt = c.snacks_prompt,

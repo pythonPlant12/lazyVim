@@ -258,7 +258,6 @@ function M.apply(variant)
     neotree_mod = p.warn,
     neotree_red = p.red,
     neotree_cursor_fg = p.fg,
-    neotree_cursor_bg = p.name == "cursor-light" and "#E2E2E2" or (p.name == "cursor-dark" and "#242424" or "#353b45"),
     neotree_cursor_line_fg = p.fg,
     neotree_fg = p.fg_dim,
     neotree_active_indent = p.accent,
@@ -287,7 +286,6 @@ function M.apply(variant)
     kind_number = p.number,
     kind_namespace = p.special,
     snacks_line_fg = p.fg,
-    snacks_line_bg = p.name == "cursor-light" and "#E2E2E2" or (p.name == "cursor-dark" and "#242424" or "#353b45"),
     snacks_file = p.fg,
     snacks_dir = p.muted,
     snacks_match = p.warn,
@@ -468,7 +466,7 @@ function M.apply(variant)
   hl(0, "NeoTreeFileName",        { fg = p.fg_dim })
   hl(0, "NeoTreeFileNameOpened",  { fg = p.fg })
   hl(0, "NeoTreeIndentMarker",    { fg = p.border })
-  hl(0, "NeoTreeCursorLine",      { fg = p.fg, bg = vim.g.theme_custom_hl.neotree_cursor_bg })
+  hl(0, "NeoTreeCursorLine",      { fg = p.fg, bg = p.line })
   hl(0, "NvimTreeFolderName",       { fg = p.fg_dim, bold = true })
   hl(0, "NvimTreeFolderIcon",       { fg = p.fg_dim })
   hl(0, "NvimTreeOpenedFolderName", { fg = p.fg, bold = true })
