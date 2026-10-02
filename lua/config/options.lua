@@ -124,5 +124,9 @@ vim.api.nvim_create_autocmd("FileType", {
   callback = function(ev)
     local ft = vim.bo[ev.buf].filetype
     vim.bo[ev.buf].syntax = ft == "htmldjango" and "htmldjango" or "jinja"
+    if ft == "htmldjango" then
+      -- After LazyVim started the htmldjango highlighter on this same event.
+      vim.schedule(function() require("features.jinja_parser").apply(ev.buf) end)
+    end
   end,
 })
