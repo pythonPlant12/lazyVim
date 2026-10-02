@@ -7,6 +7,22 @@ return {
       max_lines = 6,
       trim_scope = "outer",
     },
+    config = function(_, opts)
+      require("treesitter-context").setup(opts)
+      -- The context floats inherit the global winblend of transparent themes.
+      -- Force winblend 0 after each render so the panel hides the text below.
+      local render = require("treesitter-context.render")
+      local open = render.open
+      render.open = function(...)
+        open(...)
+        for _, win in ipairs(vim.api.nvim_list_wins()) do
+          if (vim.w[win].treesitter_context or vim.w[win].treesitter_context_line_number)
+            and vim.wo[win].winblend ~= 0 then
+            vim.wo[win].winblend = 0
+          end
+        end
+      end
+    end,
     keys = {
       {
         "[C",

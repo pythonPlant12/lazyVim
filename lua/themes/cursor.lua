@@ -310,6 +310,7 @@ function M.apply(variant)
       or "#4c566a",
     context_bg = p.line,
     treesitter_context_bg = p.line_alt,
+    context_opaque = true,
     fold_bg = p.panel_alt,
     fold_fg = p.muted,
     blame_fg = p.faint,

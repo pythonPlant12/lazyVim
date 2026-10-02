@@ -126,11 +126,16 @@ function M.apply_transparent_hl()
     "Terminal",
   }
 
-  -- A theme that publishes `sidebar_bg` keeps neo-tree on that surface.
+  -- A theme that publishes `sidebar_bg` keeps neo-tree on that surface, and
+  -- `context_opaque` keeps the treesitter-context panel on its own background.
   local c = type(vim.g.theme_custom_hl) == "table" and vim.g.theme_custom_hl or {}
-  local keep_sidebar = c.sidebar_bg ~= nil
+  local keep = {
+    NeoTree = c.sidebar_bg ~= nil,
+    TreesitterContext = c.context_opaque == true,
+  }
   for _, group in ipairs(bgless_groups) do
-    if not (keep_sidebar and group:find("^NeoTree")) then
+    local prefix = group:match("^NeoTree") or group:match("^TreesitterContext")
+    if not (prefix and keep[prefix]) then
       local current = vim.api.nvim_get_hl(0, { name = group, link = false })
       current.bg = "NONE"
       hl(0, group, current)
