@@ -8,6 +8,21 @@ local function max_popup_size()
   return math.floor(vim.o.columns * 0.5), math.floor(vim.o.lines * 0.3)
 end
 
+-- Hover buffers stay transparent to Ghostty, but must not blend with editor text.
+local function install_hover_window_opacity()
+  if vim.g.hover_window_opacity_installed then return end
+
+  vim.g.hover_window_opacity_installed = true
+  local open_floating_preview = vim.lsp.util.open_floating_preview
+  vim.lsp.util.open_floating_preview = function(contents, syntax, opts)
+    local bufnr, winid = open_floating_preview(contents, syntax, opts)
+    if opts and opts.focus_id == "textDocument/hover" and vim.api.nvim_win_is_valid(winid) then
+      vim.wo[winid].winblend = 0
+    end
+    return bufnr, winid
+  end
+end
+
 -- :CheckLsp reports the roots/executables this config resolved for the current buffer.
 local function command_check_lsp()
   local bufnr = vim.api.nvim_get_current_buf()
@@ -189,6 +204,7 @@ return {
     -- Register :CheckLsp, inlay-hint guard, rounded hover/signature popups, and highlights.
     init = function()
       install_inlay_hint_guard()
+      install_hover_window_opacity()
 
       if vim.fn.exists(":CheckLsp") == 0 then
         vim.api.nvim_create_user_command("CheckLsp", command_check_lsp, {

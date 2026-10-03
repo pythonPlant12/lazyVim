@@ -314,7 +314,7 @@ function M.apply(variant)
     context_opaque = true,
     fold_bg = p.panel_alt,
     fold_fg = p.muted,
-    blame_fg = p.faint,
+    blame_fg = p.name == "cursor-dark-midnight" and "#4B5263" or p.faint,
     -- Inline completion preview (blink ghost text). Default links to NonText,
     -- which is too dark on the midnight background; lift it to a readable gray.
     ghost_fg = p.name == "cursor-dark-midnight" and "#72767E" or p.faint,
