@@ -39,9 +39,9 @@ function M.apply_custom_hl()
 
   local hl = vim.api.nvim_set_hl
   local normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
-  local border_bg = (normal and normal.bg) and string.format("#%06x", normal.bg) or "#191A1C"
-  local normal_fg = (normal and normal.fg) and string.format("#%06x", normal.fg) or "#BCBEC4"
   local c = palette.get()
+  local border_bg = c.float_bg or ((normal and normal.bg) and string.format("#%06x", normal.bg) or "#191A1C")
+  local normal_fg = (normal and normal.fg) and string.format("#%06x", normal.fg) or "#BCBEC4"
 
   -- Prefer the theme's real syntax token colors (c.kind_*) so completion items
   -- match the color of the element itself; fall back to the generic aliases.
@@ -91,6 +91,8 @@ function M.apply_custom_hl()
 
   hl(0, "NormalFloat",               { fg = normal_fg, bg = border_bg })
   hl(0, "FloatBorder",               { fg = c.border, bg = border_bg })
+  hl(0, "DiagnosticFloat",           { fg = normal_fg, bg = border_bg })
+  hl(0, "DiagnosticFloatBorder",     { fg = c.border, bg = border_bg })
   hl(0, "PmenuBorder",               { fg = c.border, bg = border_bg })
   hl(0, "SnacksPickerBorder",        { fg = c.border, bg = border_bg })
   hl(0, "SnacksPickerBox",           { fg = normal_fg, bg = border_bg })
@@ -106,8 +108,8 @@ function M.apply_custom_hl()
   hl(0, "WhichKeyBorder",            { fg = c.border, bg = border_bg })
   hl(0, "Visual",                    { bg = c.select_bg })
   hl(0, "VisualNOS",                 { bg = c.select_bg })
-  -- Every list, menu, and picker cursor row uses the buffer cursorline color.
-  local list_bg = c.context_bg
+  -- Match HerdR's selection color across editor and list cursor rows.
+  local list_bg = c.select_bg
   hl(0, "PmenuSel",                  { bg = list_bg })
   hl(0, "BlinkCmpMenuSelection",     { bg = list_bg })
   hl(0, "NoicePopupmenuSelected",    { bg = list_bg })
@@ -226,8 +228,8 @@ function M.apply_custom_hl()
   hl(0, "UfoFoldedBg",       { bg = c.fold_bg })
   hl(0, "UfoFoldedEllipsis", { fg = c.fold_fg, bg = c.fold_bg })
 
-  hl(0, "CursorLine",   { bg = c.context_bg })
-  hl(0, "CursorLineNr", { fg = normal_fg, bg = c.context_bg, bold = true })
+  hl(0, "CursorLine",   { bg = list_bg })
+  hl(0, "CursorLineNr", { fg = normal_fg, bg = list_bg, bold = true })
   if transparency.is_transparent_theme() then
     transparency.apply_transparent_hl()
   end

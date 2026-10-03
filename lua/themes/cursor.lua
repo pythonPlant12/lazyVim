@@ -55,7 +55,7 @@ local themes = {
     panel_alt = "#353b45",
     line = "#434A56",
     line_alt = "#353b45",
-    selection = "#4B5263",
+    selection = "#566075",
     selection_inactive = "#353b45",
     search = "#3f4651",
     border = "#5E6A80",
@@ -237,6 +237,7 @@ function M.apply(variant)
     border = p.border,
     -- Keeps neo-tree slightly darker than the editor, also on transparent variants.
     sidebar_bg = p.sidebar,
+    float_bg = p.panel,
     select_bg = p.selection,
     ref_bg = p.line_alt,
     diag_err = p.red,
@@ -308,7 +309,7 @@ function M.apply(variant)
       or (p.name == "cursor-dark-midnight") and p.property
       or (p.name == "cursor-dark") and "#626262"
       or "#4c566a",
-    context_bg = p.line,
+    context_bg = p.selection,
     treesitter_context_bg = p.line_alt,
     context_opaque = true,
     fold_bg = p.panel_alt,
@@ -348,8 +349,8 @@ function M.apply(variant)
   hl(0, "lCursor",       { link = "CursorInsert" })
   hl(0, "CursorIM",      { link = "CursorInsert" })
   hl(0, "TermCursor",    { link = "Cursor" })
-  hl(0, "CursorLine",    { bg = p.line })
-  hl(0, "CursorLineNr",  { fg = p.fg, bg = p.line, bold = true })
+  hl(0, "CursorLine",    { bg = p.selection })
+  hl(0, "CursorLineNr",  { fg = p.fg, bg = p.selection, bold = true })
   hl(0, "LineNr",        { fg = p.faint, bg = p.bg })
   hl(0, "SignColumn",    { fg = p.faint, bg = p.bg })
   hl(0, "VertSplit",     { fg = p.border, bg = p.bg })
@@ -467,7 +468,7 @@ function M.apply(variant)
   hl(0, "NeoTreeFileName",        { fg = p.fg_dim })
   hl(0, "NeoTreeFileNameOpened",  { fg = p.fg })
   hl(0, "NeoTreeIndentMarker",    { fg = p.border })
-  hl(0, "NeoTreeCursorLine",      { fg = p.fg, bg = p.line })
+  hl(0, "NeoTreeCursorLine",      { fg = p.fg, bg = p.selection })
   hl(0, "NvimTreeFolderName",       { fg = p.fg_dim, bold = true })
   hl(0, "NvimTreeFolderIcon",       { fg = p.fg_dim })
   hl(0, "NvimTreeOpenedFolderName", { fg = p.fg, bold = true })

@@ -27,6 +27,20 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 })
 apply_all()
 
+-- Diagnostic floats need an opaque content surface: a transparent float lets
+-- the editor text behind it bleed through. Other floating UI stays transparent.
+do
+  local open_diagnostic_float = vim.diagnostic.open_float
+  vim.diagnostic.open_float = function(...)
+    local bufnr, win = open_diagnostic_float(...)
+    if win and vim.api.nvim_win_is_valid(win) then
+      vim.wo[win].winhighlight = "NormalFloat:DiagnosticFloat,FloatBorder:DiagnosticFloatBorder"
+      vim.wo[win].winblend = 0
+    end
+    return bufnr, win
+  end
+end
+
 -- Some plugins create highlights after load/attach; delayed reapplies keep them aligned.
 vim.api.nvim_create_autocmd({ "FileType", "BufEnter", "TermOpen", "LspAttach" }, {
   group = vim.api.nvim_create_augroup("PlainKeywordHl", { clear = true }),
@@ -87,13 +101,14 @@ vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("LazyHl", { clear = true }),
   callback = function()
     local is_light = vim.o.background == "light"
+    local selection_bg = palette.get().select_bg
     local hl = vim.api.nvim_set_hl
     if is_light then
       hl(0, "LazyNormal",     { fg = "#2F496F", bg = "#EAF2FB" })
-      hl(0, "LazyCursorLine", { fg = "#2F496F", bg = "#D2E4F5", bold = true })
+      hl(0, "LazyCursorLine", { fg = "#2F496F", bg = selection_bg, bold = true })
     else
       hl(0, "LazyNormal",     { fg = "#E8F0FA", bg = "#1C2D40" })
-      hl(0, "LazyCursorLine", { fg = "#E8F0FA", bg = "#2F496F", bold = true })
+      hl(0, "LazyCursorLine", { fg = "#E8F0FA", bg = selection_bg, bold = true })
     end
     vim.opt_local.winhighlight = "Normal:LazyNormal,CursorLine:LazyCursorLine"
   end,

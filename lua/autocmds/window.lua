@@ -31,20 +31,16 @@ vim.api.nvim_create_autocmd({ "WinNew", "WinEnter" }, {
   end,
 })
 
--- Enable cursorline in normal edit windows, disable it in floats and tool panes.
+-- Enable cursorline in every non-floating window so active rows stay consistent.
 vim.api.nvim_create_autocmd("WinEnter", {
   group = vim.api.nvim_create_augroup("FloatNoCursorLine", { clear = true }),
   callback = function()
-    -- Cursorline is useful in edit windows but noisy inside floats/tool panes.
+    -- Floating windows do not have persistent rows to navigate.
     local cfg = vim.api.nvim_win_get_config(0)
     if cfg.relative ~= "" then
       vim.wo.cursorline = false
     else
-      local ft = vim.bo.filetype
-      local excluded = { ["grug-far"] = true, ["neo-tree"] = true, ["lazy"] = true, ["mason"] = true, ["Trouble"] = true, ["noice"] = true }
-      if not excluded[ft] then
-        vim.wo.cursorline = true
-      end
+      vim.wo.cursorline = true
     end
   end,
 })
