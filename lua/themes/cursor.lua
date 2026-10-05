@@ -53,7 +53,7 @@ local themes = {
     sidebar = "#21252b",
     panel = "#21252b",
     panel_alt = "#353b45",
-    line = "#434A56",
+    line = "#3F4653",
     line_alt = "#353b45",
     selection = "#566075",
     selection_inactive = "#353b45",
@@ -310,11 +310,13 @@ function M.apply(variant)
       or (p.name == "cursor-dark") and "#626262"
       or "#4c566a",
     context_bg = p.selection,
+    -- Midnight keeps the buffer cursorline darker than list cursor rows.
+    cursorline_bg = p.name == "cursor-dark-midnight" and p.line or p.selection,
     treesitter_context_bg = p.line_alt,
     context_opaque = true,
     fold_bg = p.panel_alt,
     fold_fg = p.muted,
-    blame_fg = p.name == "cursor-dark-midnight" and "#4B5263" or p.faint,
+    blame_fg = p.name == "cursor-dark-midnight" and "#7A8290" or p.faint,
     -- Inline completion preview (blink ghost text). Default links to NonText,
     -- which is too dark on the midnight background; lift it to a readable gray.
     ghost_fg = p.name == "cursor-dark-midnight" and "#72767E" or p.faint,
@@ -349,8 +351,8 @@ function M.apply(variant)
   hl(0, "lCursor",       { link = "CursorInsert" })
   hl(0, "CursorIM",      { link = "CursorInsert" })
   hl(0, "TermCursor",    { link = "Cursor" })
-  hl(0, "CursorLine",    { bg = p.selection })
-  hl(0, "CursorLineNr",  { fg = p.fg, bg = p.selection, bold = true })
+  hl(0, "CursorLine",    { bg = vim.g.theme_custom_hl.cursorline_bg })
+  hl(0, "CursorLineNr",  { fg = p.fg, bg = vim.g.theme_custom_hl.cursorline_bg, bold = true })
   hl(0, "LineNr",        { fg = p.faint, bg = p.bg })
   hl(0, "SignColumn",    { fg = p.faint, bg = p.bg })
   hl(0, "VertSplit",     { fg = p.border, bg = p.bg })
@@ -358,7 +360,7 @@ function M.apply(variant)
   hl(0, "EndOfBuffer",   { fg = p.bg, bg = p.bg })
 
   hl(0, "Pmenu",       { fg = p.fg, bg = p.panel })
-  hl(0, "PmenuSel",    { fg = p.fg, bg = p.selection })
+  hl(0, "PmenuSel",    { fg = p.fg, bg = vim.g.theme_custom_hl.cursorline_bg })
   hl(0, "PmenuSbar",   { bg = p.panel_alt })
   hl(0, "PmenuThumb",  { bg = p.muted })
   hl(0, "PmenuBorder", { fg = p.border, bg = p.panel })
@@ -468,7 +470,7 @@ function M.apply(variant)
   hl(0, "NeoTreeFileName",        { fg = p.fg_dim })
   hl(0, "NeoTreeFileNameOpened",  { fg = p.fg })
   hl(0, "NeoTreeIndentMarker",    { fg = p.border })
-  hl(0, "NeoTreeCursorLine",      { fg = p.fg, bg = p.selection })
+  hl(0, "NeoTreeCursorLine",      { fg = p.fg, bg = vim.g.theme_custom_hl.cursorline_bg })
   hl(0, "NvimTreeFolderName",       { fg = p.fg_dim, bold = true })
   hl(0, "NvimTreeFolderIcon",       { fg = p.fg_dim })
   hl(0, "NvimTreeOpenedFolderName", { fg = p.fg, bold = true })

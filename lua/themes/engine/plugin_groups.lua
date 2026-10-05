@@ -108,8 +108,8 @@ function M.apply_custom_hl()
   hl(0, "WhichKeyBorder",            { fg = c.border, bg = border_bg })
   hl(0, "Visual",                    { bg = c.select_bg })
   hl(0, "VisualNOS",                 { bg = c.select_bg })
-  -- Match HerdR's selection color across editor and list cursor rows.
-  local list_bg = c.select_bg
+  -- Every list, menu, and picker cursor row uses the buffer cursorline color.
+  local list_bg = c.cursorline_bg or c.select_bg
   hl(0, "PmenuSel",                  { bg = list_bg })
   hl(0, "BlinkCmpMenuSelection",     { bg = list_bg })
   hl(0, "NoicePopupmenuSelected",    { bg = list_bg })
