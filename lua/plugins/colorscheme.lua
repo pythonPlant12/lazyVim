@@ -99,8 +99,7 @@ return {
       for _, name in ipairs({
         "float",
         "help",
-        "input",
-        "lazygit",
+                "lazygit",
         "notification",
         "notification_history",
         "scratch",
@@ -112,6 +111,9 @@ return {
           wo = { winblend = blend },
         })
       end
+      -- vim.ui.input prompts (bookmark names, renames) hide the text behind,
+      -- like the Telescope pickers do.
+      merge_style("input", { backdrop = false, wo = { winblend = 0 } })
 
       opts.picker = opts.picker or {}
       opts.picker.win = opts.picker.win or {}

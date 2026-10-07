@@ -57,6 +57,12 @@ local function delete_repo_bookmarks()
 end
 
 return {
+  -- dressing provides vim.ui.input for the bookmark name prompt. It inherits
+  -- the global winblend (10 on transparent themes); keep the prompt opaque.
+  {
+    "stevearc/dressing.nvim",
+    opts = { input = { win_options = { winblend = 0 } } },
+  },
   {
     "LintaoAmons/bookmarks.nvim",
     tag = "3.2.0",
