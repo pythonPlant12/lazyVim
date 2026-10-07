@@ -28,7 +28,8 @@ return {
 
       -- Reapply custom reference highlights after theme changes.
       local function set_illuminate_hl()
-        local bg = vim.o.background == "light" and "#E6E6E6" or "#3A3A4A"
+        local bg = require("themes.engine.palette").get().ref_bg
+          or (vim.o.background == "light" and "#E6E6E6" or "#3A3A4A")
         vim.api.nvim_set_hl(0, "IlluminatedWordText", { bg = bg, underline = false })
         vim.api.nvim_set_hl(0, "IlluminatedWordRead", { bg = bg, underline = false })
         vim.api.nvim_set_hl(0, "IlluminatedWordWrite", { bg = bg, underline = false })

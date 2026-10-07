@@ -57,7 +57,7 @@ local themes = {
     line_alt = "#353b45",
     selection = "#566075",
     selection_inactive = "#353b45",
-    search = "#3f4651",
+    search = "#3D4B63",
     border = "#5E6A80",
     fg = "#F0F0F0",
     fg_dim = "#D6D6DD",
@@ -239,7 +239,8 @@ function M.apply(variant)
     sidebar_bg = p.sidebar,
     float_bg = p.panel,
     select_bg = p.selection,
-    ref_bg = p.line_alt,
+    -- Word-under-cursor matches: bluish so they stay visible on the active row.
+    ref_bg = p.name == "cursor-dark-midnight" and "#3D4B63" or p.line_alt,
     diag_err = p.red,
     diag_warn = p.warn,
     diag_info = p.info,
@@ -367,8 +368,9 @@ function M.apply(variant)
 
   hl(0, "Visual",      { fg = p.fg, bg = p.selection })
   hl(0, "VisualNOS",   { bg = p.selection_inactive })
-  hl(0, "Search",      { fg = p.fg, bg = p.search })
+  hl(0, "Search",      { bg = p.search })
   hl(0, "IncSearch",   { fg = p.bg, bg = p.warn, bold = true })
+  hl(0, "CurSearch",   { link = "IncSearch" })
   hl(0, "MatchParen",  { fg = p.fg, bg = p.selection_inactive, bold = true })
 
   hl(0, "StatusLine",   { fg = p.status_fg, bg = p.status_bg })
