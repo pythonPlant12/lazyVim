@@ -425,10 +425,10 @@ end, { desc = "ESLint fix file" })
 
 keymaps.set("n", "<C-j>", ":tabprev<CR>", { desc = "Previous tab" })
 keymaps.set("n", "<C-k>", ":tabnext<CR>", { desc = "Next tab" })
-keymaps.set("n", "<C-S-j>", function()
+keymaps.set("n", "<C-S-h>", function()
   if vim.fn.tabpagenr() > 1 then vim.cmd("tabmove -1") end
 end, { desc = "Move tab left" })
-keymaps.set("n", "<C-S-k>", function()
+keymaps.set("n", "<C-S-l>", function()
   if vim.fn.tabpagenr() < vim.fn.tabpagenr("$") then vim.cmd("tabmove +1") end
 end, { desc = "Move tab right" })
 keymaps.set("n", "<leader><tab>q", ":tabclose<CR>", { desc = "Close tab" })
@@ -543,6 +543,16 @@ end
 keymaps.set("n", "<C-Tab>",    pick_buffers_smart, { desc = "Find buffers" })
 keymaps.set("n", "<leader>bl", pick_buffers_smart, { desc = "List buffers" })
 
+-- Reload the buffer from disk. Refuses when the buffer has unsaved edits.
+keymaps.set("n", "<leader>bu", function()
+  if vim.bo.modified then
+    vim.notify("Buffer has unsaved changes; save or discard first", vim.log.levels.WARN, { title = "Buffer" })
+    return
+  end
+  vim.cmd("edit!")
+  vim.notify("Reloaded " .. vim.fn.expand("%:t"), vim.log.levels.INFO, { title = "Buffer" })
+end, { desc = "Reload buffer from disk" })
+
 local function pick_tabs()
   local items = {}
   local tabs = vim.api.nvim_list_tabpages()
@@ -605,14 +615,19 @@ keymaps.set("i", "<Tab>", "<C-t>", { desc = "Indent" })
 keymaps.set("i", "<S-Tab>", "<C-d>", { desc = "Unindent" })
 
 
--- Ctrl+Shift+arrow used to MOVE lines, one held Ctrl away from Shift+arrow
--- (select lines): typing fast with Ctrl not yet released from a previous
--- chord reordered lines instead of selecting. Both chords now select; line
--- moving stays on LazyVim's <A-j>/<A-k>.
-keymaps.set("n", "<C-S-Up>",   "Vk", { desc = "Select line upward" })
-keymaps.set("n", "<C-S-Down>", "Vj", { desc = "Select line downward" })
-keymaps.set("v", "<C-S-Up>",   "k",  { desc = "Extend selection up" })
-keymaps.set("v", "<C-S-Down>", "j",  { desc = "Extend selection down" })
+-- Ctrl+Shift+arrow and Ctrl+Shift+j/k move the line or the visual selection.
+-- j = up, k = down, matching the inverted j/k of this config.
+local function map_move_line(keys, dir)
+  local line = dir == "up" and ".-2" or ".+1"
+  local range = dir == "up" and "'<-2" or "'>+1"
+  for _, lhs in ipairs(keys) do
+    keymaps.set("n", lhs, "<cmd>m " .. line .. "<CR>==", { desc = "Move line " .. dir })
+    keymaps.set("v", lhs, ":m " .. range .. "<CR>gv=gv", { desc = "Move selection " .. dir })
+    keymaps.set("i", lhs, "<Esc><cmd>m " .. line .. "<CR>==gi", { desc = "Move line " .. dir })
+  end
+end
+map_move_line({ "<C-S-Up>", "<C-S-j>" }, "up")
+map_move_line({ "<C-S-Down>", "<C-S-k>" }, "down")
 
 keymaps.set("n", "<C-e>", vim.diagnostic.open_float, { desc = "Show line diagnostics" })
 
