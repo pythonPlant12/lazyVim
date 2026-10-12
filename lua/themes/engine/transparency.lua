@@ -38,8 +38,7 @@ function M.apply_theme_blend()
   for _, name in ipairs({
     "float",
     "help",
-        "lazygit",
-    "notification",
+        "notification",
     "notification_history",
     "scratch",
     "snacks_image",
@@ -52,6 +51,7 @@ function M.apply_theme_blend()
   end
   -- vim.ui.input prompts stay opaque on every theme (see colorscheme.lua).
   merge_style("input", { backdrop = false, wo = { winblend = 0 } })
+  merge_style("lazygit", { backdrop = false, wo = { winblend = 0 } })
 
   Snacks.config.picker = Snacks.config.picker or {}
   Snacks.config.picker.win = Snacks.config.picker.win or {}

@@ -99,8 +99,7 @@ return {
       for _, name in ipairs({
         "float",
         "help",
-                "lazygit",
-        "notification",
+                "notification",
         "notification_history",
         "scratch",
         "snacks_image",
@@ -114,6 +113,9 @@ return {
       -- vim.ui.input prompts (bookmark names, renames) hide the text behind,
       -- like the Telescope pickers do.
       merge_style("input", { backdrop = false, wo = { winblend = 0 } })
+      -- Lazygit keeps the terminal transparency (bg NONE) but hides the
+      -- editor text behind it.
+      merge_style("lazygit", { backdrop = false, wo = { winblend = 0 } })
 
       opts.picker = opts.picker or {}
       opts.picker.win = opts.picker.win or {}
