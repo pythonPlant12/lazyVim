@@ -185,6 +185,16 @@ return {
       })
       opts.diagnostics = opts.diagnostics or {}
       opts.diagnostics.signs = false
+      -- Diagnostic float: append the code and the source after the message,
+      -- e.g. "... [2365] (vtsls)", so it is clear which server reported it.
+      opts.diagnostics.float = vim.tbl_extend("force", opts.diagnostics.float or {}, {
+        source = false,
+        suffix = function(d)
+          local code = d.code and (" [" .. tostring(d.code) .. "]") or ""
+          local source = d.source and (" (" .. d.source .. ")") or ""
+          return code .. source, "DiagnosticFloatingSuffix"
+        end,
+      })
       opts.folds = { enabled = false }
       table.insert(opts.servers["*"].keys, { "K", "Vj", desc = "Select line downward" })
       -- Override LazyVim's default gD (textDocument/declaration, unsupported by many
