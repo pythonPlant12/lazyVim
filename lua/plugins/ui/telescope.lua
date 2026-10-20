@@ -11,6 +11,11 @@ return {
       -- Telescope reads the global winblend by default, so transparent themes
       -- (winblend 10) show buffer text through the picker. 0 hides that text.
       opts.defaults.winblend = 0
+      -- Same near-fullscreen size as the Snacks pickers.
+      opts.defaults.layout_config = vim.tbl_deep_extend("force", opts.defaults.layout_config or {}, {
+        width = 0.95,
+        height = 0.95,
+      })
       opts.defaults.mappings = opts.defaults.mappings or {}
       -- Normal-mode j/k follow this config's inverted vertical movement.
       opts.defaults.mappings.n = vim.tbl_extend("force", opts.defaults.mappings.n or {}, {

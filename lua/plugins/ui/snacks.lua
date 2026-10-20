@@ -177,6 +177,13 @@ return {
         },
       },
       picker = {
+        -- Pickers use almost the whole screen instead of the 80% default.
+        layouts = {
+          default = { layout = { width = 0.95, height = 0.95 } },
+          vertical = { layout = { width = 0.9, height = 0.95 } },
+          telescope = { layout = { width = 0.95, height = 0.95 } },
+          ivy = { layout = { height = 0.95 } },
+        },
         sources = {
           buffers = {
             confirm = function(picker, item)
