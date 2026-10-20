@@ -531,6 +531,8 @@ end, { desc = "Equalize windows (preserve neo-tree width)" })
 
 local function pick_buffers_smart()
   Snacks.picker.buffers({
+    -- Start in normal mode: j/k walk the list right away, i or / filters.
+    focus = "list",
     confirm = function(picker, item)
       local buf = item and item.buf
       picker:close()
