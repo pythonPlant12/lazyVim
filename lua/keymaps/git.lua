@@ -8,12 +8,89 @@ local lazygit_edit = require("features.lazygit_edit")
 -- Guard bare <C-g> so it acts only as a prefix; without this, pausing after
 -- <C-g> falls through to the native CTRL-G file-info ruler.
 keymaps.set("n", "<C-g>", "<Nop>", opts)
+-- Lazygit writes its directory here on every worktree/repo switch and on
+-- quit, so the next open can start in the worktree you switched to instead
+-- of the main tree Neovim's root points at. The path is unique per Neovim
+-- instance, so two editors on the same repository do not follow each other.
+local lazygit_dir_file = vim.fn.tempname()
+
+local function git_common_dir(dir)
+  local out = vim.fn.systemlist({ "git", "-C", dir, "rev-parse", "--path-format=absolute", "--git-common-dir" })
+  return vim.v.shell_error == 0 and out[1] or nil
+end
+
+-- The last lazygit directory when it is a worktree of the same repository.
+local function lazygit_cwd(root)
+  local ok, lines = pcall(vim.fn.readfile, lazygit_dir_file)
+  local last = ok and lines[1] or nil
+  if not last or last == "" or vim.fn.isdirectory(last) ~= 1 or last == root then
+    return root
+  end
+  local common = git_common_dir(last)
+  if common and common == git_common_dir(root) then
+    return last
+  end
+  return root
+end
+
+-- Listed file buffers (no terminals, pickers, or scratch buffers).
+local function file_buffers()
+  return vim.tbl_filter(function(buf)
+    return vim.bo[buf].buflisted and vim.bo[buf].buftype == ""
+  end, vim.api.nvim_list_bufs())
+end
+
+-- After lazygit closes: when it switched to another worktree of the same
+-- repository, close every file buffer and move Neovim there, so nothing on
+-- screen still belongs to the old worktree.
+local function follow_lazygit_worktree()
+  local cwd = vim.fn.getcwd()
+  local target = lazygit_cwd(cwd)
+  if target == cwd then
+    return
+  end
+
+  local modified = vim.tbl_filter(function(buf) return vim.bo[buf].modified end, file_buffers())
+  if #modified > 0 then
+    local choice = vim.fn.confirm(
+      ("%d buffer(s) have unsaved changes. Save all and switch to %s?"):format(#modified, vim.fn.fnamemodify(target, ":~")),
+      "&Save and switch\n&Stay here",
+      2
+    )
+    if choice ~= 1 then
+      return
+    end
+    vim.cmd("wall")
+  end
+
+  for _, buf in ipairs(file_buffers()) do
+    pcall(vim.api.nvim_buf_delete, buf, { force = true })
+  end
+
+  vim.cmd.cd(vim.fn.fnameescape(target))
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if vim.bo[vim.api.nvim_win_get_buf(win)].filetype == "neo-tree" then
+      require("neo-tree.command").execute({ source = "filesystem", dir = target, action = "show" })
+      break
+    end
+  end
+  vim.notify("Switched to worktree " .. vim.fn.fnamemodify(target, ":~"), vim.log.levels.INFO, { title = "Lazygit" })
+end
+
 keymaps.set("n", "<C-g>g", function()
   if lazygit_edit.jump_to_lazygit() then
     return
   end
 
-  Snacks.lazygit({ cwd = LazyVim.root.git() })
+  Snacks.lazygit({
+    cwd = lazygit_cwd(LazyVim.root.git()),
+    env = { LAZYGIT_NEW_DIR_FILE = lazygit_dir_file },
+    win = {
+      on_close = function()
+        vim.schedule(follow_lazygit_worktree)
+      end,
+    },
+  })
 end, { desc = "Lazygit" })
 keymaps.set("n", "<C-g>l",  "<Nop>", opts) -- disable bare <C-g>l so it acts only as a prefix
 keymaps.set("n", "<C-g>h",  function() Snacks.picker.git_log({ cwd = LazyVim.root.git() }) end, { desc = "Git history" })
