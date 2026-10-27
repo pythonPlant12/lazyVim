@@ -1,8 +1,8 @@
--- Transparency handling: which themes render see-through, window blending,
+-- Transparency handling: which themes render see-through, Snacks backdrops,
 -- and clearing backgrounds that plugins keep reintroducing.
 local M = {}
 
--- Theme names that render see-through (terminal opacity shows) and need blended floats.
+-- Theme names that render see-through (terminal opacity shows).
 local transparent_names = {
   ["islands-dark"] = true,
   ["islands-white"] = true,
@@ -21,12 +21,8 @@ function M.is_transparent_theme()
   return M.is_transparent_name(vim.g.colors_name)
 end
 
--- Transparent themes keep floats blended; opaque themes force normal backgrounds.
-function M.apply_theme_blend()
-  local blend = M.is_transparent_theme() and 10 or 0
-  vim.o.winblend = blend
-  vim.o.pumblend = blend
-
+-- Transparent themes keep the dim backdrop behind Snacks floats; opaque themes drop it.
+function M.apply_snacks_backdrop()
   if Snacks == nil or type(Snacks.config) ~= "table" then return end
 
   local transparent = M.is_transparent_theme()
@@ -44,22 +40,11 @@ function M.apply_theme_blend()
     "snacks_image",
     "terminal",
   }) do
-    merge_style(name, {
-      backdrop = transparent and nil or false,
-      wo = { winblend = blend },
-    })
+    merge_style(name, { backdrop = transparent and nil or false })
   end
-  -- vim.ui.input prompts stay opaque on every theme (see colorscheme.lua).
-  merge_style("input", { backdrop = false, wo = { winblend = 0 } })
-  merge_style("lazygit", { backdrop = false, wo = { winblend = 0 } })
-
-  Snacks.config.picker = Snacks.config.picker or {}
-  Snacks.config.picker.win = Snacks.config.picker.win or {}
-  for _, name in ipairs({ "input", "list", "preview" }) do
-    Snacks.config.picker.win[name] = vim.tbl_deep_extend("force", Snacks.config.picker.win[name] or {}, {
-      wo = { winblend = blend },
-    })
-  end
+  -- vim.ui.input prompts and lazygit never dim the editor behind them (see colorscheme.lua).
+  merge_style("input", { backdrop = false })
+  merge_style("lazygit", { backdrop = false })
 end
 
 -- Clear backgrounds on groups that plugins often repaint after loading.

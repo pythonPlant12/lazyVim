@@ -65,14 +65,7 @@ do
   end
 end
 
--- Transparent themes need blended popups; opaque themes should stay solid.
 local is_transparent_theme_name = require("themes.engine.transparency").is_transparent_name
-
-do
-  local blend = is_transparent_theme_name(cs) and 10 or 0
-  vim.o.winblend = blend
-  vim.o.pumblend = blend
-end
 
 return {
   {
@@ -88,9 +81,8 @@ return {
     opts = function(_, opts)
       opts = opts or {}
       local transparent = is_transparent_theme_name(cs)
-      local blend = transparent and 10 or 0
 
-      -- Keep Snacks float/picker opacity aligned with the active theme.
+      -- Transparent themes keep the dim backdrop behind Snacks floats.
       opts.styles = opts.styles or {}
       local function merge_style(name, style)
         opts.styles[name] = vim.tbl_deep_extend("force", opts.styles[name] or {}, style)
@@ -105,25 +97,11 @@ return {
         "snacks_image",
         "terminal",
       }) do
-        merge_style(name, {
-          backdrop = transparent and nil or false,
-          wo = { winblend = blend },
-        })
+        merge_style(name, { backdrop = transparent and nil or false })
       end
-      -- vim.ui.input prompts (bookmark names, renames) hide the text behind,
-      -- like the Telescope pickers do.
-      merge_style("input", { backdrop = false, wo = { winblend = 0 } })
-      -- Lazygit keeps the terminal transparency (bg NONE) but hides the
-      -- editor text behind it.
-      merge_style("lazygit", { backdrop = false, wo = { winblend = 0 } })
-
-      opts.picker = opts.picker or {}
-      opts.picker.win = opts.picker.win or {}
-      for _, name in ipairs({ "input", "list", "preview" }) do
-        opts.picker.win[name] = vim.tbl_deep_extend("force", opts.picker.win[name] or {}, {
-          wo = { winblend = blend },
-        })
-      end
+      -- vim.ui.input prompts and lazygit never dim the editor behind them.
+      merge_style("input", { backdrop = false })
+      merge_style("lazygit", { backdrop = false })
 
       opts.scroll = opts.scroll or {}
       -- Disable animated scroll to keep cursor movement smooth.

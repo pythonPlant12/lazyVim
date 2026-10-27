@@ -223,8 +223,6 @@ function M.apply(variant)
     vim.o.termguicolors = true
   end
   vim.o.background = variant == "light" and "light" or "dark"
-  vim.o.winblend = 0
-  vim.o.pumblend = 0
 
   vim.g.theme_custom_hl = {
     name = p.name,

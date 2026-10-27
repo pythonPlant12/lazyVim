@@ -12,6 +12,4 @@ if type(vim.g.theme_custom_hl) == "table" then
   t.statusline = vim.tbl_deep_extend("force", t.statusline or {}, { surface = "#2B2D30" })
   vim.g.theme_custom_hl = t
 end
-vim.o.winblend = 0
-vim.o.pumblend = 0
 vim.g.colors_name = "default-dark"

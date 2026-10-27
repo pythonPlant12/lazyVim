@@ -122,7 +122,6 @@ function M.apply_default_opaque_hl()
             "FloatBorder:TreesitterContextSeparator",
             "EndOfBuffer:TreesitterContext",
           }, ",")
-          vim.wo[win].winblend = vim.o.winblend
         end)
       elseif ok_line_number and is_line_number then
         pcall(function()
@@ -133,7 +132,6 @@ function M.apply_default_opaque_hl()
             "FloatBorder:TreesitterContextSeparator",
             "EndOfBuffer:TreesitterContextLineNumber",
           }, ",")
-          vim.wo[win].winblend = vim.o.winblend
         end)
       elseif is_lazygit then
         pcall(function()
@@ -144,7 +142,6 @@ function M.apply_default_opaque_hl()
             "FloatBorder:FloatBorder",
             "EndOfBuffer:NormalFloat",
           }, ",")
-          vim.wo[win].winblend = vim.o.winblend
         end)
       end
     end

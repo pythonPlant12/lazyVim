@@ -274,16 +274,9 @@ local function lualine_theme_hint(scheme, background)
   return scheme:find("^islands") and ("islands-" .. background) or "auto"
 end
 
--- Apply a colorscheme with matching background, blend, lualine, and LazyGit theme.
+-- Apply a colorscheme with matching background, lualine, and LazyGit theme.
 local function apply_scheme(scheme, background)
   vim.o.background = background
-  local transparent = scheme == "islands-dark"
-    or scheme == "islands-white"
-    or scheme == "islands-light"
-    or scheme:find("^islands%-rose%-pine") ~= nil
-  local blend = transparent and 10 or 0
-  vim.o.winblend = blend
-  vim.o.pumblend = blend
   vim.g._lualine_theme_hint = lualine_theme_hint(scheme, background)
   vim.cmd.colorscheme(scheme)
   vim.g.theme_mode = background
@@ -295,8 +288,6 @@ end
 local function apply_theme_mode(mode)
   local background = mode == "light" and "light" or "dark"
   vim.o.background = background
-  vim.o.winblend = 0
-  vim.o.pumblend = 0
 
   local schemes = background == "dark"
       and { "default-dark", "solarized-osaka", "habamax" }
@@ -325,8 +316,6 @@ end
 local function apply_catppuccin(flavour)
   local bg = (flavour == "latte") and "light" or "dark"
   vim.o.background = bg
-  vim.o.winblend = 0
-  vim.o.pumblend = 0
   require("catppuccin").setup({ flavour = flavour })
   vim.g._lualine_theme_hint = "auto"
   vim.cmd.colorscheme("catppuccin")
@@ -340,8 +329,6 @@ local function apply_rose_pine(variant)
   local cs = variant == "main" and "rose-pine" or ("rose-pine-" .. variant)
   local bg = variant == "dawn" and "light" or "dark"
   vim.o.background = bg
-  vim.o.winblend = 0
-  vim.o.pumblend = 0
   vim.g._lualine_theme_hint = "auto"
   vim.cmd.colorscheme(cs)
   vim.g.theme_mode = bg
@@ -352,8 +339,6 @@ end
 -- Apply the dimmed dark Rose Pine variant.
 local function apply_rose_pine_dark_dimmed()
   vim.o.background = "dark"
-  vim.o.winblend = 0
-  vim.o.pumblend = 0
   vim.g._lualine_theme_hint = "auto"
   vim.cmd.colorscheme("rose-pine-dark-dimmed")
   vim.g.theme_mode = "dark"
@@ -366,8 +351,6 @@ local function apply_islands_rose_pine(variant)
   local cs = "islands-rose-pine-" .. variant
   local bg = variant == "light" and "light" or "dark"
   vim.o.background = bg
-  vim.o.winblend = 10
-  vim.o.pumblend = 10
   vim.g._lualine_theme_hint = "islands-" .. variant
   vim.cmd.colorscheme(cs)
   vim.g.theme_mode = bg

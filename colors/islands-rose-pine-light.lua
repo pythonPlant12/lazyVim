@@ -282,5 +282,3 @@ hl(0, "NeotestExpandMarker", { fg = ui.muted })
 hl(0, "NeotestWinSelect",    { fg = syn.foam, bold = true })
 hl(0, "NeotestFocused",      { bold = true, underline = true })
 
-vim.o.winblend = 0
-vim.o.pumblend = 0

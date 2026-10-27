@@ -38,8 +38,11 @@ vim.cmd([[let &t_Ce = "\e[4:0m"]])
 -- Command line / popup menu appearance
 vim.o.cmdheight = 2
 vim.o.pumheight = 20
-vim.o.pumblend = 10 -- transparency for the popup menu
-vim.o.winblend = 10 -- transparency for floating windows
+-- Floats and the popup menu never blend, on transparent themes too: a float
+-- with a transparent background still covers the text behind it. This is the
+-- only place that sets these options.
+vim.o.pumblend = 0
+vim.o.winblend = 0
 
 -- Spell: ensure the personal spellfile directory exists before pointing at it
 local spell_dir = vim.fn.stdpath("config") .. "/spell"

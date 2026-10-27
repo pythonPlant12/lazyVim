@@ -11,7 +11,7 @@ local rose_pine_dawn = require("themes.overrides.rose-pine-dawn")
 
 -- Colorschemes reset highlight groups, so reapply all custom layers afterward.
 local function apply_all()
-  transparency.apply_theme_blend()
+  transparency.apply_snacks_backdrop()
   rose_pine_dawn.apply()
   plugin_groups.apply_custom_hl()
   normalize.apply_cursor_hl()
@@ -27,15 +27,13 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 })
 apply_all()
 
--- Diagnostic floats need an opaque content surface: a transparent float lets
--- the editor text behind it bleed through. Other floating UI stays transparent.
+-- Diagnostic floats get their own opaque surface colors.
 do
   local open_diagnostic_float = vim.diagnostic.open_float
   vim.diagnostic.open_float = function(...)
     local bufnr, win = open_diagnostic_float(...)
     if win and vim.api.nvim_win_is_valid(win) then
       vim.wo[win].winhighlight = "NormalFloat:DiagnosticFloat,FloatBorder:DiagnosticFloatBorder"
-      vim.wo[win].winblend = 0
     end
     return bufnr, win
   end

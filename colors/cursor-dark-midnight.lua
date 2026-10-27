@@ -3,5 +3,5 @@ package.loaded["themes.semantic"] = nil
 require("themes.cursor").apply("midnight")
 
 local transparency = require("themes.engine.transparency")
-transparency.apply_theme_blend()
+transparency.apply_snacks_backdrop()
 transparency.apply_transparent_hl()

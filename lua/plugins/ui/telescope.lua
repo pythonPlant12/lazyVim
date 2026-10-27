@@ -1,4 +1,4 @@
--- Telescope: inverted j/k, no default LazyGit key, and opaque floats.
+-- Telescope: inverted j/k, no default LazyGit key, near-fullscreen layout.
 local picker_open = require("features.picker_open")
 
 return {
@@ -8,9 +8,6 @@ return {
     opts = function(_, opts)
       local actions = require("telescope.actions")
       opts.defaults = opts.defaults or {}
-      -- Telescope reads the global winblend by default, so transparent themes
-      -- (winblend 10) show buffer text through the picker. 0 hides that text.
-      opts.defaults.winblend = 0
       -- Same near-fullscreen size as the Snacks pickers.
       opts.defaults.layout_config = vim.tbl_deep_extend("force", opts.defaults.layout_config or {}, {
         width = 0.95,

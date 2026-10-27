@@ -27,8 +27,6 @@ if type(vim.g.theme_custom_hl) == "table" then
   vim.g.theme_custom_hl = t
 end
 
-vim.o.winblend = 0
-vim.o.pumblend = 0
 vim.g.colors_name = "default-light"
 
 -- Strings.

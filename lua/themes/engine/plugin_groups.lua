@@ -35,7 +35,7 @@ end
 
 -- Central place for custom UI colors shared by completion, pickers, Git, folds, and Neo-tree.
 function M.apply_custom_hl()
-  transparency.apply_theme_blend()
+  transparency.apply_snacks_backdrop()
 
   local hl = vim.api.nvim_set_hl
   local normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
