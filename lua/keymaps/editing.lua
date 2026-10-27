@@ -47,6 +47,36 @@ keymaps.set("n", "<leader>o", function() smart_jump("<C-i>") end, opts)
 
 keymaps.set("n", "<C-o>", function() smart_jump("<C-o>") end, opts)
 
+-- Fold actions run on the whole file in normal mode and on the selected lines in visual mode.
+local function open_folds(first, last)
+  vim.cmd(("silent! %d,%dfoldopen!"):format(first, last))
+end
+
+-- Open all when one fold is closed, else close all levels of the folds that start in the range.
+-- `:foldclose!` also closes the folds around the range, so reopen the ones that start before `first`.
+local function toggle_folds(first, last)
+  for l = first, last do
+    if vim.fn.foldclosed(l) ~= -1 then return open_folds(first, last) end
+  end
+  vim.cmd(("silent! %d,%dfoldclose!"):format(first, last))
+  for l = first, last do
+    while vim.fn.foldclosed(l) ~= -1 and vim.fn.foldclosed(l) < first do
+      vim.cmd(l .. "foldopen")
+    end
+  end
+end
+
+local function map_folds(lhs, action, desc)
+  keymaps.set("n", lhs, function() action(1, vim.fn.line("$")) end, { desc = desc .. " in file" })
+  keymaps.set("x", lhs, function()
+    local a, b = vim.fn.line("v"), vim.fn.line(".")
+    vim.cmd("normal! \27")
+    action(math.min(a, b), math.max(a, b))
+  end, { desc = desc .. " in selection" })
+end
+
+map_folds("za", toggle_folds, "Toggle folds")
+map_folds("zu", open_folds, "Open folds")
 keymaps.set("n", "zc", "za", { desc = "Toggle fold" })
 keymaps.set("v", "zs", "zf", { desc = "Fold selection" })
 
