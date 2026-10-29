@@ -39,6 +39,14 @@ return {
       opts.servers.cssls = vim.tbl_deep_extend("force", opts.servers.cssls or {}, {
         filetypes = { "css", "scss", "less", "html", "htmldjango" },
         on_attach = disable_template_document_highlight,
+        -- Declare the PostCSS mixin and Tailwind at-rules, so cssls stops reporting them as unknown.
+        -- The server reads custom data only from this notification, not from init_options. The URI list
+        -- is wrapped once more because the server spreads an array param into arguments.
+        on_init = function(client)
+          client:notify("css/customDataChanged", {
+            { vim.uri_from_fname(vim.fn.stdpath("config") .. "/lua/lsp/css_custom_data.json") },
+          })
+        end,
       })
 
       opts.servers.emmet_language_server = vim.tbl_deep_extend("force", opts.servers.emmet_language_server or {}, {

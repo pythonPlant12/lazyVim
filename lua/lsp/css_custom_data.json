@@ -1,0 +1,12 @@
+{
+  "version": 1.1,
+  "atDirectives": [
+    { "name": "@define-mixin", "description": "postcss-mixins: define a mixin." },
+    { "name": "@mixin", "description": "postcss-mixins: include a mixin." },
+    { "name": "@mixin-content", "description": "postcss-mixins: insert the content block of the @mixin call." },
+    { "name": "@tailwind", "description": "Tailwind CSS: insert the base, components, or utilities styles." },
+    { "name": "@apply", "description": "Tailwind CSS: insert the styles of utility classes." },
+    { "name": "@screen", "description": "Tailwind CSS: media query for a breakpoint name." },
+    { "name": "@config", "description": "Tailwind CSS: set the config file for this stylesheet." }
+  ]
+}
