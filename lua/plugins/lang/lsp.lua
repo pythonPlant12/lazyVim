@@ -215,17 +215,15 @@ return {
 
       local max_width, max_height = max_popup_size()
 
-      vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
-        border = "rounded",
-        max_width = max_width,
-        max_height = max_height,
-      })
-
-      vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, {
-        border = "rounded",
-        max_width = max_width,
-        max_height = max_height,
-      })
+      -- vim.lsp.with() is gone; hover/signature popups take their options per
+      -- call. The border comes from 'winborder', so only the size is added here.
+      local popup_defaults = { max_width = max_width, max_height = max_height }
+      for _, name in ipairs({ "hover", "signature_help" }) do
+        local orig = vim.lsp.buf[name]
+        vim.lsp.buf[name] = function(config)
+          return orig(vim.tbl_extend("keep", config or {}, popup_defaults))
+        end
+      end
 
       vim.api.nvim_set_hl(0, "@lsp.type.component", { link = "@tag" })
     end,
