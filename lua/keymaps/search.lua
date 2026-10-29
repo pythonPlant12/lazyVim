@@ -105,7 +105,12 @@ local function set_prefixed_search(input)
   return true
 end
 
-keymaps.set("n", "<Esc>", "<cmd>nohlsearch<cr><Esc>", { desc = "Clear search highlight" })
+-- <Esc> also ends a multicursor session (the built-in clear key, <C-l>, is the
+-- jump-forward map here).
+keymaps.set("n", "<Esc>", function()
+  require("keymaps.multicursor").clear()
+  vim.cmd.nohlsearch()
+end, { desc = "Clear search highlight and multicursors" })
 
 -- In a diff view (or gitsigns inline preview) normal-mode n/N navigate hunks,
 -- so landing on a search match in normal mode would silently change what n

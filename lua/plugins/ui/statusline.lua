@@ -41,9 +41,8 @@ return {
       local function mode_chip_color()
         local p = P.get()
         local state = vim.fn.reg_recording() ~= "" and "recording"
-          or vim.g.multicursor_build_mode and "multicursor_build"
           or vim.g.window_resize_mode and "resize"
-          or vim.g.multicursor_mode_active and "multicursor"
+          or require("keymaps.multicursor").active() and "multicursor"
         if state then
           return { fg = p.states[state].fg, bg = p.states[state].bg, gui = "bold" }
         end
@@ -86,9 +85,9 @@ return {
             -- blink.cmp disables all completion while recording; make it loud.
             local rec = vim.fn.reg_recording()
             if rec ~= "" then return "RECORDING @" .. rec end
-            if vim.g.multicursor_build_mode then return "M CURSOR" end
             if vim.g.window_resize_mode then return "RESIZE WINDOW" end
-            if vim.g.multicursor_mode_active then return "MULTI SELECT" end
+            local cursors = require("keymaps.multicursor").count()
+            if cursors > 0 then return "MULTI CURSOR " .. (cursors + 1) end
             return mode
           end,
           color = mode_chip_color,

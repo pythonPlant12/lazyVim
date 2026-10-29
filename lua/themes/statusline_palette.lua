@@ -23,16 +23,14 @@ local mode_dark = {
 -- Special editor states shown in the mode chip (macro recording, multicursor,
 -- window resize). Any theme can override these in its statusline.states block.
 local states_light = {
-  recording         = { fg = "#5C1423", bg = "#F2B8C1" },
-  multicursor_build = { fg = "#4F3800", bg = "#F4D58D" },
-  resize            = { fg = "#5A2E00", bg = "#F1C7A6" },
-  multicursor       = { fg = "#1B4D4A", bg = "#BFE7E3" },
+  recording   = { fg = "#5C1423", bg = "#F2B8C1" },
+  resize      = { fg = "#5A2E00", bg = "#F1C7A6" },
+  multicursor = { fg = "#1B4D4A", bg = "#BFE7E3" },
 }
 local states_dark = {
-  recording         = { fg = "#2B060D", bg = "#E37B8C" },
-  multicursor_build = { fg = "#211600", bg = "#F2C14E" },
-  resize            = { fg = "#271000", bg = "#E6985A" },
-  multicursor       = { fg = "#081F1D", bg = "#7AD7CD" },
+  recording   = { fg = "#2B060D", bg = "#E37B8C" },
+  resize      = { fg = "#271000", bg = "#E6985A" },
+  multicursor = { fg = "#081F1D", bg = "#7AD7CD" },
 }
 
 local defaults_light = {

@@ -14,7 +14,7 @@ lua/
   plugins/                -- lazy.nvim specs, ONE plugin per file
     ai/                   -- copilot, copilot-chat, avante
     coding/               -- blink-cmp, comment, surround, inc-rename, ts-context,
-                          -- multicursor, illuminate, folds, rainbow, colorizer
+                          -- illuminate, folds, rainbow, colorizer
     editor/               -- bookmarks, markdown-preview, grug-far/scooter
     git/                  -- gitsigns, undotree
     lang/                 -- lsp core + java, rust, backend(py), frontend, html,

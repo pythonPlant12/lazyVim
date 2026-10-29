@@ -19,8 +19,8 @@ vim.keymap.set({ "n", "i", "x", "s" }, "<C-s>", "<Nop>", { noremap = true, silen
 -- Macro recording moved from q to Q: a stray q<letter> silently started
 -- recording, and blink.cmp disables ALL completion (insert, / and :) while
 -- recording. Q both starts (Q<register>) and stops (Q) a recording; q is a
--- no-op globally but keeps its buffer-local uses (popups, resize mode,
--- multicursor layer).
+-- no-op globally but keeps its buffer-local uses (popups, resize mode).
+-- The built-in multicursor Q / q= are reached from keymaps/multicursor.lua.
 vim.keymap.set("n", "q", "<Nop>", { noremap = true, silent = true, desc = "Disabled (macro recording is on Q)" })
 vim.keymap.set("n", "Q", "q", { noremap = true, silent = true, desc = "Record macro" })
 
