@@ -38,8 +38,11 @@ local function apply_highlights()
     bg = vim.o.background == "light" and 0xffffff or 0x1a1b26
   end
 
-  -- Theme accents: brackets follow punctuation/special, quotes follow strings.
-  local bracket = hl_color("Special", "fg") or hl_color("Delimiter", "fg") or 0xe0af68
+  -- Theme accents: brackets follow the theme's match_paren, else punctuation/special; quotes follow strings.
+  local theme = vim.g.theme_custom_hl
+  local match_paren = type(theme) == "table" and theme.name == vim.g.colors_name and theme.match_paren
+  local bracket = match_paren and tonumber(match_paren:sub(2), 16)
+    or hl_color("Special", "fg") or hl_color("Delimiter", "fg") or 0xe0af68
   local quote = hl_color("String", "fg") or 0x9ece6a
 
   -- ~0.4 keeps the tint soft yet clearly opaque against the background.
