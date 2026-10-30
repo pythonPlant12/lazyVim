@@ -70,8 +70,12 @@ local function map_folds(lhs, action, desc)
   keymaps.set("n", lhs, function() action(1, vim.fn.line("$")) end, { desc = desc .. " in file" })
   keymaps.set("x", lhs, function()
     local a, b = vim.fn.line("v"), vim.fn.line(".")
+    local first = math.min(a, b)
     vim.cmd("normal! \27")
-    action(math.min(a, b), math.max(a, b))
+    action(first, math.max(a, b))
+    -- Stay on the top of the selection, not on the line where the Visual cursor ended.
+    vim.api.nvim_win_set_cursor(0, { first, 0 })
+    vim.cmd("normal! ^")
   end, { desc = desc .. " in selection" })
 end
 
