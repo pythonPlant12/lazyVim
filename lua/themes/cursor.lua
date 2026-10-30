@@ -239,8 +239,9 @@ function M.apply(variant)
     select_bg = p.selection,
     -- Word-under-cursor matches: bluish so they stay visible on the active row.
     ref_bg = p.name == "cursor-dark-midnight" and "#3D4B63" or p.line_alt,
-    -- Matched bracket: class yellow instead of the pink Special on midnight.
+    -- Matched bracket and LazyGit active border: class yellow instead of the pink Special on midnight.
     match_paren = p.name == "cursor-dark-midnight" and p.type or nil,
+    lazygit_border = p.name == "cursor-dark-midnight" and p.type or nil,
     diag_err = p.red,
     diag_warn = p.warn,
     diag_info = p.info,

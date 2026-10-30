@@ -191,30 +191,19 @@ local function lazygit_theme_name(kind)
   return kind
 end
 
--- Sync LazyGit's config.yml to match the theme, or write a default fallback.
+-- Sync LazyGit's config.yml to the theme's config-<kind>.yml, or a default fallback, with the
+-- theme colors of the LazyGit float in Neovim.
 local function update_lazygit_theme(kind)
   kind = lazygit_theme_name(kind)
-  local src
+  local content
   if type(kind) == "string" and kind ~= "" then
-    src = lazygit_cfg_dir .. "/config-" .. kind .. ".yml"
-  end
-  local dst = lazygit_cfg_dir .. "/config.yml"
-  if src then
-    local rf = io.open(src, "r")
+    local rf = io.open(lazygit_cfg_dir .. "/config-" .. kind .. ".yml", "r")
     if rf then
-      local content = rf:read("*a")
+      content = rf:read("*a")
       rf:close()
-      local wf = io.open(dst, "w")
-      if wf then
-        wf:write(content)
-        wf:close()
-      end
-      return
     end
   end
-  local wf = io.open(dst, "w")
-  if wf then
-    wf:write([[
+  content = content or [[
 gui:
   theme:
     activeBorderColor:
@@ -255,9 +244,8 @@ git:
   paging:
     colorArg: always
     pager: "delta --color-only --syntax-theme=none --paging=never --hunk-header-decoration-style=none"
-]])
-    wf:close()
-  end
+]]
+  require("features.lazygit_theme").write(lazygit_cfg_dir .. "/config.yml", content)
 end
 
 -- Pick the lualine theme hint that matches the given scheme/background.

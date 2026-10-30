@@ -223,6 +223,7 @@ function M.apply_custom_hl()
   hl(0, "TreesitterContextBottom",     { bg = treesitter_context_bg, underline = false })
 
   hl(0, "Folded",            { fg = c.fold_fg, bg = c.fold_bg })
+  hl(0, "LazyGitActiveBorder", { fg = c.lazygit_border or palette.color_from_hl("Special", "fg") })
   hl(0, "FoldColumn",        { fg = c.fold_fg, bg = c.fold_bg })
   hl(0, "UfoFoldedFg",       { fg = c.fold_fg })
   hl(0, "UfoFoldedBg",       { bg = c.fold_bg })

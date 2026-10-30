@@ -135,11 +135,9 @@ return {
       words = { enabled = false },
       -- LazyGit edit actions route through scripts/lazygit-edit to open files in Neovim.
       lazygit = {
-        -- Snacks generates the lazygit theme from Neovim highlights. Its
-        -- default maps the active row to Visual; use the cursorline color.
-        theme = {
-          selectedLineBgColor = { bg = "CursorLine" },
-        },
+        -- Snacks generates the lazygit theme from Neovim highlights; the same
+        -- theme goes to config.yml for lazygit in a terminal.
+        theme = require("features.lazygit_theme").theme,
         win = {
           width = 0,
           height = 0,
