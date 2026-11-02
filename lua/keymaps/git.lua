@@ -276,7 +276,7 @@ local function list_line_commits(path, lnum, cwd, ref)
       if sha then
         cur = {
           ref = sha,
-          label = string.format("%-3s %s  %s  %s", author_initials(author), sha, date, subj or ""),
+          label = string.format("     %-3s %s  %s  %s", author_initials(author), sha, date, subj or ""),
           lines = {},
         }
         items[#items + 1] = cur
@@ -296,6 +296,20 @@ local function list_line_commits(path, lnum, cwd, ref)
     end
   end
   return items, nil
+end
+
+-- Put the branch tip first, marked HEAD, so the branch itself is selectable
+-- even when its last commit did not touch the file or line.
+local function with_branch_head(items, ref, cwd)
+  local head = (list_commits(ref, 1, cwd) or {})[1]
+  if not head then
+    return items
+  end
+  if items[1] and items[1].ref == head.ref then
+    table.remove(items, 1)
+  end
+  table.insert(items, 1, head)
+  return items
 end
 
 -- Pick a ref, set gitsigns' diff base, and preview the current hunk inline.
@@ -330,6 +344,7 @@ local function pick_line_diff_base_and_preview()
       vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Diff" })
       return
     end
+    commits = with_branch_head(commits, branch_item.ref, cwd)
     if #commits == 0 then
       vim.notify("No commits changed this line on " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Diff" })
       return
@@ -531,6 +546,17 @@ local function pick_commit_with_live_diff(picker_opts)
     end
   end
 
+  -- q in either diff pane closes the commit list and the diff, like <C-g>fd.
+  -- While the list is open this is a cancel that keeps the current position.
+  local function close_with_q()
+    if preview.picker and not preview.picker.closed then
+      orig_view = vim.api.nvim_win_call(main_win, vim.fn.winsaveview)
+      preview.picker:close()
+    else
+      preview_close()
+    end
+  end
+
   -- Put `lines` (the file at some ref) into the preview pane and refresh the diff.
   local function apply_preview(lines)
     if not (preview.buf and vim.api.nvim_buf_is_valid(preview.buf)) then
@@ -546,6 +572,9 @@ local function pick_commit_with_live_diff(picker_opts)
       preview.win = vim.api.nvim_open_win(preview.buf, false, { split = "left", win = main_win })
       vim.api.nvim_win_call(preview.win, function() vim.cmd("diffthis") end)
       vim.api.nvim_win_call(main_win, function() vim.cmd("diffthis") end)
+      for _, b in ipairs({ preview.buf, main_buf }) do
+        vim.keymap.set("n", "q", close_with_q, { buffer = b, silent = true })
+      end
       -- Both panes scroll together, same as the plain <C-g>fd diff.
       for _, w in ipairs({ preview.win, main_win }) do
         vim.wo[w].scrollbind = true
@@ -618,6 +647,11 @@ local function pick_commit_with_live_diff(picker_opts)
     sitems[#sitems + 1] = { idx = i, text = it.label, ref = it.ref, label = it.label }
   end
 
+  local focus_file_keys = {}
+  for _, key in ipairs({ "<C-w>j", "<C-w><C-j>", "<C-w>k", "<C-w><C-k>" }) do
+    focus_file_keys[key] = { "focus_diff_file", mode = { "i", "n" } }
+  end
+
   local confirmed = false
   Snacks.picker.pick({
     title = picker_opts.title,
@@ -630,6 +664,8 @@ local function pick_commit_with_live_diff(picker_opts)
     focus = "list",
     -- Leaving the list upwards lands on the file (right pane). Without this
     -- nvim picks the window above by screen position, which is the preview.
+    -- The list is the bottom window, so every vertical key goes up; this
+    -- also covers the swapped <C-w>j/<C-w>k of keymaps/editing.lua.
     actions = {
       focus_diff_file = function()
         if vim.api.nvim_win_is_valid(main_win) then
@@ -637,15 +673,7 @@ local function pick_commit_with_live_diff(picker_opts)
         end
       end,
     },
-    win = {
-      list = { keys = { ["<C-w>k"] = "focus_diff_file", ["<C-w><C-k>"] = "focus_diff_file" } },
-      input = {
-        keys = {
-          ["<C-w>k"] = { "focus_diff_file", mode = { "i", "n" } },
-          ["<C-w><C-k>"] = { "focus_diff_file", mode = { "i", "n" } },
-        },
-      },
-    },
+    win = { list = { keys = focus_file_keys }, input = { keys = focus_file_keys } },
     -- Full-width strip as a real BOTTOM SPLIT (not a float), so it never
     -- covers the diff windows — the file stays fully visible above it.
     layout = {
@@ -672,6 +700,7 @@ local function pick_commit_with_live_diff(picker_opts)
     -- moves to the diff windows it shrinks to a couple of rows, so the file
     -- gets the space back without losing the list.
     on_show = function(picker)
+      preview.picker = picker
       local list_win = picker.list.win.win
       if not (list_win and vim.api.nvim_win_is_valid(list_win)) then
         return
@@ -720,13 +749,8 @@ local function pick_commit_with_live_diff(picker_opts)
           return
         end
         if picker_opts.keep_diff then
-          -- Ensure the preview matches the picked commit, then hand q the close.
+          -- Ensure the preview matches the picked commit; q still closes it.
           preview_show(item.ref)
-          for _, b in ipairs({ main_buf, preview.buf }) do
-            if b and vim.api.nvim_buf_is_valid(b) then
-              vim.keymap.set("n", "q", preview_close, { buffer = b, silent = true })
-            end
-          end
           -- Closing either diff window (q, :q, <C-w>q) tears the whole diff
           -- down and returns to the file.
           for _, w in ipairs({ preview.win, main_win }) do
@@ -747,13 +771,18 @@ local function pick_commit_with_live_diff(picker_opts)
       end)
     end,
     on_close = function()
+      if confirmed then
+        return
+      end
+      -- Snacks closes its split on the next tick; with splitkeep=screen that
+      -- moves the file cursor, so restore the view one tick after it.
       vim.schedule(function()
-        if not confirmed then
-          preview_close()
+        preview_close()
+        vim.schedule(function()
           if vim.api.nvim_win_is_valid(main_win) then
             vim.api.nvim_win_call(main_win, function() vim.fn.winrestview(orig_view) end)
           end
-        end
+        end)
       end)
     end,
   })
@@ -790,6 +819,7 @@ local function pick_diff_base_and_open()
       vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Diff" })
       return
     end
+    commits = with_branch_head(commits, branch_item.ref, cwd)
     if #commits == 0 then
       vim.notify("No commits changed this file on " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Diff" })
       return
@@ -847,6 +877,7 @@ local function pick_ref_and_restore_file()
       vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Restore" })
       return
     end
+    commits = with_branch_head(commits, branch_item.ref, cwd)
     if #commits == 0 then
       vim.notify("No commits changed this file on " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Restore" })
       return
