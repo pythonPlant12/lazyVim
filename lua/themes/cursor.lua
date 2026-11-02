@@ -1,5 +1,5 @@
--- Cursor-editor-inspired themes (dark / dark-midnight / light): palettes plus
--- the full highlight application shared by the three colors/cursor-*.lua files.
+-- Cursor-editor-inspired themes (dark / dark-midnight / dark-midnight-dimmed / light): palettes plus
+-- the full highlight application shared by the colors/cursor-*.lua files.
 local M = {}
 
 local themes = {
@@ -216,8 +216,63 @@ local statusline_palettes = {
   },
 }
 
+-- Meteorite Gray Dimmed: every Meteorite Gray color with the same hue, at 55%
+-- of the saturation, and bright colors pulled a fifth of the way down to mid
+-- lightness. Dark colors (backgrounds, lines, borders) stay as they are, so the
+-- role logic and the UI are identical; only the color strength differs.
+-- With `dark` set, dark colors (diff backgrounds) get the same saturation cut
+-- and keep their lightness.
+local function dim(hex, dark)
+  if type(hex) ~= "string" or not hex:match("^#%x%x%x%x%x%x$") then return hex end
+  local r, g, b = tonumber(hex:sub(2, 3), 16) / 255, tonumber(hex:sub(4, 5), 16) / 255, tonumber(hex:sub(6, 7), 16) / 255
+  local max, min = math.max(r, g, b), math.min(r, g, b)
+  local l = (max + min) / 2
+  if l < 0.45 and not dark then return hex end
+  local h, s = 0, 0
+  if max ~= min then
+    local d = max - min
+    s = l > 0.5 and d / (2 - max - min) or d / (max + min)
+    if max == r then h = (g - b) / d + (g < b and 6 or 0)
+    elseif max == g then h = (b - r) / d + 2
+    else h = (r - g) / d + 4 end
+    h = h / 6
+  end
+  s = s * 0.55
+  if l > 0.5 and not dark then l = l - (l - 0.5) * 0.2 end
+  local function hue(p, q, t)
+    t = t % 1
+    if t < 1 / 6 then return p + (q - p) * 6 * t end
+    if t < 1 / 2 then return q end
+    if t < 2 / 3 then return p + (q - p) * (2 / 3 - t) * 6 end
+    return p
+  end
+  local q = l < 0.5 and l * (1 + s) or l + s - l * s
+  local p = 2 * l - q
+  local function byte(v) return math.floor(v * 255 + 0.5) end
+  return string.format("#%02X%02X%02X", byte(hue(p, q, h + 1 / 3)), byte(hue(p, q, h)), byte(hue(p, q, h - 1 / 3)))
+end
+
+local function dimmed(t)
+  local out = {}
+  for k, v in pairs(t) do
+    out[k] = type(v) == "table" and dimmed(v) or dim(v)
+  end
+  return out
+end
+
+themes.midnight_dimmed = dimmed(themes.midnight)
+themes.midnight_dimmed.name = "cursor-dark-midnight-dimmed"
+-- Active line a step darker than Meteorite Gray's, to suit the softer text.
+themes.midnight_dimmed.line = "#414855"
+statusline_palettes["cursor-dark-midnight-dimmed"] = dimmed(statusline_palettes["cursor-dark-midnight"])
+
 function M.apply(variant)
   local p = assert(themes[variant], "unknown Cursor theme variant: " .. tostring(variant))
+  -- Meteorite Gray and its dimmed variant share the same UI rules.
+  local midnight = p.name:find("^cursor%-dark%-midnight") ~= nil
+  -- Diff backgrounds of the dimmed variant: same hues, dimmed saturation.
+  local diff_bg = p.name == "cursor-dark-midnight-dimmed" and function(hex) return dim(hex, true) end
+    or function(hex) return hex end
 
   if vim.fn.has("termguicolors") == 1 then
     vim.o.termguicolors = true
@@ -238,25 +293,25 @@ function M.apply(variant)
     float_bg = p.panel,
     select_bg = p.selection,
     -- Word-under-cursor matches: bluish so they stay visible on the active row.
-    ref_bg = p.name == "cursor-dark-midnight" and "#3D4B63" or p.line_alt,
+    ref_bg = midnight and "#3D4B63" or p.line_alt,
     -- Matched bracket and LazyGit active border: class yellow instead of the pink Special on midnight.
-    match_paren = p.name == "cursor-dark-midnight" and p.type or nil,
-    lazygit_border = p.name == "cursor-dark-midnight" and p.type or nil,
+    match_paren = midnight and p.type or nil,
+    lazygit_border = midnight and p.type or nil,
     diag_err = p.red,
     diag_warn = p.warn,
     diag_info = p.info,
     diag_hint = p.hint,
-    diff_add = p.name == "cursor-light" and "#D8F0E3" or (p.name == "cursor-dark" and "#1F3327" or "#24483D"),
-    diff_del = p.name == "cursor-light" and "#FFDDE3" or (p.name == "cursor-dark" and "#331720" or "#512C3C"),
-    diff_change = (p.name == "cursor-dark-midnight") and "#63481E" or p.line_alt,
-    diff_text = (p.name == "cursor-dark-midnight") and "#8A6526" or p.selection,
+    diff_add = diff_bg(p.name == "cursor-light" and "#D8F0E3" or (p.name == "cursor-dark" and "#1F3327" or "#24483D")),
+    diff_del = diff_bg(p.name == "cursor-light" and "#FFDDE3" or (p.name == "cursor-dark" and "#331720" or "#512C3C")),
+    diff_change = diff_bg(midnight and "#63481E" or p.line_alt),
+    diff_text = diff_bg(midnight and "#8A6526" or p.selection),
     diff_context = p.bg,
     gadd_inline = p.green,
     gdel_inline = p.red,
     gchg_inline = p.warn,
-    gadd_ln = p.name == "cursor-light" and "#D8F0E3" or (p.name == "cursor-dark" and "#1F3327" or "#2B3A32"),
-    gdel_ln = p.name == "cursor-light" and "#FFDDE3" or (p.name == "cursor-dark" and "#331720" or "#3A2429"),
-    gchg_ln = (p.name == "cursor-dark-midnight") and "#503C1B" or p.line_alt,
+    gadd_ln = diff_bg(p.name == "cursor-light" and "#D8F0E3" or (p.name == "cursor-dark" and "#1F3327" or "#2B3A32")),
+    gdel_ln = diff_bg(p.name == "cursor-light" and "#FFDDE3" or (p.name == "cursor-dark" and "#331720" or "#3A2429")),
+    gchg_ln = diff_bg(midnight and "#503C1B" or p.line_alt),
     neotree_added = p.green,
     neotree_mod = p.warn,
     neotree_red = p.red,
@@ -304,24 +359,24 @@ function M.apply(variant)
     -- Light theme needs light indent guides: inactive lines are a faint gray
     -- (not near-black), the active scope gets the accent color.
     indent_fg = (p.name == "cursor-light") and "#DCDCDC"
-      or (p.name == "cursor-dark-midnight") and "#626262"
+      or midnight and "#626262"
       or (p.name == "cursor-dark") and "#2C2C2C"
       or "#272c36",
     indent_scope_fg = (p.name == "cursor-light") and p.accent
-      or (p.name == "cursor-dark-midnight") and p.property
+      or midnight and p.property
       or (p.name == "cursor-dark") and "#626262"
       or "#4c566a",
     context_bg = p.selection,
     -- Midnight keeps the buffer cursorline darker than list cursor rows.
-    cursorline_bg = p.name == "cursor-dark-midnight" and p.line or p.selection,
+    cursorline_bg = midnight and p.line or p.selection,
     treesitter_context_bg = p.line_alt,
     context_opaque = true,
     fold_bg = p.panel_alt,
     fold_fg = p.muted,
-    blame_fg = p.name == "cursor-dark-midnight" and "#7A8290" or p.faint,
+    blame_fg = midnight and "#7A8290" or p.faint,
     -- Inline completion preview (blink ghost text). Default links to NonText,
     -- which is too dark on the midnight background; lift it to a readable gray.
-    ghost_fg = p.name == "cursor-dark-midnight" and "#72767E" or p.faint,
+    ghost_fg = midnight and "#72767E" or p.faint,
   }
 
   vim.cmd("highlight clear")
@@ -401,13 +456,13 @@ function M.apply(variant)
   hl(0, "Type",        { fg = p.type })
   hl(0, "Constant",    { fg = p.constant })
   hl(0, "PreProc",     { fg = p.preproc })
-  hl(0, "Special",     { fg = p.name == "cursor-dark-midnight" and p.property or p.special })
+  hl(0, "Special",     { fg = midnight and p.property or p.special })
   hl(0, "Delimiter",   { fg = p.fg })
 
   -- Treesitter + LSP token colors are assigned by semantic category through the
   -- shared registry (themes/semantic.lua). Every language variant and LSP
   -- semantic token inherits its color from this one map.
-  local namespace = p.name == "cursor-dark-midnight" and p.type or p.blue
+  local namespace = midnight and p.type or p.blue
   require("themes.semantic").apply(hl, {
     ["function.call"]       = p.func,
     ["function.definition"] = p.func,
@@ -436,10 +491,10 @@ function M.apply(variant)
   -- Handled outside the registry: URL underline, and HTML/tag groups.
   hl(0, "@string.special.url", { fg = p.special, underline = true })
 
-  local attribute = p.name == "cursor-dark-midnight" and p.property or p.type
-  local tag = p.name == "cursor-dark-midnight" and p.blue or p.keyword
-  local tag_delimiter = p.name == "cursor-dark-midnight" and p.blue or p.muted
-  local tag_name = p.name == "cursor-dark-midnight" and p.blue or p.keyword
+  local attribute = midnight and p.property or p.type
+  local tag = midnight and p.blue or p.keyword
+  local tag_delimiter = midnight and p.blue or p.muted
+  local tag_name = midnight and p.blue or p.keyword
   hl(0, "@tag",               { fg = tag })
   hl(0, "@tag.builtin",       { fg = tag })
   hl(0, "@tag.attribute",     { fg = attribute })

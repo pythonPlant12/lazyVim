@@ -15,6 +15,7 @@ local valid_schemes = {
   ["islands-rose-pine-light"] = true,
   ["cursor-dark"] = true,
   ["cursor-dark-midnight"] = true,
+  ["cursor-dark-midnight-dimmed"] = true,
   ["cursor-light"] = true,
   ["rose-pine"] = true,
   ["rose-pine-dawn"] = true,
@@ -54,7 +55,7 @@ do
   }
   local is_light = light_schemes[cs] or (cs == "catppuccin" and catppuccin_flavour == "latte")
   vim.o.background = is_light and "light" or "dark"
-  if cs == "cursor-dark" or cs == "cursor-dark-midnight" or cs == "cursor-light" then
+  if cs == "cursor-dark" or cs == "cursor-dark-midnight" or cs == "cursor-dark-midnight-dimmed" or cs == "cursor-light" then
     vim.g._lualine_theme_hint = cs
   elseif cs == "default-light" or cs == "islands-white" or cs == "islands-light" then
     vim.g._lualine_theme_hint = "islands-light"

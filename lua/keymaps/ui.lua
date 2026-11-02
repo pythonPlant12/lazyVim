@@ -185,6 +185,9 @@ local function lazygit_theme_name(kind)
   if kind == "cursor-dark-midnight" then
     return "meteorite-gray"
   end
+  if kind == "cursor-dark-midnight-dimmed" then
+    return "meteorite-gray-dimmed"
+  end
   if kind == "islands-white" then
     return "islands-light"
   end
@@ -256,7 +259,7 @@ local function lualine_theme_hint(scheme, background)
   if scheme == "default-dark" or scheme == "islands-dark" then
     return "islands-dark"
   end
-  if scheme == "cursor-dark" or scheme == "cursor-dark-midnight" or scheme == "cursor-light" then
+  if scheme == "cursor-dark" or scheme == "cursor-dark-midnight" or scheme == "cursor-dark-midnight-dimmed" or scheme == "cursor-light" then
     return scheme
   end
   return scheme:find("^islands") and ("islands-" .. background) or "auto"
@@ -351,6 +354,7 @@ keymaps.set("n", "<leader>ut", function()
     { label = "Default Dark Theme",        action = function() apply_theme_mode("dark") end },
     { label = "Meteorite Dark",            action = function() apply_scheme("cursor-dark", "dark") end },
     { label = "Meteorite Gray",            action = function() apply_scheme("cursor-dark-midnight", "dark") end },
+    { label = "Meteorite Gray Dimmed",     action = function() apply_scheme("cursor-dark-midnight-dimmed", "dark") end },
     { label = "Meteorite Light",           action = function() apply_scheme("cursor-light", "light") end },
     { label = "Default Light Theme",       action = function() apply_scheme("default-light", "light") end },
     { label = "Default White Theme",       action = function() apply_theme_mode("light") end },

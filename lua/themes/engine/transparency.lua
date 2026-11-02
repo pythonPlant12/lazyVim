@@ -9,6 +9,7 @@ local transparent_names = {
   ["islands-light"] = true,
   ["islands-rose-pine-dark"] = true,
   ["cursor-dark-midnight"] = true,
+  ["cursor-dark-midnight-dimmed"] = true,
 }
 
 -- True when the given colorscheme name is a transparent variant.
