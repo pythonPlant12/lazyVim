@@ -58,10 +58,9 @@ return {
     "MagicDuck/grug-far.nvim",
     opts = {
       windowCreationCommand = "botright vsplit",
-      -- Never trim long result lines. Syncing (e.g. <S-CR>) writes the
-      -- displayed line back to the file, so a trimmed line would corrupt it
-      -- with truncated text plus the "... (very long line ...)" marker.
-      maxLineLength = -1,
+      -- Trim long result lines (minified build files) to keep the buffer fast.
+      -- The config below stops sync from writing a trimmed line back.
+      maxLineLength = 500,
       keymaps = {
         -- grug-far's default <enter> action is gotoLocation, which calls
         -- nvim_win_set_cursor without guarding against stale result line
@@ -81,8 +80,6 @@ return {
           extraArgs = "--hidden -g !.git",
         },
       },
-      -- Result folding hides context while editing replacements.
-      folding = { enabled = false },
     },
     -- Set up grug-far, patch a CRLF bug, and add buffer-local keymaps per instance.
     config = function(_, opts)
@@ -98,6 +95,20 @@ return {
           return string.sub(line, 1, -2)
         end
         return line
+      end
+
+      -- Sync writes each changed result line back to its file. A trimmed line
+      -- holds only its first maxLineLength chars plus a marker, so skip it.
+      local results = require("grug-far.render.resultsList")
+      local for_each_changed = results.forEachChangedLocation
+      results.forEachChangedLocation = function(buf, context, start_row, end_row, callback, force)
+        for_each_changed(buf, context, start_row, end_row, function(loc, new_line, ...)
+          if new_line:find("%.%.%. %(very long line, trimmed to %d+ chars%)$") then
+            vim.notify_once("grug-far: sync skips trimmed long lines", vim.log.levels.WARN)
+            return
+          end
+          callback(loc, new_line, ...)
+        end, force)
       end
 
       vim.api.nvim_create_autocmd("FileType", {
