@@ -127,6 +127,9 @@ function M.apply_custom_hl()
   hl(0, "DiffDelete", { bg = c.diff_del })
   hl(0, "DiffChange", { bg = c.diff_change })
   hl(0, "DiffText",   { bg = c.diff_text })
+  -- Changed chars per diff side (mapped in keymaps/git.lua): red old, green new.
+  hl(0, "DiffTextOld", { bg = c.diff_del })
+  hl(0, "DiffTextNew", { bg = c.diff_add })
   local snacks_diff_context = transparency.is_transparent_theme() and "NONE" or border_bg
   hl(0, "SnacksDiffContext",         { bg = snacks_diff_context })
   hl(0, "SnacksDiffContextLineNr",   { bg = snacks_diff_context })

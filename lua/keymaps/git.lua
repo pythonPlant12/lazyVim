@@ -380,6 +380,12 @@ end
 
 keymaps.set("n", "<C-g>lD", pick_line_diff_base_and_preview, { desc = "Line diff against ref" })
 
+-- Show changed chars inside a changed line in red on the old side and green
+-- on the new side. A nil side clears the mapping.
+local function color_diff_side(win, side)
+  vim.wo[win].winhighlight = side and ("DiffText:DiffText%s,DiffTextAdd:DiffText%s"):format(side, side) or ""
+end
+
 -- Native gitsigns diff; q closes only the diff (scratch pane + diff mode),
 -- leaving every other split untouched. The right pane is the real buffer, so
 -- closing the diff leaves the cursor exactly where it was.
@@ -406,6 +412,7 @@ local function open_file_diff_fullscreen(base)
             pcall(vim.api.nvim_win_close, win, true)
           else
             vim.api.nvim_win_call(win, function() vim.cmd("diffoff") end)
+            color_diff_side(win, nil)
           end
         end
       end
@@ -417,6 +424,9 @@ local function open_file_diff_fullscreen(base)
 
     for _, win in ipairs(diff_wins) do
       vim.keymap.set("n", "q", close_diff, { buffer = vim.api.nvim_win_get_buf(win), silent = true })
+      -- The gitsigns:// pane holds the base (old) version.
+      local is_base = vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(win)):match("^gitsigns://")
+      color_diff_side(win, is_base and "Old" or "New")
     end
 
     -- If the scratch pane is closed by other means (:q, :close), still clean up.
@@ -536,6 +546,9 @@ local function pick_commit_with_live_diff(picker_opts)
         end
       end
     end
+    if vim.api.nvim_win_is_valid(main_win) then
+      color_diff_side(main_win, nil)
+    end
     preview.win, preview.buf, preview.ref = nil, nil, nil
     pcall(vim.keymap.del, "n", "q", { buffer = main_buf })
     -- Land back on the file.
@@ -580,6 +593,8 @@ local function pick_commit_with_live_diff(picker_opts)
         vim.wo[w].scrollbind = true
         vim.wo[w].cursorbind = true
       end
+      color_diff_side(preview.win, "Old")
+      color_diff_side(main_win, "New")
       -- While the picker has focus, scrollbind doesn't act on mouse scrolls
       -- of the (unfocused) file pane; mirror them to the preview manually.
       preview.scroll_autocmd = vim.api.nvim_create_autocmd("WinScrolled", {
