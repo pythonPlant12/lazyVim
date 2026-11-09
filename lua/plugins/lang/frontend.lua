@@ -34,6 +34,17 @@ local function vue_language_server_path()
   return normalize("/usr/local/lib/node_modules/@vue/language-server")
 end
 
+-- Nearest name at or above path, up to and including the workspace root
+-- (find skips the stop dir).
+local function find_up(name, path, type)
+  return vim.fs.find(name, {
+    path = path,
+    upward = true,
+    type = type,
+    stop = vim.fs.dirname(resolver.workspace_root()),
+  })[1]
+end
+
 local function vue_typescript_plugin()
   return {
     name = "@vue/typescript-plugin",
@@ -71,20 +82,18 @@ return {
       opts.servers.tsserver = { enabled = false }
 
       opts.servers.vtsls = vim.tbl_deep_extend("force", opts.servers.vtsls or {}, {
+        -- tsserver finds references only in its own server, so all packages
+        -- of a pnpm workspace share one server.
         root_dir = function(bufnr, on_dir)
-          on_dir(resolver.nearest_root_by_markers(bufnr, resolver.frontend_markers.vtsls))
+          local root = resolver.nearest_root_by_markers(bufnr, resolver.frontend_markers.vtsls)
+          local pnpm_workspace = find_up("pnpm-workspace.yaml", root, "file")
+          on_dir(pnpm_workspace and vim.fs.dirname(pnpm_workspace) or root)
         end,
         -- autoUseWorkspaceTsdk looks only in the root. A monorepo subproject
         -- without its own TypeScript then gets the bundled version, which can
-        -- resolve modules differently from the build. Use the nearest one up,
-        -- up to and including the workspace root (find skips the stop dir).
+        -- resolve modules differently from the build. Use the nearest one up.
         before_init = function(_, config)
-          local tsdk = vim.fs.find("node_modules/typescript/lib", {
-            path = config.root_dir,
-            upward = true,
-            type = "directory",
-            stop = vim.fs.dirname(resolver.workspace_root()),
-          })[1]
+          local tsdk = find_up("node_modules/typescript/lib", config.root_dir, "directory")
           if tsdk then
             config.settings.typescript.tsdk = tsdk
           end
