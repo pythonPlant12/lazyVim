@@ -386,6 +386,27 @@ local function color_diff_side(win, side)
   vim.wo[win].winhighlight = side and ("DiffText:DiffText%s,DiffTextAdd:DiffText%s"):format(side, side) or ""
 end
 
+-- Every diff view gets the side colors. A revision pane (gitsigns://, scratch)
+-- is the old side; with only real files, the first pane is the old side.
+local function color_diff_sides()
+  local wins = vim.tbl_filter(function(w) return vim.wo[w].diff end, vim.api.nvim_tabpage_list_wins(0))
+  local function is_revision(w)
+    local buf = vim.api.nvim_win_get_buf(w)
+    return vim.bo[buf].buftype ~= "" or vim.api.nvim_buf_get_name(buf):find("://") ~= nil
+  end
+  local has_revision = vim.iter(wins):any(is_revision)
+  for i, w in ipairs(wins) do
+    local is_old = has_revision and is_revision(w) or (not has_revision and i == 1)
+    color_diff_side(w, is_old and "Old" or "New")
+  end
+end
+vim.api.nvim_create_autocmd("DiffUpdated", {
+  group = vim.api.nvim_create_augroup("diff_side_colors", { clear = true }),
+  callback = color_diff_sides,
+})
+-- `nvim -d` (git difftool) diffs before this module loads.
+color_diff_sides()
+
 -- Native gitsigns diff; q closes only the diff (scratch pane + diff mode),
 -- leaving every other split untouched. The right pane is the real buffer, so
 -- closing the diff leaves the cursor exactly where it was.
@@ -424,9 +445,6 @@ local function open_file_diff_fullscreen(base)
 
     for _, win in ipairs(diff_wins) do
       vim.keymap.set("n", "q", close_diff, { buffer = vim.api.nvim_win_get_buf(win), silent = true })
-      -- The gitsigns:// pane holds the base (old) version.
-      local is_base = vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(win)):match("^gitsigns://")
-      color_diff_side(win, is_base and "Old" or "New")
     end
 
     -- If the scratch pane is closed by other means (:q, :close), still clean up.
@@ -593,8 +611,6 @@ local function pick_commit_with_live_diff(picker_opts)
         vim.wo[w].scrollbind = true
         vim.wo[w].cursorbind = true
       end
-      color_diff_side(preview.win, "Old")
-      color_diff_side(main_win, "New")
       -- While the picker has focus, scrollbind doesn't act on mouse scrolls
       -- of the (unfocused) file pane; mirror them to the preview manually.
       preview.scroll_autocmd = vim.api.nvim_create_autocmd("WinScrolled", {
