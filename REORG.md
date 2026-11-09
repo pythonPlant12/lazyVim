@@ -12,7 +12,7 @@ colors/<theme>.lua        -- ONE complete theme per file: palette, UI/plugin/git
 lua/
   config/                 -- options, lazy.nvim setup, entry delegators
   plugins/                -- lazy.nvim specs, ONE plugin per file
-    ai/                   -- copilot, copilot-chat, avante
+    ai/                   -- copilot, copilot-chat
     coding/               -- blink-cmp, comment, surround, inc-rename, ts-context,
                           -- illuminate, folds, rainbow, colorizer
     editor/               -- bookmarks, markdown-preview, grug-far/scooter
