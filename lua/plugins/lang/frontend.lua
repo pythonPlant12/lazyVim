@@ -74,6 +74,21 @@ return {
         root_dir = function(bufnr, on_dir)
           on_dir(resolver.nearest_root_by_markers(bufnr, resolver.frontend_markers.vtsls))
         end,
+        -- autoUseWorkspaceTsdk looks only in the root. A monorepo subproject
+        -- without its own TypeScript then gets the bundled version, which can
+        -- resolve modules differently from the build. Use the nearest one up,
+        -- up to and including the workspace root (find skips the stop dir).
+        before_init = function(_, config)
+          local tsdk = vim.fs.find("node_modules/typescript/lib", {
+            path = config.root_dir,
+            upward = true,
+            type = "directory",
+            stop = vim.fs.dirname(resolver.workspace_root()),
+          })[1]
+          if tsdk then
+            config.settings.typescript.tsdk = tsdk
+          end
+        end,
         filetypes = {
           "javascript",
           "javascriptreact",
