@@ -593,6 +593,11 @@ local function pick_commit_with_live_diff(picker_opts)
     else
       -- Content changed under an existing diff; recompute it.
       vim.api.nvim_win_call(main_win, function() vim.cmd("diffupdate") end)
+      -- Replacing the preview lines opens all its folds, but the file pane
+      -- keeps its closed folds and the panes lose alignment. Reset both.
+      for _, w in ipairs({ preview.win, main_win }) do
+        vim.api.nvim_win_call(w, function() vim.cmd("normal! zX") end)
+      end
     end
     -- Land on the first hunk instead of the top of the file on every hover.
     vim.api.nvim_win_call(main_win, function()
