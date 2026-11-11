@@ -153,6 +153,14 @@ return {
             editAtLineAndWait = ("python3 %s \"{{filename}}\" \"{{line}}\""):format(vim.fn.shellescape(vim.fn.stdpath("config") .. "/scripts/lazygit-edit")),
             editInTerminal = false,
           },
+          -- <C-j>/<C-k> switch Neovim tabs (autocmds/integrations.lua), so commits
+          -- move only with Ctrl+Shift+Up/Down.
+          keybinding = {
+            commits = {
+              moveDownCommit = "<ctrl+shift+down>",
+              moveUpCommit = "<ctrl+shift+up>",
+            },
+          },
         },
       },
       -- Inline image/PDF previews for docs and picker preview panes.
