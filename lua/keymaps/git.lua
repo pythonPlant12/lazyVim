@@ -92,11 +92,49 @@ keymaps.set("n", "<C-g>g", function()
     },
   })
 end, { desc = "Lazygit" })
+-- A changed hunk in the inline preview keeps the red and green lines and
+-- marks the changed chars in a slightly lighter red and green.
+-- Added-only and deleted-only hunks keep the gitsigns colors.
+local change_hunk_hl = table.concat({
+  "GitSignsAddInline:LineDiffNewText",
+  "GitSignsChangeInline:LineDiffNewText",
+  "GitSignsDeleteVirtLnInLine:LineDiffOldText",
+}, ",")
+
+local function preview_line_diff()
+  local win, buf = vim.api.nvim_get_current_win(), vim.api.nvim_get_current_buf()
+  require("gitsigns").preview_hunk_inline(function()
+    vim.schedule(function()
+      local ns = vim.api.nvim_create_namespace("gitsigns_preview_inline")
+      local has_old, has_new = false, false
+      for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(buf, ns, 0, -1, { details = true })) do
+        has_old = has_old or mark[4].virt_lines ~= nil
+        has_new = has_new or mark[4].hl_group == "GitSignsAddPreview"
+      end
+      if not (has_old and has_new and vim.api.nvim_win_is_valid(win)) then
+        return
+      end
+      local prev_hl = vim.wo[win].winhighlight
+      vim.wo[win].winhighlight = prev_hl == "" and change_hunk_hl or prev_hl .. "," .. change_hunk_hl
+      -- gitsigns clears the preview on the same events.
+      vim.api.nvim_create_autocmd({ "CursorMoved", "InsertEnter", "BufLeave" }, {
+        buffer = buf,
+        once = true,
+        callback = function()
+          if vim.api.nvim_win_is_valid(win) then
+            vim.wo[win].winhighlight = prev_hl
+          end
+        end,
+      })
+    end)
+  end)
+end
+
 keymaps.set("n", "<C-g>l",  "<Nop>", opts) -- disable bare <C-g>l so it acts only as a prefix
 keymaps.set("n", "<C-g>h",  function() Snacks.picker.git_log({ cwd = LazyVim.root.git() }) end, { desc = "Git history" })
 keymaps.set("n", "<C-g>s",  function() Snacks.picker.git_status() end, { desc = "Git status" })
 keymaps.set("n", "<C-g>d",  function() Snacks.picker.git_diff() end, { desc = "Git diff" })
-keymaps.set("n", "<C-g>ld", function() require("gitsigns").preview_hunk_inline() end, { desc = "Line diff" })
+keymaps.set("n", "<C-g>ld", preview_line_diff, { desc = "Line diff" })
 keymaps.set("n", "<C-g>lh", function() Snacks.picker.git_log_line() end, { desc = "Line history" })
 keymaps.set("n", "<C-g>lr", function() require("gitsigns").reset_hunk() end, { desc = "Revert line/hunk to HEAD" })
 -- Return the git toplevel, falling back to cwd when not in a repo.
@@ -358,7 +396,7 @@ local function pick_line_diff_base_and_preview()
       local gs = require("gitsigns")
       local buf = vim.api.nvim_get_current_buf()
       gs.change_base(commit_item.ref, false)
-      gs.preview_hunk_inline()
+      preview_line_diff()
       -- The changed base is only for this preview. The same events that
       -- dismiss the inline preview also restore the default base (index),
       -- so gutter signs and <C-g>fd don't keep diffing against the commit.

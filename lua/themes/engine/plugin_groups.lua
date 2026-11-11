@@ -6,6 +6,16 @@ local normalize = require("themes.engine.normalize")
 
 local M = {}
 
+-- Move hex color `from` toward hex color `to` by `amount` (0..1).
+local function mix(from, to, amount)
+  if not (from and to and from:match("^#%x+$") and to:match("^#%x+$")) then
+    return from
+  end
+  local function chan(hex, i) return tonumber(hex:sub(i, i + 1), 16) end
+  local function blend(i) return math.floor(chan(from, i) + (chan(to, i) - chan(from, i)) * amount + 0.5) end
+  return ("#%02x%02x%02x"):format(blend(2), blend(4), blend(6))
+end
+
 -- Snacks computes diff groups lazily; patch them after it is available.
 function M.apply_snacks_diff_hl()
   if Snacks == nil then return end
@@ -130,6 +140,11 @@ function M.apply_custom_hl()
   -- Changed chars per diff side (mapped in keymaps/git.lua): red old, green new.
   hl(0, "DiffTextOld", { bg = c.diff_del })
   hl(0, "DiffTextNew", { bg = c.diff_add })
+  -- Changed chars in a changed line of the inline line diff (mapped in
+  -- keymaps/git.lua): the deleted and added line colors, a bit lighter.
+  local text_fg = palette.color_from_hl("Normal", "fg", "#BCBEC4")
+  hl(0, "LineDiffOldText", { bg = mix(c.diff_del, text_fg, 0.1) })
+  hl(0, "LineDiffNewText", { bg = mix(c.diff_add, text_fg, 0.1) })
   local snacks_diff_context = transparency.is_transparent_theme() and "NONE" or border_bg
   hl(0, "SnacksDiffContext",         { bg = snacks_diff_context })
   hl(0, "SnacksDiffContextLineNr",   { bg = snacks_diff_context })
