@@ -295,6 +295,9 @@ return {
         hide_dotfiles = false,
         hide_gitignored = false,
       }
+      -- / matches the whole path, so `node_modules/.pnpm` finds nested items;
+      -- a space matches any text (`pnpm accepts`).
+      opts.filesystem.find_by_full_path_words = true
       opts.filesystem.follow_current_file = { enabled = true }
       opts.filesystem.bind_to_cwd = false
       opts.filesystem.window = opts.filesystem.window or {}
