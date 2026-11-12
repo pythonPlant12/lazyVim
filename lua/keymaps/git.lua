@@ -334,23 +334,22 @@ local function open_file_diff_fullscreen(base)
   end, 50)
 end
 
--- Pick a branch then commit and open that ref's diff in fullscreen.
--- Only commits that touched the current file are offered.
-local function pick_diff_base_and_open()
+-- Branch prompt, then the commits of that branch that changed the current
+-- file, tip first: on_pick(branch, commits). title names the notices.
+local function pick_branch_commits(title, on_pick)
   local fpath = current_real_file()
   if fpath == "" then
-    vim.notify("No file in current buffer", vim.log.levels.ERROR, { title = "Git Diff" })
+    vim.notify("No file in current buffer", vim.log.levels.ERROR, { title = title })
     return
   end
   local cwd = live_diff.git_root()
-  local active = current_branch(cwd)
-  local branches, err = list_branches(active, cwd)
+  local branches, err = list_branches(current_branch(cwd), cwd)
   if not branches then
-    vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = "Git Diff" })
+    vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = title })
     return
   end
   if #branches == 0 then
-    vim.notify("No branches found", vim.log.levels.WARN, { title = "Git Diff" })
+    vim.notify("No branches found", vim.log.levels.WARN, { title = title })
     return
   end
 
@@ -362,22 +361,29 @@ local function pick_diff_base_and_open()
 
     local commits, commits_err = live_diff.list_commits(branch_item.ref, 150, cwd, fpath)
     if not commits then
-      vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Diff" })
+      vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = title })
       return
     end
     commits = live_diff.with_branch_head(commits, branch_item.ref, cwd)
     if #commits == 0 then
-      vim.notify("No commits changed this file on " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Diff" })
+      vim.notify("No commits changed this file on " .. branch_item.ref, vim.log.levels.WARN, { title = title })
       return
     end
+    on_pick(branch_item.ref, commits)
+  end)
+end
 
+-- Pick a branch then commit and open that ref's diff in fullscreen.
+-- Only commits that touched the current file are offered.
+local function pick_diff_base_and_open()
+  pick_branch_commits("Git Diff", function(branch, commits)
     -- Hovering a commit shows the diff live in the background; <CR> keeps it
     -- open (q closes), <Esc> restores the previous layout.
     live_diff.pick({
       items = commits,
-      title = "Diff against commit (" .. branch_item.ref .. ")",
+      title = "Diff against commit (" .. branch .. ")",
       keep_diff = true,
-      branch = branch_item.ref,
+      branch = branch,
     })
   end)
 end
@@ -396,47 +402,14 @@ keymaps.set("n", "<C-g>fD", pick_diff_base_and_open, { desc = "File diff against
 -- Restore only the current file from the selected commit/ref.
 -- Only commits that touched the current file are offered.
 local function pick_ref_and_restore_file()
-  local fpath = current_real_file()
-  if fpath == "" then
-    vim.notify("No file in current buffer", vim.log.levels.ERROR, { title = "Git Restore" })
-    return
-  end
-  local cwd = live_diff.git_root()
-  local active = current_branch(cwd)
-  local branches, err = list_branches(active, cwd)
-  if not branches then
-    vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = "Git Restore" })
-    return
-  end
-  if #branches == 0 then
-    vim.notify("No branches found", vim.log.levels.WARN, { title = "Git Restore" })
-    return
-  end
-
-  vim.ui.select(branches, {
-    prompt = "Select branch:",
-    format_item = function(item) return item.label end,
-  }, function(branch_item)
-    if not branch_item then return end
-
-    local commits, commits_err = live_diff.list_commits(branch_item.ref, 150, cwd, fpath)
-    if not commits then
-      vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Restore" })
-      return
-    end
-    commits = live_diff.with_branch_head(commits, branch_item.ref, cwd)
-    if #commits == 0 then
-      vim.notify("No commits changed this file on " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Restore" })
-      return
-    end
-
+  pick_branch_commits("Git Restore", function(branch, commits)
     -- Hovering a commit previews the diff live; <CR> closes the preview and
     -- actually restores the file, <Esc> cancels without touching anything.
     live_diff.pick({
       items = commits,
-      title = "Restore file from (" .. branch_item.ref .. ")",
+      title = "Restore file from (" .. branch .. ")",
       keep_diff = false,
-      branch = branch_item.ref,
+      branch = branch,
       on_confirm = function(commit_item)
         local filepath = current_real_file()
         if not filepath or filepath == "" then
