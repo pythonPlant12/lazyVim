@@ -4,6 +4,7 @@ local keymaps = vim.keymap
 local opts = { noremap = true, silent = true }
 local lazygit_edit = require("features.lazygit_edit")
 local live_diff = require("features.live_diff")
+local diff_bar = require("features.diff_bar")
 
 -- Git (<C-g>): custom workflows around LazyGit, Snacks pickers, and gitsigns.
 -- Guard bare <C-g> so it acts only as a prefix; without this, pausing after
@@ -299,6 +300,7 @@ local function open_file_diff_fullscreen(base)
           end
         end
       end
+      diff_bar.clear(diff_wins[1], diff_wins[2])
       pcall(vim.keymap.del, "n", "q", { buffer = orig_buf })
       if vim.api.nvim_win_is_valid(orig_win) then
         vim.api.nvim_set_current_win(orig_win)
@@ -307,6 +309,15 @@ local function open_file_diff_fullscreen(base)
 
     for _, win in ipairs(diff_wins) do
       vim.keymap.set("n", "q", close_diff, { buffer = vim.api.nvim_win_get_buf(win), silent = true })
+    end
+
+    -- The gitsigns pane is named `gitsigns://<gitdir>//<base>:<path>`; the
+    -- index base (`:0`) is HEAD.
+    local gs_win = vim.iter(diff_wins):find(function(w) return vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(w)):match("^gitsigns://") end)
+    if gs_win then
+      local path = vim.api.nvim_buf_get_name(orig_buf)
+      local base = vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(gs_win)):match("^gitsigns://.*//(:?[^:]*):")
+      diff_bar.show(gs_win, orig_win, path, live_diff.git_root(path), base:find("^:") and "HEAD" or base)
     end
 
     -- If the scratch pane is closed by other means (:q, :close), still clean up.
@@ -366,6 +377,7 @@ local function pick_diff_base_and_open()
       items = commits,
       title = "Diff against commit (" .. branch_item.ref .. ")",
       keep_diff = true,
+      branch = branch_item.ref,
     })
   end)
 end
@@ -424,6 +436,7 @@ local function pick_ref_and_restore_file()
       items = commits,
       title = "Restore file from (" .. branch_item.ref .. ")",
       keep_diff = false,
+      branch = branch_item.ref,
       on_confirm = function(commit_item)
         local filepath = current_real_file()
         if not filepath or filepath == "" then

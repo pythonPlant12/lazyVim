@@ -1,6 +1,7 @@
 -- Commit list with a live background diff, shared by <C-g>fD/<C-g>fR and the
 -- lazygit edit feature, plus the helpers that build its items.
 local M = {}
+local diff_bar = require("features.diff_bar")
 
 -- Return the git toplevel, falling back to cwd when not in a repo.
 local function git_root_or_cwd()
@@ -150,6 +151,8 @@ end
 --   on_ref      called with the ref each time the diff shows another commit
 --               (`ref^` when that commit deleted the file), nil when it closes
 --   live        false: no diff while moving, only on_confirm acts
+--   branch      branch of the shown commit in the top bar of the diff, or a
+--               function of the shown ref that returns one (default: current)
 function M.pick(picker_opts)
   local main_win = vim.api.nvim_get_current_win()
   local main_buf = vim.api.nvim_get_current_buf()
@@ -232,6 +235,7 @@ function M.pick(picker_opts)
       preview.list_autocmd = nil
     end
     pcall(vim.api.nvim_del_autocmd, close_autocmd)
+    diff_bar.clear(main_win, preview.win)
     -- Tear down so the file window survives no matter which side was closed:
     -- if the file window is gone, the preview window becomes the file window.
     if preview.win and vim.api.nvim_win_is_valid(preview.win) then
@@ -389,6 +393,9 @@ function M.pick(picker_opts)
         end
         preview.ref = want
         apply_preview(lines or { "(file did not exist at " .. want .. ")" })
+        local branch = picker_opts.branch
+        if type(branch) == "function" then branch = branch(shown) end
+        diff_bar.show(preview.win, main_win, path, cwd, shown, branch)
         if picker_opts.on_ref then
           picker_opts.on_ref(shown)
         end
