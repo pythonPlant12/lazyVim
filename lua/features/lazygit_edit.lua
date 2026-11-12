@@ -166,6 +166,21 @@ local function close_lazygit_window(win)
   end, 50)
 end
 
+-- Run open() in a normal window of this tab, then close the LazyGit float.
+-- Without one, the float closes first and open() runs in the window below it.
+local function in_this_tab(open)
+  local lazygit_win = current_lazygit_window()
+  local target = normal_window_in_current_tab()
+  if target then
+    vim.api.nvim_set_current_win(target)
+    open()
+    close_lazygit_window(lazygit_win)
+  else
+    close_lazygit_window(lazygit_win)
+    vim.defer_fn(open, 60)
+  end
+end
+
 -- Clamp the cursor to a target column on the current line.
 local function restore_cursor_col(col)
   if not col then return end
@@ -187,9 +202,6 @@ function M.open_same_tab(path, line, col)
   local abs = vim.fn.fnamemodify(path, ":p")
   if abs == "" then return end
 
-  local lazygit_win = current_lazygit_window()
-  local target = normal_window_in_current_tab()
-
   local escaped = vim.fn.fnameescape(abs)
   local edit_cmd
   if line and tonumber(line) and tonumber(line) > 0 then
@@ -198,38 +210,29 @@ function M.open_same_tab(path, line, col)
     edit_cmd = "edit " .. escaped
   end
 
-  if target and vim.api.nvim_win_is_valid(target) then
-    vim.api.nvim_set_current_win(target)
+  in_this_tab(function()
     vim.cmd(edit_cmd)
     restore_cursor_col(col)
-  else
-    close_lazygit_window(lazygit_win)
-    vim.defer_fn(function()
-      vim.cmd(edit_cmd)
-      restore_cursor_col(col)
-    end, 60)
-    return
-  end
-
-  close_lazygit_window(lazygit_win)
+  end)
 end
 
 -- Show a revision file alone (its working file is gone) as a read-only
--- scratch buffer, in this tab (closing the lazygit float) or a new tab.
+-- scratch buffer, in this tab or a new tab; q closes it (the tab for E).
 local function open_revision(abs, lines, line, new_tab)
   local buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.bo[buf].modifiable = false
   vim.bo[buf].filetype = vim.filetype.match({ filename = abs, buf = buf }) or ""
-  local target = not new_tab and normal_window_in_current_tab()
-  if target then
-    close_lazygit_window(current_lazygit_window())
-    vim.api.nvim_set_current_win(target)
-    vim.api.nvim_win_set_buf(target, buf)
-  else
-    vim.cmd("tab sbuffer " .. buf)
+  vim.keymap.set("n", "q", function()
+    if new_tab and #vim.api.nvim_list_tabpages() > 1 then vim.cmd.tabclose() end
+    vim.api.nvim_buf_delete(buf, { force = true })
+  end, { buffer = buf, nowait = true })
+  local function show()
+    if new_tab then vim.cmd("tab sbuffer " .. buf) else vim.api.nvim_win_set_buf(0, buf) end
+    pcall(vim.api.nvim_win_set_cursor, 0, { tonumber(line) or 1, 0 })
   end
-  pcall(vim.api.nvim_win_set_cursor, 0, { tonumber(line) or 1, 0 })
+  if new_tab then show() else in_this_tab(show) end
+  return buf
 end
 
 -- The tab's label names the revision in the left pane: the tab line shows
@@ -266,11 +269,11 @@ function M.open_file(opts)
       if not lines then
         return vim.notify(("%s did not exist at %s"):format(opts.path, opts.commit or "HEAD"), vim.log.levels.WARN)
       end
-      open_revision(abs, lines, opts.line, opts.new_tab)
+      local buf = open_revision(abs, lines, opts.line, opts.new_tab)
       local tab = vim.api.nvim_get_current_tabpage()
       set_label(tab, abs, shown, opts.source)
       -- The label goes with the revision file.
-      vim.api.nvim_create_autocmd("BufWinLeave", { buffer = 0, once = true, callback = function() set_label(tab) end })
+      vim.api.nvim_create_autocmd("BufWinLeave", { buffer = buf, once = true, callback = function() set_label(tab) end })
     end)
   end
 
