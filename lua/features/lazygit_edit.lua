@@ -303,7 +303,8 @@ end
 
 -- Show a revision file alone (its working file is gone) as a read-only
 -- scratch buffer, in this tab or a new tab; q closes it (the tab for E).
-local function open_revision(abs, lines, line, new_tab)
+-- on_show gets the window that shows it.
+local function open_revision(abs, lines, line, new_tab, on_show)
   local buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.bo[buf].modifiable = false
@@ -315,6 +316,7 @@ local function open_revision(abs, lines, line, new_tab)
   local function show()
     if new_tab then vim.cmd("tab sbuffer " .. buf) else vim.api.nvim_win_set_buf(0, buf) end
     pcall(vim.api.nvim_win_set_cursor, 0, { tonumber(line) or 1, 0 })
+    on_show(vim.api.nvim_get_current_win())
   end
   if new_tab then show() else in_this_tab(show) end
   return buf
@@ -326,6 +328,7 @@ function M.open_file(opts)
   local abs = vim.fn.fnamemodify(opts.path, ":p")
   local live_diff = require("features.live_diff")
   local label = require("features.revision_label")
+  local diff_bar = require("features.diff_bar")
   local cwd = live_diff.git_root(abs)
   local function rev_parse(rev) return (live_diff.git_lines({ "rev-parse", rev }, cwd) or {})[1] end
   local head = rev_parse("HEAD")
@@ -337,16 +340,27 @@ function M.open_file(opts)
       if not lines then
         return vim.notify(("%s did not exist at %s"):format(opts.path, opts.commit or "HEAD"), vim.log.levels.WARN)
       end
-      local buf = open_revision(abs, lines, opts.line, opts.new_tab)
+      local win
+      local buf = open_revision(abs, lines, opts.line, opts.new_tab, function(w)
+        win = w
+        diff_bar.show(win, nil, abs, cwd, shown, opts.source)
+      end)
       local tab = vim.api.nvim_get_current_tabpage()
       label.set(tab, abs, shown, opts.source)
-      -- The label goes with the revision file.
-      vim.api.nvim_create_autocmd("BufWinLeave", { buffer = buf, once = true, callback = function() label.set(tab) end })
+      -- The label and the bar go with the revision file.
+      vim.api.nvim_create_autocmd("BufWinLeave", { buffer = buf, once = true, callback = function()
+        label.set(tab)
+        diff_bar.clear(win)
+      end })
     end)
   end
 
   if commit == head then
     commit = nil
+  end
+  -- The source belongs to the commit lazygit gave, not to others in the list.
+  local function source_of(ref)
+    return commit and vim.startswith(commit, (ref:gsub("%^$", ""))) and opts.source or nil
   end
 
   if opts.new_tab then open_new_tab(abs, opts.line) else open_this_tab(abs, opts.line) end
@@ -364,12 +378,12 @@ function M.open_file(opts)
     focus_diff = true,
     line = tonumber(opts.line) or 1,
     esc_keeps_diff = true,
-    -- No label for HEAD or a closed diff. The source belongs to the commit
-    -- lazygit gave, not to others in the list.
+    -- No label for HEAD or a closed diff.
     on_ref = function(ref)
       if not ref or vim.startswith(head, ref) then return label.set(tab) end
-      label.set(tab, abs, ref, commit and vim.startswith(commit, (ref:gsub("%^$", ""))) and opts.source or nil)
+      label.set(tab, abs, ref, source_of(ref))
     end,
+    branch = source_of,
     on_quit = opts.new_tab and function()
       if vim.api.nvim_tabpage_is_valid(tab) and #vim.api.nvim_list_tabpages() > 1 then
         vim.cmd.tabclose(vim.api.nvim_tabpage_get_number(tab))
