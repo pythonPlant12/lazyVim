@@ -384,6 +384,7 @@ local function pick_diff_base_and_open()
       items = commits,
       title = "Diff against commit (" .. branch .. ")",
       keep_diff = true,
+      worktree_row = true,
       branch = branch,
     })
   end)

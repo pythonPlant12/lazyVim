@@ -419,6 +419,7 @@ function M.open_file(opts)
     items = live_diff.with_branch_head(live_diff.list_commits({ "HEAD", commit }, 150, cwd, work) or {}, "HEAD", cwd),
     title = "Diff against commit",
     keep_diff = true,
+    worktree_row = true,
     select = commit or head,
     focus_diff = true,
     line = tonumber(opts.line) or 1,

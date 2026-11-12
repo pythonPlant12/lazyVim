@@ -171,6 +171,7 @@ end
 --   live        false: no diff while moving, only on_confirm acts
 --   branch      branch of the shown commit in the top bar of the diff, or a
 --               function of the shown ref that returns one (default: current)
+--   worktree_row  a `Worktree` header row on top (the diffs compare to it)
 --   left        { ref, branch, path }: a fixed revision in the left pane; the shown
 --               commit goes to the right pane, and a `working` row on top
 --               (ref "working") shows the working file there
@@ -469,17 +470,26 @@ function M.pick(picker_opts)
   end
 
   local sitems = {}
-  -- The working row puts "working" in the hash column.
-  local items = left and vim.list_extend({ { ref = "working", label = "         working" } }, picker_opts.items) or picker_opts.items
+  -- The working row puts "working" in the hash column. The Worktree header
+  -- names the right pane above the commits and is never selected.
+  local items = picker_opts.items
+  if left then
+    items = vim.list_extend({ { ref = "working", label = "         working" } }, items)
+  elseif picker_opts.worktree_row then
+    items = vim.list_extend({ { ref = "worktree", label = "Worktree", header = true } }, items)
+  end
   for i, it in ipairs(items) do
-    sitems[#sitems + 1] = { idx = i, text = it.label, ref = it.ref, label = it.label, dim = it.dim }
+    sitems[#sitems + 1] = { idx = i, text = it.label, ref = it.ref, label = it.label, dim = it.dim, header = it.header }
   end
 
-  -- Move to the next row in direction dir that is not dimmed; false if none.
+  -- Dimmed rows and the header are never selected.
+  local function skipped(item) return item.dim or item.header end
+
+  -- Move to the next row in direction dir that is not skipped; false if none.
   local function step(picker, dir)
     local list = picker.list
     for i = list.cursor + dir, dir > 0 and list:count() or 1, dir do
-      if not list:get(i).dim then
+      if not skipped(list:get(i)) then
         list:view(i)
         return true
       end
@@ -535,7 +545,7 @@ function M.pick(picker_opts)
       tab_prev = switch_tab("tabprevious"),
       tab_next = switch_tab("tabnext"),
       show_in_lazygit = function(_, item)
-        if item then
+        if item and not item.header then
           require("features.lazygit_edit").show_commit(item.ref, cwd)
         end
       end,
@@ -610,8 +620,8 @@ function M.pick(picker_opts)
       end
     end,
     on_change = function(picker, item)
-      -- Any other way onto a dimmed row (start, mouse, gg) moves off it.
-      if item and item.dim then
+      -- Any other way onto a skipped row (start, mouse, gg) moves off it.
+      if item and skipped(item) then
         return step(picker, 1) or step(picker, -1)
       end
       if item and picker_opts.live ~= false then
