@@ -153,12 +153,18 @@ end
 --   live        false: no diff while moving, only on_confirm acts
 --   branch      branch of the shown commit in the top bar of the diff, or a
 --               function of the shown ref that returns one (default: current)
+--   left        { ref, branch }: a fixed revision in the left pane; the shown
+--               commit goes to the right pane, and a `working` row on top
+--               (ref "working") shows the working file there
 function M.pick(picker_opts)
   local main_win = vim.api.nvim_get_current_win()
   local main_buf = vim.api.nvim_get_current_buf()
   local path = vim.api.nvim_buf_get_name(main_buf)
   local cwd = M.git_root()
   local ft = vim.bo[main_buf].filetype
+  local left = picker_opts.left
+  -- With left: the right pane's revision file.
+  local right_buf
   -- The list belongs to this tab. Its windows stay here and show again on
   -- return; its window autocmds must not touch other tabs.
   local tab = vim.api.nvim_get_current_tabpage()
@@ -246,6 +252,12 @@ function M.pick(picker_opts)
         main_win = preview.win
       end
     end
+    if right_buf and vim.api.nvim_buf_is_valid(right_buf) then
+      for _, w in ipairs(vim.fn.win_findbuf(right_buf)) do
+        vim.api.nvim_win_set_buf(w, main_buf)
+      end
+      vim.api.nvim_buf_delete(right_buf, { force = true })
+    end
     if preview.buf and vim.api.nvim_buf_is_valid(preview.buf) then
       pcall(vim.api.nvim_buf_delete, preview.buf, { force = true })
     end
@@ -311,29 +323,45 @@ function M.pick(picker_opts)
   end
 
   local start_line = picker_opts.line
+  -- Put `lines` into a read-only revision buffer (a new one if buf is not
+  -- valid) and return it.
+  local function revision_buf(buf, lines)
+    if not (buf and vim.api.nvim_buf_is_valid(buf)) then
+      buf = vim.api.nvim_create_buf(false, true)
+      vim.bo[buf].buftype = "nofile"
+      vim.bo[buf].swapfile = false
+      vim.bo[buf].filetype = ft
+      vim.keymap.set("n", "q", close_with_q, { buffer = buf, silent = true })
+    end
+    vim.bo[buf].modifiable = true
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    vim.bo[buf].modifiable = false
+    return buf
+  end
+  -- Diff mode with both panes scrolling together, same as the plain <C-g>fd diff.
+  local function bind(w)
+    vim.api.nvim_win_call(w, function() vim.cmd("diffthis") end)
+    vim.wo[w].scrollbind = true
+    vim.wo[w].cursorbind = true
+  end
+  -- With left: the right pane shows `lines` (a revision), or the working file without them.
+  local function show_right(lines)
+    if lines then right_buf = revision_buf(right_buf, lines) end
+    local buf = lines and right_buf or main_buf
+    if vim.api.nvim_win_get_buf(main_win) ~= buf then
+      vim.api.nvim_win_set_buf(main_win, buf)
+      -- The window takes the options it last had with that buffer.
+      if preview.win then bind(main_win) end
+    end
+  end
   -- Put `lines` (the file at some ref) into the preview pane and refresh the diff.
   local function apply_preview(lines)
-    if not (preview.buf and vim.api.nvim_buf_is_valid(preview.buf)) then
-      preview.buf = vim.api.nvim_create_buf(false, true)
-      vim.bo[preview.buf].buftype = "nofile"
-      vim.bo[preview.buf].swapfile = false
-      vim.bo[preview.buf].filetype = ft
-    end
-    vim.bo[preview.buf].modifiable = true
-    vim.api.nvim_buf_set_lines(preview.buf, 0, -1, false, lines)
-    vim.bo[preview.buf].modifiable = false
+    preview.buf = revision_buf(preview.buf, lines)
     if not (preview.win and vim.api.nvim_win_is_valid(preview.win)) then
       preview.win = vim.api.nvim_open_win(preview.buf, false, { split = "left", win = main_win })
-      vim.api.nvim_win_call(preview.win, function() vim.cmd("diffthis") end)
-      vim.api.nvim_win_call(main_win, function() vim.cmd("diffthis") end)
-      for _, b in ipairs({ preview.buf, main_buf }) do
-        vim.keymap.set("n", "q", close_with_q, { buffer = b, silent = true })
-      end
-      -- Both panes scroll together, same as the plain <C-g>fd diff.
-      for _, w in ipairs({ preview.win, main_win }) do
-        vim.wo[w].scrollbind = true
-        vim.wo[w].cursorbind = true
-      end
+      bind(preview.win)
+      bind(main_win)
+      vim.keymap.set("n", "q", close_with_q, { buffer = main_buf, silent = true })
       -- While the picker has focus, scrollbind doesn't act on mouse scrolls
       -- of the (unfocused) file pane; mirror them to the preview manually.
       preview.scroll_autocmd = vim.api.nvim_create_autocmd("WinScrolled", {
@@ -362,7 +390,7 @@ function M.pick(picker_opts)
         return
       end
       vim.cmd("normal! gg")
-      local first_main = vim.api.nvim_buf_get_lines(main_buf, 0, 1, false)[1]
+      local first_main = vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]
       local first_prev = vim.api.nvim_buf_get_lines(preview.buf, 0, 1, false)[1]
       -- If line 1 already differs it IS the first hunk; ]c would skip past it.
       if first_main == first_prev then
@@ -387,24 +415,39 @@ function M.pick(picker_opts)
         return
       end
       local rel = (vim.fs.relpath and vim.fs.relpath(cwd, path)) or path
-      M.show_revision(want, rel, cwd, function(lines, shown)
-        if preview.want ~= want or preview.closed then
-          return -- superseded by a newer hover or the picker closed
+      -- The file at ref (a note when it did not exist) and the ref shown; the
+      -- `working` row has no lines.
+      local function fetch(ref, on_done)
+        if ref == "working" then return on_done(nil, ref) end
+        M.show_revision(ref, rel, cwd, function(lines, shown)
+          on_done(lines or { "(file did not exist at " .. ref .. ")" }, shown)
+        end)
+      end
+      fetch(want, function(lines, shown)
+        -- With left, its revision stays in the left pane and `want` goes right.
+        local function apply(left_lines, left_shown)
+          if preview.want ~= want or preview.closed then
+            return -- superseded by a newer hover or the picker closed
+          end
+          preview.ref = want
+          if left then show_right(lines) end
+          apply_preview(left_lines)
+          local branch = picker_opts.branch
+          if type(branch) == "function" then branch = branch(shown) end
+          diff_bar.show(preview.win, main_win, path, cwd, left_shown, left and left.branch or branch, left and lines and shown, branch)
+          if picker_opts.on_ref then
+            picker_opts.on_ref(shown)
+          end
         end
-        preview.ref = want
-        apply_preview(lines or { "(file did not exist at " .. want .. ")" })
-        local branch = picker_opts.branch
-        if type(branch) == "function" then branch = branch(shown) end
-        diff_bar.show(preview.win, main_win, path, cwd, shown, branch)
-        if picker_opts.on_ref then
-          picker_opts.on_ref(shown)
-        end
+        if left then fetch(left.ref, apply) else apply(lines, shown) end
       end)
     end))
   end
 
   local sitems = {}
-  for i, it in ipairs(picker_opts.items) do
+  -- The working row puts "working" in the hash column.
+  local items = left and vim.list_extend({ { ref = "working", label = "         working" } }, picker_opts.items) or picker_opts.items
+  for i, it in ipairs(items) do
     sitems[#sitems + 1] = { idx = i, text = it.label, ref = it.ref, label = it.label, dim = it.dim }
   end
 

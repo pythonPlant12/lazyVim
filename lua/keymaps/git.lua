@@ -5,6 +5,7 @@ local opts = { noremap = true, silent = true }
 local lazygit_edit = require("features.lazygit_edit")
 local live_diff = require("features.live_diff")
 local diff_bar = require("features.diff_bar")
+local revision_label = require("features.revision_label")
 
 -- Git (<C-g>): custom workflows around LazyGit, Snacks pickers, and gitsigns.
 -- Guard bare <C-g> so it acts only as a prefix; without this, pausing after
@@ -250,16 +251,16 @@ end
 keymaps.set("n", "<C-g>lD", pick_line_diff_base_and_preview, { desc = "Line diff against ref" })
 
 -- Every diff view gets the side colors. A revision pane (gitsigns://, scratch)
--- is the old side; with only real files, the first pane is the old side.
+-- is the old side next to a real file; with only one kind, the first pane is.
 local function color_diff_sides()
   local wins = vim.tbl_filter(function(w) return vim.wo[w].diff end, vim.api.nvim_tabpage_list_wins(0))
   local function is_revision(w)
     local buf = vim.api.nvim_win_get_buf(w)
     return vim.bo[buf].buftype ~= "" or vim.api.nvim_buf_get_name(buf):find("://") ~= nil
   end
-  local has_revision = vim.iter(wins):any(is_revision)
+  local mixed = vim.iter(wins):any(is_revision) and not vim.iter(wins):all(is_revision)
   for i, w in ipairs(wins) do
-    local is_old = has_revision and is_revision(w) or (not has_revision and i == 1)
+    local is_old = mixed and is_revision(w) or (not mixed and i == 1)
     live_diff.color_diff_side(w, is_old and "Old" or "New")
   end
 end
@@ -334,23 +335,22 @@ local function open_file_diff_fullscreen(base)
   end, 50)
 end
 
--- Pick a branch then commit and open that ref's diff in fullscreen.
--- Only commits that touched the current file are offered.
-local function pick_diff_base_and_open()
+-- Branch prompt, then the commits of that branch that changed the current
+-- file, tip first: on_pick(branch, commits). title names the notices.
+local function pick_branch_commits(title, on_pick)
   local fpath = current_real_file()
   if fpath == "" then
-    vim.notify("No file in current buffer", vim.log.levels.ERROR, { title = "Git Diff" })
+    vim.notify("No file in current buffer", vim.log.levels.ERROR, { title = title })
     return
   end
   local cwd = live_diff.git_root()
-  local active = current_branch(cwd)
-  local branches, err = list_branches(active, cwd)
+  local branches, err = list_branches(current_branch(cwd), cwd)
   if not branches then
-    vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = "Git Diff" })
+    vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = title })
     return
   end
   if #branches == 0 then
-    vim.notify("No branches found", vim.log.levels.WARN, { title = "Git Diff" })
+    vim.notify("No branches found", vim.log.levels.WARN, { title = title })
     return
   end
 
@@ -362,22 +362,29 @@ local function pick_diff_base_and_open()
 
     local commits, commits_err = live_diff.list_commits(branch_item.ref, 150, cwd, fpath)
     if not commits then
-      vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Diff" })
+      vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = title })
       return
     end
     commits = live_diff.with_branch_head(commits, branch_item.ref, cwd)
     if #commits == 0 then
-      vim.notify("No commits changed this file on " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Diff" })
+      vim.notify("No commits changed this file on " .. branch_item.ref, vim.log.levels.WARN, { title = title })
       return
     end
+    on_pick(branch_item.ref, commits)
+  end)
+end
 
+-- Pick a branch then commit and open that ref's diff in fullscreen.
+-- Only commits that touched the current file are offered.
+local function pick_diff_base_and_open()
+  pick_branch_commits("Git Diff", function(branch, commits)
     -- Hovering a commit shows the diff live in the background; <CR> keeps it
     -- open (q closes), <Esc> restores the previous layout.
     live_diff.pick({
       items = commits,
-      title = "Diff against commit (" .. branch_item.ref .. ")",
+      title = "Diff against commit (" .. branch .. ")",
       keep_diff = true,
-      branch = branch_item.ref,
+      branch = branch,
     })
   end)
 end
@@ -393,50 +400,57 @@ keymaps.set("n", "<C-g>fd", function()
 end, { desc = "File diff" })
 keymaps.set("n", "<C-g>fD", pick_diff_base_and_open, { desc = "File diff against ref" })
 
+-- Compare two revisions of the current file: pick the left one (no diff
+-- yet), then the right list diffs each commit, or the working file on its
+-- `working` row, against it. new_tab: the diff opens in a tab that q closes.
+local function compare_revisions(new_tab)
+  pick_branch_commits("Git Compare", function(left_branch, left_commits)
+    live_diff.pick({
+      items = left_commits,
+      title = "Compare: left revision (" .. left_branch .. ")",
+      live = false,
+      on_confirm = function(left_item)
+        pick_branch_commits("Git Compare", function(branch, commits)
+          local fpath = current_real_file()
+          if new_tab then vim.cmd("tab split") end
+          local tab = vim.api.nvim_get_current_tabpage()
+          live_diff.pick({
+            items = commits,
+            title = ("Compare %s with (%s)"):format(left_item.ref, branch),
+            keep_diff = true,
+            esc_keeps_diff = true,
+            left = { ref = left_item.ref, branch = left_branch },
+            branch = branch,
+            -- `file @left..@right` or `file @left..working`; none once closed.
+            on_ref = function(ref)
+              revision_label.set(tab, fpath, ref and left_item.ref .. ".." .. (ref == "working" and ref or "@" .. ref))
+            end,
+            on_quit = new_tab and function()
+              if vim.api.nvim_tabpage_is_valid(tab) and #vim.api.nvim_list_tabpages() > 1 then
+                vim.cmd.tabclose(vim.api.nvim_tabpage_get_number(tab))
+              end
+            end or nil,
+          })
+        end)
+      end,
+    })
+  end)
+end
+
+keymaps.set("n", "<C-g>fc", function() compare_revisions(false) end, { desc = "Compare two revisions" })
+keymaps.set("n", "<C-g>fC", function() compare_revisions(true) end, { desc = "Compare two revisions in a new tab" })
+
 -- Restore only the current file from the selected commit/ref.
 -- Only commits that touched the current file are offered.
 local function pick_ref_and_restore_file()
-  local fpath = current_real_file()
-  if fpath == "" then
-    vim.notify("No file in current buffer", vim.log.levels.ERROR, { title = "Git Restore" })
-    return
-  end
-  local cwd = live_diff.git_root()
-  local active = current_branch(cwd)
-  local branches, err = list_branches(active, cwd)
-  if not branches then
-    vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = "Git Restore" })
-    return
-  end
-  if #branches == 0 then
-    vim.notify("No branches found", vim.log.levels.WARN, { title = "Git Restore" })
-    return
-  end
-
-  vim.ui.select(branches, {
-    prompt = "Select branch:",
-    format_item = function(item) return item.label end,
-  }, function(branch_item)
-    if not branch_item then return end
-
-    local commits, commits_err = live_diff.list_commits(branch_item.ref, 150, cwd, fpath)
-    if not commits then
-      vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Restore" })
-      return
-    end
-    commits = live_diff.with_branch_head(commits, branch_item.ref, cwd)
-    if #commits == 0 then
-      vim.notify("No commits changed this file on " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Restore" })
-      return
-    end
-
+  pick_branch_commits("Git Restore", function(branch, commits)
     -- Hovering a commit previews the diff live; <CR> closes the preview and
     -- actually restores the file, <Esc> cancels without touching anything.
     live_diff.pick({
       items = commits,
-      title = "Restore file from (" .. branch_item.ref .. ")",
+      title = "Restore file from (" .. branch .. ")",
       keep_diff = false,
-      branch = branch_item.ref,
+      branch = branch,
       on_confirm = function(commit_item)
         local filepath = current_real_file()
         if not filepath or filepath == "" then

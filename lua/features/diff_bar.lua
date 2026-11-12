@@ -24,12 +24,13 @@ local function redraw() vim.api.nvim_exec_autocmds("User", { pattern = "DiffBar"
 
 -- Bars of a diff of path (cwd: its repository): the revision pane shows ref
 -- (HEAD when it is HEAD) of branch (default: the current branch); the
--- working pane, if any, the current branch.
-function M.show(rev_win, work_win, path, cwd, ref, branch)
+-- working pane, if any, the current branch, or with work_ref that revision
+-- of work_branch (a diff of two revisions).
+function M.show(rev_win, work_win, path, cwd, ref, branch, work_ref, work_branch)
   local current, sha = head(cwd)
-  ref = vim.startswith(sha, ref) and "HEAD" or ref:gsub("^(%x%x%x%x%x%x%x)%x*", "%1")
-  put(rev_win, bar(path, branch or current, "@" .. ref))
-  put(work_win, bar(path, current, "working"))
+  local function rev(r) return "@" .. (vim.startswith(sha, r) and "HEAD" or r:gsub("^(%x%x%x%x%x%x%x)%x*", "%1")) end
+  put(rev_win, bar(path, branch or current, rev(ref)))
+  put(work_win, work_ref and bar(path, work_branch or current, rev(work_ref)) or bar(path, current, "working"))
   redraw()
 end
 
