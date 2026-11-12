@@ -318,7 +318,7 @@ local function open_file_diff_fullscreen(base)
     if gs_win then
       local path = vim.api.nvim_buf_get_name(orig_buf)
       local base = vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(gs_win)):match("^gitsigns://.*//(:?[^:]*):")
-      diff_bar.show(gs_win, orig_win, path, live_diff.git_root(path), base:find("^:") and "HEAD" or base)
+      diff_bar.show(gs_win, orig_win, live_diff.git_root(path), { path = path, ref = base:find("^:") and "HEAD" or base }, { path = path })
     end
 
     -- If the scratch pane is closed by other means (:q, :close), still clean up.
@@ -419,7 +419,7 @@ local function compare_revisions(new_tab)
             title = ("Compare %s with (%s)"):format(left_item.ref, branch),
             keep_diff = true,
             esc_keeps_diff = true,
-            left = { ref = left_item.ref, branch = left_branch },
+            left = { ref = left_item.ref, branch = left_branch, path = left_item.path },
             branch = branch,
             -- `file @left..@right` or `file @left..working`; none once closed.
             on_ref = function(ref)
@@ -458,14 +458,23 @@ local function pick_ref_and_restore_file()
           return
         end
 
-        local git_root = LazyVim.root.git()
+        local git_root = live_diff.git_root(filepath)
         local lock = git_root .. "/.git/index.lock"
         if vim.uv.fs_stat(lock) then
           vim.uv.fs_unlink(lock)
         end
-        local result = vim.system({ "git", "checkout", commit_item.ref, "--", filepath }, { cwd = git_root }):wait()
+        -- Like `git checkout <ref> -- file`, but from the file's name at that
+        -- commit, which differs before a rename.
+        local rel = commit_item.path or live_diff.relpath(git_root, filepath)
+        local result = vim.system({ "git", "cat-file", "--filters", commit_item.ref .. ":" .. rel }, { cwd = git_root }):wait()
+        if result.code == 0 then
+          local f = assert(io.open(filepath, "wb"))
+          f:write(result.stdout)
+          f:close()
+          result = vim.system({ "git", "add", "--", filepath }, { cwd = git_root }):wait()
+        end
         if result.code ~= 0 then
-          vim.notify("git checkout failed:\n" .. (result.stderr or ""), vim.log.levels.ERROR, { title = "Git Restore" })
+          vim.notify("git restore failed:\n" .. (result.stderr or ""), vim.log.levels.ERROR, { title = "Git Restore" })
           return
         end
 

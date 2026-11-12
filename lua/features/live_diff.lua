@@ -56,45 +56,61 @@ function M.author_initials(name)
   return (vim.fn.strcharpart(words[1], 0, 1) .. vim.fn.strcharpart(words[#words], 0, 1)):upper()
 end
 
+-- Path of a file relative to the repository root cwd.
+function M.relpath(cwd, path)
+  return (vim.fs.relpath and vim.fs.relpath(cwd, path)) or path
+end
+
 -- Return recent commits for a ref (or a list of refs) as selectable items
--- (marking HEAD).
+-- (marking HEAD). With a path, each item's path is the file's name at that
+-- commit (renames followed).
 function M.list_commits(ref, limit, cwd, path)
   local function log(...)
     return vim.iter({ "log", ref, ("--max-count=%d"):format(limit or 150), ... }):flatten():totable()
   end
-  local args = log("--pretty=format:%h\t%an\t%ad\t%s", "--date=format:%Y-%m-%d %H:%M")
+  local args = log("--pretty=format:%h\t%an\t%ad\t%p\t%s", "--date=format:%Y-%m-%d %H:%M")
   -- With a path only commits that touched that file are listed (following renames).
-  -- --follow drops merge commits (a stash entry is one); -m keeps them, once per parent.
-  local changed
+  -- --follow drops merge commits (a stash entry is one); -m keeps them, once
+  -- per parent the file differs from.
+  local stash
   if path and path ~= "" then
     local base = cwd or git_root_or_cwd()
-    local rel = (vim.fs.relpath and vim.fs.relpath(base, path)) or path
-    vim.list_extend(args, { "-m", "--follow", "--", rel })
-    -- A merge changed the file only against its first parent; the rest are
-    -- dimmed. Stash entries stay enabled.
-    changed = {}
-    local first_parent = M.git_lines(log("--format=%h", "--diff-merges=first-parent", "--no-patch", "--follow", "--", rel), cwd) or {}
-    for _, sha in ipairs(vim.list_extend(first_parent, M.git_lines({ "stash", "list", "--format=%h" }, cwd) or {})) do
-      changed[sha] = true
+    vim.list_extend(args, { "-m", "--follow", "--name-status", "--", M.relpath(base, path) })
+    stash = {}
+    for _, sha in ipairs(M.git_lines({ "stash", "list", "--format=%h" }, cwd) or {}) do
+      stash[sha] = true
     end
   end
   local lines, err = M.git_lines(args, cwd)
   if not lines then
     return nil, err
   end
-  local items, seen = {}, {}
+  local items, seen, cur = {}, {}, nil
   for i, line in ipairs(lines) do
-    local sha, author, date, subj = line:match("^([^\t]+)\t([^\t]*)\t([^\t]*)\t(.*)$")
-    if sha and not seen[sha] then
-      seen[sha] = true
+    local sha, author, date, parents, subj = line:match("^([^\t]+)\t([^\t]*)\t([^\t]*)\t([^\t]*)\t(.*)$")
+    -- --name-status lines (`M\tpath`, `R085\told\tnew`) follow their commit.
+    local name = not sha and line:match("^%u%d*\t.-([^\t]+)$")
+    if name then
+      cur.path = cur.path or name
+    elseif sha and not seen[sha] then
       -- Path-filtered lists rarely start at HEAD, so the marker would lie.
       local head = (i == 1 and not path) and "HEAD" or "    "
       items[#items + 1] = {
         ref = sha,
         label = string.format("%s %-3s %s  %s  %s", head, M.author_initials(author), sha, date, subj or ""),
-        dim = changed and not changed[sha] or nil,
+        parents = math.max(#vim.split(parents, " ", { trimempty = true }), 1),
       }
+      seen[sha] = items[#items]
+    elseif sha then
+      seen[sha].parents = seen[sha].parents - 1
     end
+    cur = sha and seen[sha] or cur
+  end
+  -- A row whose file is the same as in one of its parents (a merge that only
+  -- carries a version) is dimmed. Stash entries stay enabled.
+  for _, it in ipairs(items) do
+    it.dim = stash and it.parents > 1 and not stash[it.ref] or nil
+    it.parents = nil
   end
   return items, nil
 end
@@ -138,7 +154,9 @@ end
 
 -- Commit picker with a live background diff: moving through the list diffs
 -- the current buffer against the hovered commit without closing the list.
---   items       list_commits items ({ ref, label, dim }); dim rows are skipped
+--   items       list_commits items ({ ref, label, dim, path }); dim rows are
+--               skipped; a row shows the file at its path (default: the
+--               current file's)
 --   title       picker title
 --   keep_diff   keep the diff open after <CR> (q closes it); otherwise the
 --               preview closes and on_confirm handles the pick
@@ -153,7 +171,7 @@ end
 --   live        false: no diff while moving, only on_confirm acts
 --   branch      branch of the shown commit in the top bar of the diff, or a
 --               function of the shown ref that returns one (default: current)
---   left        { ref, branch }: a fixed revision in the left pane; the shown
+--   left        { ref, branch, path }: a fixed revision in the left pane; the shown
 --               commit goes to the right pane, and a `working` row on top
 --               (ref "working") shows the working file there
 function M.pick(picker_opts)
@@ -163,6 +181,11 @@ function M.pick(picker_opts)
   local cwd = M.git_root()
   local ft = vim.bo[main_buf].filetype
   local left = picker_opts.left
+  -- The file's name at each commit, where the item knows it.
+  local paths = left and { [left.ref] = left.path } or {}
+  for _, it in ipairs(picker_opts.items) do
+    paths[it.ref] = paths[it.ref] or it.path
+  end
   -- With left: the right pane's revision file.
   local right_buf
   -- The list belongs to this tab. Its windows stay here and show again on
@@ -414,18 +437,18 @@ function M.pick(picker_opts)
       if not want or want == preview.ref or preview.closed then
         return
       end
-      local rel = (vim.fs.relpath and vim.fs.relpath(cwd, path)) or path
-      -- The file at ref (a note when it did not exist) and the ref shown; the
-      -- `working` row has no lines.
+      -- The file at ref (a note when it did not exist), the ref shown and the
+      -- file's name there; the `working` row has no lines.
       local function fetch(ref, on_done)
         if ref == "working" then return on_done(nil, ref) end
+        local rel = paths[ref] or M.relpath(cwd, path)
         M.show_revision(ref, rel, cwd, function(lines, shown)
-          on_done(lines or { "(file did not exist at " .. ref .. ")" }, shown)
+          on_done(lines or { "(file did not exist at " .. ref .. ")" }, shown, rel)
         end)
       end
-      fetch(want, function(lines, shown)
+      fetch(want, function(lines, shown, file)
         -- With left, its revision stays in the left pane and `want` goes right.
-        local function apply(left_lines, left_shown)
+        local function apply(left_lines, left_shown, left_file)
           if preview.want ~= want or preview.closed then
             return -- superseded by a newer hover or the picker closed
           end
@@ -434,12 +457,13 @@ function M.pick(picker_opts)
           apply_preview(left_lines)
           local branch = picker_opts.branch
           if type(branch) == "function" then branch = branch(shown) end
-          diff_bar.show(preview.win, main_win, path, cwd, left_shown, left and left.branch or branch, left and lines and shown, branch)
+          diff_bar.show(preview.win, main_win, cwd, { path = left_file, ref = left_shown, branch = left and left.branch or branch },
+            left and lines and { path = file, ref = shown, branch = branch } or { path = path })
           if picker_opts.on_ref then
             picker_opts.on_ref(shown)
           end
         end
-        if left then fetch(left.ref, apply) else apply(lines, shown) end
+        if left then fetch(left.ref, apply) else apply(lines, shown, file) end
       end)
     end))
   end
@@ -612,7 +636,7 @@ function M.pick(picker_opts)
           preview_close()
         end
         if picker_opts.on_confirm then
-          picker_opts.on_confirm({ ref = item.ref, label = item.label })
+          picker_opts.on_confirm(items[item.idx])
         end
       end)
     end,

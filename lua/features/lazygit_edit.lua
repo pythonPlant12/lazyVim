@@ -24,7 +24,7 @@ local function is_lazygit_buf(buf)
     or (type(cmd) == "string" and cmd:find("lazygit", 1, true) ~= nil)
 end
 
--- First message of e/E (args: commit, source, new_tab, folder): keep them, then
+-- First message of e/E (args: commit, source, refs, new_tab, folder): keep them, then
 -- press LazyGit's edit (M.edit). The on-screen "Diff files (<hash>|stash@{N}"
 -- title wins over SelectedCommit, which is wrong for a stash or in the patch view.
 function M.expect(args)
@@ -39,6 +39,7 @@ function M.expect(args)
       pending = {
         commit = title or args.commit,
         source = (title or ""):match("^stash@") and "stash" or args.source,
+        refs = args.refs,
         new_tab = args.new_tab ~= nil,
         at = vim.uv.now(),
       }
@@ -66,8 +67,12 @@ function M.configure_lazygit()
   for _, c in ipairs({
     { context = "files, staging, stagingSecondary", args = "{{if not .SelectedFile}} folder=1{{end}}" },
     -- SelectedCommit is the very SelectedReflogCommit object when the view
-    -- was opened from the reflog.
-    { context = "commitFiles, patchBuilding", args = " commit={{.SelectedCommit.Hash}}{{if eq .SelectedCommit .SelectedReflogCommit}} source=reflog{{end}}{{if not .SelectedCommitFile}} folder=1{{end}}" },
+    -- was opened from the reflog, SelectedSubCommit from a branch's commits.
+    -- Which panel opened those is unknown: refs lists the local branch, remote
+    -- branch and tag selections.
+    { context = "commitFiles, patchBuilding", args = " commit={{.SelectedCommit.Hash}}{{if eq .SelectedCommit .SelectedReflogCommit}} source=reflog{{end}}"
+      .. "{{if eq .SelectedCommit .SelectedSubCommit}} refs={{with .SelectedLocalBranch}}{{.Name}}{{end}},{{with .SelectedRemoteBranch}}{{.RemoteName}}/{{.Name}}{{end}},{{with .SelectedTag}}{{.Name}}{{end}}{{end}}"
+      .. "{{if not .SelectedCommitFile}} folder=1{{end}}" },
   }) do
     table.insert(commands, { key = "e", context = c.context, command = expect .. c.args, description = "Open in Neovim" })
     table.insert(commands, { key = "E", context = c.context, command = expect .. c.args .. " new_tab=1", description = "Open in a new Neovim tab" })
@@ -329,8 +334,35 @@ local function open_revision(abs, lines, line, new_tab, on_show)
   return buf
 end
 
+-- The name the file rel of commit has now: its renames since then, in order.
+local function renamed_since(rel, commit, cwd)
+  local lines = require("features.live_diff").git_lines({ "log", "--reverse", "-M", "--diff-filter=R", "--name-status", "--format=", commit .. "..HEAD" }, cwd)
+  for _, line in ipairs(lines or {}) do
+    local old, new = line:match("^R%d*\t([^\t]+)\t([^\t]+)$")
+    if old == rel then rel = new end
+  end
+  return rel
+end
+
+-- The branch a commit came from: the first of refs (lazygit's local, remote and
+-- tag selections, for a branch's commits) that holds it, else for a commit off
+-- HEAD the branch git names it by; nil is the current branch.
+local function branch_of(commit, refs, cwd)
+  local function holds(ref)
+    return vim.system({ "git", "merge-base", "--is-ancestor", commit, ref }, { cwd = cwd }):wait().code == 0
+  end
+  for ref in vim.gsplit(refs or "", ",", { trimempty = true }) do
+    if holds(ref) then return ref end
+  end
+  if not holds("HEAD") then
+    local name = (require("features.live_diff").git_lines({ "name-rev", "--name-only", "--refs=refs/heads/*", "--refs=refs/remotes/*", "--exclude=*/HEAD", commit }, cwd) or {})[1]
+    return name and name ~= "undefined" and (name:gsub("^remotes/", ""):gsub("[~^].*$", "")) or nil
+  end
+end
+
 -- Entry point of lazygit's e/E: a revision diff, a diff against HEAD, the plain
--- file or the revision file alone. opts: path, line, commit, source, new_tab.
+-- file or the revision file alone. opts: path (the file's name at the commit),
+-- line, commit, source, refs (comma list), new_tab.
 function M.open_file(opts)
   local abs = vim.fn.fnamemodify(opts.path, ":p")
   local live_diff = require("features.live_diff")
@@ -340,9 +372,15 @@ function M.open_file(opts)
   local function rev_parse(rev) return (live_diff.git_lines({ "rev-parse", rev }, cwd) or {})[1] end
   local head = rev_parse("HEAD")
   local commit = opts.commit and rev_parse(opts.commit)
+  local source = opts.source or commit and branch_of(commit, opts.refs, cwd)
+  -- The working file: renamed since the commit, it has another name now.
+  local work = abs
+  if commit and not vim.uv.fs_stat(abs) then
+    work = cwd .. "/" .. renamed_since(live_diff.relpath(cwd, abs), commit, cwd)
+  end
   -- Without a working file the revision file opens alone, even for HEAD (the
   -- Files panel, or the commit that deleted it).
-  if (commit or head) and not vim.uv.fs_stat(abs) then
+  if (commit or head) and not vim.uv.fs_stat(work) then
     return live_diff.show_revision(commit or head, vim.fs.relpath(cwd, abs), cwd, function(lines, shown)
       if not lines then
         return vim.notify(("%s did not exist at %s"):format(opts.path, opts.commit or "HEAD"), vim.log.levels.WARN)
@@ -350,10 +388,10 @@ function M.open_file(opts)
       local win
       local buf = open_revision(abs, lines, opts.line, opts.new_tab, function(w)
         win = w
-        diff_bar.show(win, nil, abs, cwd, shown, opts.source)
+        diff_bar.show(win, nil, cwd, { path = abs, ref = shown, branch = source })
       end)
       local tab = vim.api.nvim_get_current_tabpage()
-      label.set(tab, abs, shown, opts.source)
+      label.set(tab, abs, shown, source)
       -- The label and the bar go with the revision file.
       vim.api.nvim_create_autocmd("BufWinLeave", { buffer = buf, once = true, callback = function()
         label.set(tab)
@@ -367,18 +405,18 @@ function M.open_file(opts)
   end
   -- The source belongs to the commit lazygit gave, not to others in the list.
   local function source_of(ref)
-    return commit and vim.startswith(commit, (ref:gsub("%^$", ""))) and opts.source or nil
+    return commit and vim.startswith(commit, (ref:gsub("%^$", ""))) and source or nil
   end
 
-  if opts.new_tab then open_new_tab(abs, opts.line) else open_this_tab(abs, opts.line) end
+  if opts.new_tab then open_new_tab(work, opts.line) else open_this_tab(work, opts.line) end
   local tab = vim.api.nvim_get_current_tabpage()
   -- Untracked and unchanged files have nothing to diff against HEAD.
-  if not commit and (not head or vim.system({ "git", "diff", "--quiet", "HEAD", "--", abs }, { cwd = cwd }):wait().code == 0) then
+  if not commit and (not head or vim.system({ "git", "diff", "--quiet", "HEAD", "--", work }, { cwd = cwd }):wait().code == 0) then
     return
   end
   live_diff.pick({
     -- Commits of the file reachable from HEAD or from the commit, HEAD first.
-    items = live_diff.with_branch_head(live_diff.list_commits({ "HEAD", commit }, 150, cwd, abs) or {}, "HEAD", cwd),
+    items = live_diff.with_branch_head(live_diff.list_commits({ "HEAD", commit }, 150, cwd, work) or {}, "HEAD", cwd),
     title = "Diff against commit",
     keep_diff = true,
     select = commit or head,
@@ -388,7 +426,7 @@ function M.open_file(opts)
     -- No label for HEAD or a closed diff.
     on_ref = function(ref)
       if not ref or vim.startswith(head, ref) then return label.set(tab) end
-      label.set(tab, abs, ref, source_of(ref))
+      label.set(tab, work, ref, source_of(ref))
     end,
     branch = source_of,
     on_quit = opts.new_tab and function()
@@ -408,7 +446,7 @@ function M.edit(path, line)
   if not p or vim.uv.now() - p.at > 5000 then
     return open_this_tab(path, line)
   end
-  M.open_file({ path = path, line = line, commit = p.commit, source = p.source, new_tab = p.new_tab })
+  M.open_file({ path = path, line = line, commit = p.commit, source = p.source, refs = p.refs, new_tab = p.new_tab })
 end
 
 return M

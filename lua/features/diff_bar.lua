@@ -22,15 +22,19 @@ end
 
 local function redraw() vim.api.nvim_exec_autocmds("User", { pattern = "DiffBar" }) end
 
--- Bars of a diff of path (cwd: its repository): the revision pane shows ref
--- (HEAD when it is HEAD) of branch (default: the current branch); the
--- working pane, if any, the current branch, or with work_ref that revision
--- of work_branch (a diff of two revisions).
-function M.show(rev_win, work_win, path, cwd, ref, branch, work_ref, work_branch)
+-- Bars of a diff (cwd: its repository). rev, the revision pane: { path, ref,
+-- branch }, ref read as HEAD when it is HEAD, branch defaults to the current
+-- one. work, the other pane if any: { path } for the working file of the
+-- current branch, or another revision like rev (a diff of two revisions).
+-- path is the file's name in that pane.
+function M.show(rev_win, work_win, cwd, rev, work)
   local current, sha = head(cwd)
-  local function rev(r) return "@" .. (vim.startswith(sha, r) and "HEAD" or r:gsub("^(%x%x%x%x%x%x%x)%x*", "%1")) end
-  put(rev_win, bar(path, branch or current, rev(ref)))
-  put(work_win, work_ref and bar(path, work_branch or current, rev(work_ref)) or bar(path, current, "working"))
+  local function text(side)
+    local r = side.ref and "@" .. (vim.startswith(sha, side.ref) and "HEAD" or side.ref:gsub("^(%x%x%x%x%x%x%x)%x*", "%1")) or "working"
+    return bar(side.path, side.ref and side.branch or current, r)
+  end
+  put(rev_win, text(rev))
+  put(work_win, work and text(work))
   redraw()
 end
 
