@@ -26,15 +26,19 @@ local function update()
   local file_wins = vim.tbl_filter(is_file_win, wins)
   local split = #file_wins > 1
   for _, win in ipairs(wins) do
-    vim.wo[win].winbar = (split and is_file_win(win)) and WINBAR or ""
+    -- A split diff's own bar (features/diff_bar) wins.
+    vim.wo[win].winbar = vim.w[win].diff_bar or (split and is_file_win(win)) and WINBAR or ""
   end
 end
+
+local function schedule_update() vim.schedule(update) end
 
 vim.api.nvim_create_autocmd(
   { "WinEnter", "WinLeave", "WinNew", "WinClosed", "BufWinEnter", "TabEnter" },
   {
     group = group,
     -- Defer so the window list is settled (WinClosed fires pre-removal).
-    callback = function() vim.schedule(update) end,
+    callback = schedule_update,
   }
 )
+vim.api.nvim_create_autocmd("User", { group = group, pattern = "DiffBar", callback = schedule_update })
