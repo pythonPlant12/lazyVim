@@ -289,7 +289,16 @@ local function open_file_diff_fullscreen(base)
     end
     if #diff_wins == 0 then return end
 
+    local close_autocmds = {}
     local function close_diff()
+      for _, id in ipairs(close_autocmds) do
+        pcall(vim.api.nvim_del_autocmd, id)
+      end
+      -- The file pane is gone: the revision pane takes the file.
+      if not vim.api.nvim_win_is_valid(orig_win) then
+        orig_win = vim.iter(diff_wins):find(vim.api.nvim_win_is_valid) or orig_win
+        pcall(vim.api.nvim_win_set_buf, orig_win, orig_buf)
+      end
       for _, win in ipairs(diff_wins) do
         if vim.api.nvim_win_is_valid(win) then
           local buf = vim.api.nvim_win_get_buf(win)
@@ -321,16 +330,22 @@ local function open_file_diff_fullscreen(base)
       diff_bar.show(gs_win, orig_win, live_diff.git_root(path), { path = path, ref = base:find("^:") and "HEAD" or base }, { path = path })
     end
 
-    -- If the scratch pane is closed by other means (:q, :close), still clean up.
+    -- If a pane is closed by other means (:q, :close), still clean up. The
+    -- file then takes the view of its pane, read before the window goes.
     for _, win in ipairs(diff_wins) do
-      local buf = vim.api.nvim_win_get_buf(win)
-      if vim.api.nvim_buf_get_name(buf):match("^gitsigns://") then
-        vim.api.nvim_create_autocmd("WinClosed", {
-          pattern = tostring(win),
-          once = true,
-          callback = function() vim.schedule(close_diff) end,
-        })
-      end
+      close_autocmds[#close_autocmds + 1] = vim.api.nvim_create_autocmd("WinClosed", {
+        pattern = tostring(win),
+        once = true,
+        callback = function()
+          local view = vim.api.nvim_win_call(orig_win, vim.fn.winsaveview)
+          vim.schedule(function()
+            close_diff()
+            if vim.api.nvim_win_is_valid(orig_win) then
+              vim.api.nvim_win_call(orig_win, function() vim.fn.winrestview(view) end)
+            end
+          end)
+        end,
+      })
     end
   end, 50)
 end
