@@ -9,90 +9,10 @@ local live_diff = require("features.live_diff")
 -- Guard bare <C-g> so it acts only as a prefix; without this, pausing after
 -- <C-g> falls through to the native CTRL-G file-info ruler.
 keymaps.set("n", "<C-g>", "<Nop>", opts)
--- Lazygit writes its directory here on every worktree/repo switch and on
--- quit, so the next open can start in the worktree you switched to instead
--- of the main tree Neovim's root points at. The path is unique per Neovim
--- instance, so two editors on the same repository do not follow each other.
-local lazygit_dir_file = vim.fn.tempname()
-
-local function git_common_dir(dir)
-  local out = vim.fn.systemlist({ "git", "-C", dir, "rev-parse", "--path-format=absolute", "--git-common-dir" })
-  return vim.v.shell_error == 0 and out[1] or nil
-end
-
--- The last lazygit directory when it is a worktree of the same repository.
-local function lazygit_cwd(root)
-  local ok, lines = pcall(vim.fn.readfile, lazygit_dir_file)
-  local last = ok and lines[1] or nil
-  if not last or last == "" or vim.fn.isdirectory(last) ~= 1 or last == root then
-    return root
-  end
-  local common = git_common_dir(last)
-  if common and common == git_common_dir(root) then
-    return last
-  end
-  return root
-end
-
--- Listed file buffers (no terminals, pickers, or scratch buffers).
-local function file_buffers()
-  return vim.tbl_filter(function(buf)
-    return vim.bo[buf].buflisted and vim.bo[buf].buftype == ""
-  end, vim.api.nvim_list_bufs())
-end
-
--- After lazygit closes: when it switched to another worktree of the same
--- repository, close every file buffer and move Neovim there, so nothing on
--- screen still belongs to the old worktree.
-local function follow_lazygit_worktree()
-  local cwd = vim.fn.getcwd()
-  local target = lazygit_cwd(cwd)
-  if target == cwd then
-    return
-  end
-
-  local modified = vim.tbl_filter(function(buf) return vim.bo[buf].modified end, file_buffers())
-  if #modified > 0 then
-    local choice = vim.fn.confirm(
-      ("%d buffer(s) have unsaved changes. Save all and switch to %s?"):format(#modified, vim.fn.fnamemodify(target, ":~")),
-      "&Save and switch\n&Stay here",
-      2
-    )
-    if choice ~= 1 then
-      return
-    end
-    vim.cmd("wall")
-  end
-
-  for _, buf in ipairs(file_buffers()) do
-    pcall(vim.api.nvim_buf_delete, buf, { force = true })
-  end
-
-  vim.cmd.cd(vim.fn.fnameescape(target))
-  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-    if vim.bo[vim.api.nvim_win_get_buf(win)].filetype == "neo-tree" then
-      require("neo-tree.command").execute({ source = "filesystem", dir = target, action = "show" })
-      break
-    end
-  end
-  vim.notify("Switched to worktree " .. vim.fn.fnamemodify(target, ":~"), vim.log.levels.INFO, { title = "Lazygit" })
-end
-
 keymaps.set("n", "<C-g>g", function()
-  if lazygit_edit.jump_to_lazygit() then
-    return
+  if not lazygit_edit.jump_to_lazygit() then
+    lazygit_edit.open_lazygit()
   end
-
-  lazygit_edit.configure_lazygit()
-  Snacks.lazygit({
-    cwd = lazygit_cwd(LazyVim.root.git()),
-    env = { LAZYGIT_NEW_DIR_FILE = lazygit_dir_file },
-    win = {
-      on_close = function()
-        vim.schedule(follow_lazygit_worktree)
-      end,
-    },
-  })
 end, { desc = "Lazygit" })
 -- A changed hunk in the inline preview keeps the red and green lines and
 -- marks the changed chars in a slightly lighter red and green.
@@ -296,31 +216,33 @@ local function pick_line_diff_base_and_preview()
       return
     end
 
-    vim.ui.select(commits, {
-      prompt = "Select commit from " .. branch_item.ref .. ":",
-      format_item = function(item) return item.label end,
-    }, function(commit_item)
-      if not commit_item then return end
-      local gs = require("gitsigns")
-      local buf = vim.api.nvim_get_current_buf()
-      gs.change_base(commit_item.ref, false)
-      preview_line_diff()
-      -- The changed base is only for this preview. The same events that
-      -- dismiss the inline preview also restore the default base (index),
-      -- so gutter signs and <C-g>fd don't keep diffing against the commit.
-      vim.defer_fn(function()
-        vim.api.nvim_create_autocmd({ "CursorMoved", "InsertEnter", "BufLeave" }, {
-          buffer = buf,
-          once = true,
-          desc = "Restore gitsigns base after line diff preview",
-          callback = function()
-            vim.schedule(function()
-              pcall(function() require("gitsigns").change_base(nil, false) end)
-            end)
-          end,
-        })
-      end, 150)
-    end)
+    -- The commit list of fD without the live diff; <CR> previews inline.
+    live_diff.pick({
+      items = commits,
+      title = "Line diff against commit (" .. branch_item.ref .. ")",
+      live = false,
+      on_confirm = function(commit_item)
+        local gs = require("gitsigns")
+        local buf = vim.api.nvim_get_current_buf()
+        gs.change_base(commit_item.ref, false)
+        preview_line_diff()
+        -- The changed base is only for this preview. The same events that
+        -- dismiss the inline preview also restore the default base (index),
+        -- so gutter signs and <C-g>fd don't keep diffing against the commit.
+        vim.defer_fn(function()
+          vim.api.nvim_create_autocmd({ "CursorMoved", "InsertEnter", "BufLeave" }, {
+            buffer = buf,
+            once = true,
+            desc = "Restore gitsigns base after line diff preview",
+            callback = function()
+              vim.schedule(function()
+                pcall(function() require("gitsigns").change_base(nil, false) end)
+              end)
+            end,
+          })
+        end, 150)
+      end,
+    })
   end)
 end
 
