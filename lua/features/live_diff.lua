@@ -413,13 +413,13 @@ function M.pick(picker_opts)
     return false
   end
 
-  local list_keys = {
+  local input_keys = {
     -- Previous/next tab, like the global normal-mode maps.
     ["<C-j>"] = { "tab_prev", mode = { "i", "n" } },
     ["<C-k>"] = { "tab_next", mode = { "i", "n" } },
   }
   for _, key in ipairs({ "<C-w>j", "<C-w><C-j>", "<C-w>k", "<C-w><C-k>" }) do
-    list_keys[key] = { "focus_diff_file", mode = { "i", "n" } }
+    input_keys[key] = { "focus_diff_file", mode = { "i", "n" } }
   end
   -- Leave the filter input first, or the other tab opens in insert mode.
   local function switch_tab(cmd)
@@ -429,8 +429,10 @@ function M.pick(picker_opts)
     end
   end
   if picker_opts.esc_keeps_diff then
-    list_keys["<Esc>"] = { "confirm", mode = "n" }
+    input_keys["<Esc>"] = { "confirm", mode = "n" }
   end
+  -- The input is for typing; L there stays a letter.
+  local list_keys = vim.tbl_extend("force", input_keys, { L = "show_in_lazygit" })
 
   local confirmed = false
   Snacks.picker.pick({
@@ -458,8 +460,13 @@ function M.pick(picker_opts)
       list_up = function(picker) step(picker, -1) end,
       tab_prev = switch_tab("tabprevious"),
       tab_next = switch_tab("tabnext"),
+      show_in_lazygit = function(_, item)
+        if item then
+          require("features.lazygit_edit").show_commit(item.ref, cwd)
+        end
+      end,
     },
-    win = { list = { keys = list_keys }, input = { keys = list_keys } },
+    win = { list = { keys = list_keys }, input = { keys = input_keys } },
     -- Full-width strip as a real BOTTOM SPLIT (not a float), so it never
     -- covers the diff windows — the file stays fully visible above it.
     layout = {
