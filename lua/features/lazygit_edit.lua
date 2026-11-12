@@ -164,4 +164,41 @@ function M.open_same_tab(path, line, col)
   close_lazygit_window(lazygit_win)
 end
 
+-- Entry point of lazygit's e/E. Opens the working file in this tab (closing
+-- the lazygit float) or in a new tab. A file that differs from HEAD opens as
+-- a diff against HEAD, with the file's commit list shrunk below it, HEAD
+-- selected and the cursor in the working file.
+--   path     file to open
+--   line     cursor line in the working file (default: top of the file)
+--   commit   commit to compare against (default: HEAD)
+--   source   branch, reflog or stash the commit came from
+--   new_tab  open in a new tab; q then closes the tab
+function M.open_file(opts)
+  local abs = vim.fn.fnamemodify(opts.path, ":p")
+  if opts.new_tab then M.open(abs, opts.line) else M.open_same_tab(abs, opts.line) end
+  local tab = vim.api.nvim_get_current_tabpage()
+
+  local live_diff = require("features.live_diff")
+  local cwd = live_diff.git_root(abs)
+  local head = (live_diff.git_lines({ "rev-parse", "HEAD" }, cwd) or {})[1]
+  -- Untracked and unchanged files have nothing to diff.
+  if not head or vim.system({ "git", "diff", "--quiet", "HEAD", "--", abs }, { cwd = cwd }):wait().code == 0 then
+    return
+  end
+  live_diff.pick({
+    items = live_diff.with_branch_head(live_diff.list_commits("HEAD", 150, cwd, abs) or {}, "HEAD", cwd),
+    title = "Diff against commit",
+    keep_diff = true,
+    select = head,
+    focus_diff = true,
+    line = tonumber(opts.line) or 1,
+    esc_keeps_diff = true,
+    on_quit = opts.new_tab and function()
+      if vim.api.nvim_tabpage_is_valid(tab) and #vim.api.nvim_list_tabpages() > 1 then
+        vim.cmd.tabclose(vim.api.nvim_tabpage_get_number(tab))
+      end
+    end or nil,
+  })
+end
+
 return M
