@@ -164,10 +164,30 @@ function M.open_same_tab(path, line, col)
   close_lazygit_window(lazygit_win)
 end
 
+-- Show a revision file alone (its working file is gone) as a read-only
+-- scratch buffer, in this tab (closing the lazygit float) or a new tab.
+local function open_revision(abs, lines, line, new_tab)
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].filetype = vim.filetype.match({ filename = abs, buf = buf }) or ""
+  local target = not new_tab and normal_window_in_current_tab()
+  if target then
+    close_lazygit_window(current_lazygit_window())
+    vim.api.nvim_set_current_win(target)
+    vim.api.nvim_win_set_buf(target, buf)
+  else
+    vim.cmd("tab sbuffer " .. buf)
+  end
+  pcall(vim.api.nvim_win_set_cursor, 0, { tonumber(line) or 1, 0 })
+end
+
 -- Entry point of lazygit's e/E. Opens the working file in this tab (closing
 -- the lazygit float) or in a new tab. A file that differs from HEAD opens as
 -- a diff against HEAD, with the file's commit list shrunk below it, HEAD
--- selected and the cursor in the working file.
+-- selected and the cursor in the working file. Another commit opens a
+-- revision diff with that commit selected; when the working file is gone,
+-- the revision file opens alone.
 --   path     file to open
 --   line     cursor line in the working file (default: top of the file)
 --   commit   commit to compare against (default: HEAD)
@@ -175,21 +195,36 @@ end
 --   new_tab  open in a new tab; q then closes the tab
 function M.open_file(opts)
   local abs = vim.fn.fnamemodify(opts.path, ":p")
-  if opts.new_tab then M.open(abs, opts.line) else M.open_same_tab(abs, opts.line) end
-  local tab = vim.api.nvim_get_current_tabpage()
-
   local live_diff = require("features.live_diff")
   local cwd = live_diff.git_root(abs)
   local head = (live_diff.git_lines({ "rev-parse", "HEAD" }, cwd) or {})[1]
-  -- Untracked and unchanged files have nothing to diff.
-  if not head or vim.system({ "git", "diff", "--quiet", "HEAD", "--", abs }, { cwd = cwd }):wait().code == 0 then
+  local commit = opts.commit and (live_diff.git_lines({ "rev-parse", opts.commit }, cwd) or {})[1]
+  -- Without a working file even HEAD (e.g. the commit that deleted it) opens alone.
+  if commit and not vim.uv.fs_stat(abs) then
+    return live_diff.show_revision(commit, vim.fs.relpath(cwd, abs), cwd, function(lines)
+      if not lines then
+        return vim.notify(("%s did not exist at %s"):format(opts.path, opts.commit), vim.log.levels.WARN)
+      end
+      open_revision(abs, lines, opts.line, opts.new_tab)
+    end)
+  end
+
+  if commit == head then
+    commit = nil
+  end
+
+  if opts.new_tab then M.open(abs, opts.line) else M.open_same_tab(abs, opts.line) end
+  local tab = vim.api.nvim_get_current_tabpage()
+  -- Untracked and unchanged files have nothing to diff against HEAD.
+  if not commit and (not head or vim.system({ "git", "diff", "--quiet", "HEAD", "--", abs }, { cwd = cwd }):wait().code == 0) then
     return
   end
   live_diff.pick({
-    items = live_diff.with_branch_head(live_diff.list_commits("HEAD", 150, cwd, abs) or {}, "HEAD", cwd),
+    -- Commits of the file reachable from HEAD or from the commit, HEAD first.
+    items = live_diff.with_branch_head(live_diff.list_commits({ "HEAD", commit }, 150, cwd, abs) or {}, "HEAD", cwd),
     title = "Diff against commit",
     keep_diff = true,
-    select = head,
+    select = commit or head,
     focus_diff = true,
     line = tonumber(opts.line) or 1,
     esc_keeps_diff = true,
