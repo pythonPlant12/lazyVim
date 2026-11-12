@@ -4,6 +4,7 @@ return {
     "akinsho/bufferline.nvim",
     opts = function(_, opts)
       opts = opts or {}
+      local max_name = 50
       opts.options = vim.tbl_deep_extend("force", opts.options or {}, {
         mode = "tabs",
         separator_style = { "│", "│" },
@@ -11,12 +12,15 @@ return {
         show_close_icon = false,
         indicator = { style = "none" },
         diagnostics = false,
+        -- Each tab is as wide as its name, up to max_name cells.
+        tab_size = 0,
+        max_name_length = max_name,
         -- A revision diff names its tab `file @hash` (features/revision_label).
-        -- The file is shortened, not the hash, to fit the 18-cell name.
+        -- A name too long is shortened in the file, not the hash.
         name_formatter = function(b)
           local file, ref = require("features.revision_label").get(b.tabnr)
           if ref then
-            return ("%s @%s"):format(require("bufferline.utils").truncate_name(file, 16 - #ref), ref)
+            return ("%s @%s"):format(require("bufferline.utils").truncate_name(file, max_name - 2 - #ref), ref)
           end
         end,
       })
