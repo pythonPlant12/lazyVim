@@ -55,9 +55,10 @@ function M.author_initials(name)
   return (vim.fn.strcharpart(words[1], 0, 1) .. vim.fn.strcharpart(words[#words], 0, 1)):upper()
 end
 
--- Return recent commits for a ref as selectable items (marking HEAD).
+-- Return recent commits for a ref (or a list of refs) as selectable items
+-- (marking HEAD).
 function M.list_commits(ref, limit, cwd, path)
-  local args = { "log", ref, "--pretty=format:%h\t%an\t%ad\t%s", "--date=format:%Y-%m-%d %H:%M", ("--max-count=%d"):format(limit or 150) }
+  local args = vim.iter({ "log", ref, "--pretty=format:%h\t%an\t%ad\t%s", "--date=format:%Y-%m-%d %H:%M", ("--max-count=%d"):format(limit or 150) }):flatten():totable()
   -- With a path only commits that touched that file are listed (following renames).
   if path and path ~= "" then
     local base = cwd or git_root_or_cwd()
@@ -90,11 +91,28 @@ function M.with_branch_head(items, ref, cwd)
   if not head then
     return items
   end
-  if items[1] and items[1].ref == head.ref then
-    table.remove(items, 1)
-  end
+  -- Drop the tip wherever it is: a list of several refs may hold newer commits.
+  items = vim.tbl_filter(function(it) return it.ref ~= head.ref end, items)
   table.insert(items, 1, head)
   return items
+end
+
+-- Fetch the file `rel` at `ref` in the background and call on_done(lines, shown)
+-- on the main loop. A commit that deleted the file shows the version before
+-- it: shown is then `ref^`. lines is nil when neither has the file.
+function M.show_revision(ref, rel, cwd, on_done)
+  local function show(shown)
+    vim.system({ "git", "show", shown .. ":" .. rel }, { cwd = cwd, text = true }, vim.schedule_wrap(function(res)
+      if res.code == 0 then
+        on_done(vim.split((res.stdout or ""):gsub("\n$", ""), "\n", { plain = true }), shown)
+      elseif shown == ref then
+        show(ref .. "^")
+      else
+        on_done(nil, ref)
+      end
+    end))
+  end
+  show(ref)
 end
 
 -- Show changed chars inside a changed line in red on the old side and green
@@ -116,6 +134,7 @@ end
 --   esc_keeps_diff  <Esc> closes only the list, like <CR> with keep_diff
 --   on_quit     called after q closed the diff
 --   on_ref      called with the ref each time the diff shows another commit
+--               (`ref^` when that commit deleted the file)
 function M.pick(picker_opts)
   local main_win = vim.api.nvim_get_current_win()
   local main_buf = vim.api.nvim_get_current_buf()
@@ -328,26 +347,16 @@ function M.pick(picker_opts)
         return
       end
       local rel = (vim.fs.relpath and vim.fs.relpath(cwd, path)) or path
-      vim.system(
-        { "git", "show", want .. ":" .. rel },
-        { cwd = cwd, text = true },
-        vim.schedule_wrap(function(res)
-          if preview.want ~= want or preview.closed then
-            return -- superseded by a newer hover or the picker closed
-          end
-          local lines
-          if res.code == 0 then
-            lines = vim.split((res.stdout or ""):gsub("\n$", ""), "\n", { plain = true })
-          else
-            lines = { "(file did not exist at " .. want .. ")" }
-          end
-          preview.ref = want
-          apply_preview(lines)
-          if picker_opts.on_ref then
-            picker_opts.on_ref(want)
-          end
-        end)
-      )
+      M.show_revision(want, rel, cwd, function(lines, shown)
+        if preview.want ~= want or preview.closed then
+          return -- superseded by a newer hover or the picker closed
+        end
+        preview.ref = want
+        apply_preview(lines or { "(file did not exist at " .. want .. ")" })
+        if picker_opts.on_ref then
+          picker_opts.on_ref(shown)
+        end
+      end)
     end))
   end
 
