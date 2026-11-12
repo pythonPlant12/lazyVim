@@ -259,11 +259,12 @@ function M.open_file(opts)
   local cwd = live_diff.git_root(abs)
   local head = (live_diff.git_lines({ "rev-parse", "HEAD" }, cwd) or {})[1]
   local commit = opts.commit and (live_diff.git_lines({ "rev-parse", opts.commit }, cwd) or {})[1]
-  -- Without a working file even HEAD (e.g. the commit that deleted it) opens alone.
-  if commit and not vim.uv.fs_stat(abs) then
-    return live_diff.show_revision(commit, vim.fs.relpath(cwd, abs), cwd, function(lines, shown)
+  -- Without a working file the revision file opens alone, even for HEAD (the
+  -- Files panel, or the commit that deleted it).
+  if (commit or head) and not vim.uv.fs_stat(abs) then
+    return live_diff.show_revision(commit or head, vim.fs.relpath(cwd, abs), cwd, function(lines, shown)
       if not lines then
-        return vim.notify(("%s did not exist at %s"):format(opts.path, opts.commit), vim.log.levels.WARN)
+        return vim.notify(("%s did not exist at %s"):format(opts.path, opts.commit or "HEAD"), vim.log.levels.WARN)
       end
       open_revision(abs, lines, opts.line, opts.new_tab)
       local tab = vim.api.nvim_get_current_tabpage()
