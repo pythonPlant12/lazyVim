@@ -234,15 +234,6 @@ keybinding:
     nextItem: k
     prevItem-alt: <up>
     nextItem-alt: <down>
-customCommands:
-  - key: E
-    context: files
-    description: Open file in new tab
-    command: "python3 /Users/nikita/.config/nvim/scripts/lazygit-edit --tab {{if .SelectedFile}}{{.SelectedFile.Name | quote}}{{else}}{{.SelectedPath | quote}}{{end}}"
-  - key: E
-    context: commitFiles
-    description: Open file in new tab
-    command: "python3 /Users/nikita/.config/nvim/scripts/lazygit-edit --tab {{.SelectedPath | quote}}"
 git:
   paging:
     colorArg: always

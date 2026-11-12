@@ -83,6 +83,7 @@ keymaps.set("n", "<C-g>g", function()
     return
   end
 
+  lazygit_edit.configure_lazygit()
   Snacks.lazygit({
     cwd = lazygit_cwd(LazyVim.root.git()),
     env = { LAZYGIT_NEW_DIR_FILE = lazygit_dir_file },
