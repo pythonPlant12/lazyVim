@@ -350,7 +350,7 @@ function M.open_file(opts)
       local win
       local buf = open_revision(abs, lines, opts.line, opts.new_tab, function(w)
         win = w
-        diff_bar.show(win, nil, abs, cwd, shown, opts.source)
+        diff_bar.show(win, nil, cwd, { path = abs, ref = shown, branch = opts.source })
       end)
       local tab = vim.api.nvim_get_current_tabpage()
       label.set(tab, abs, shown, opts.source)

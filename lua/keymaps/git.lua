@@ -318,7 +318,7 @@ local function open_file_diff_fullscreen(base)
     if gs_win then
       local path = vim.api.nvim_buf_get_name(orig_buf)
       local base = vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(gs_win)):match("^gitsigns://.*//(:?[^:]*):")
-      diff_bar.show(gs_win, orig_win, path, live_diff.git_root(path), base:find("^:") and "HEAD" or base)
+      diff_bar.show(gs_win, orig_win, live_diff.git_root(path), { path = path, ref = base:find("^:") and "HEAD" or base }, { path = path })
     end
 
     -- If the scratch pane is closed by other means (:q, :close), still clean up.
@@ -419,7 +419,7 @@ local function compare_revisions(new_tab)
             title = ("Compare %s with (%s)"):format(left_item.ref, branch),
             keep_diff = true,
             esc_keeps_diff = true,
-            left = { ref = left_item.ref, branch = left_branch },
+            left = { ref = left_item.ref, branch = left_branch, path = left_item.path },
             branch = branch,
             -- `file @left..@right` or `file @left..working`; none once closed.
             on_ref = function(ref)
