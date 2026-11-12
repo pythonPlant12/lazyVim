@@ -58,13 +58,24 @@ end
 -- Return recent commits for a ref (or a list of refs) as selectable items
 -- (marking HEAD).
 function M.list_commits(ref, limit, cwd, path)
-  local args = vim.iter({ "log", ref, "--pretty=format:%h\t%an\t%ad\t%s", "--date=format:%Y-%m-%d %H:%M", ("--max-count=%d"):format(limit or 150) }):flatten():totable()
+  local function log(...)
+    return vim.iter({ "log", ref, ("--max-count=%d"):format(limit or 150), ... }):flatten():totable()
+  end
+  local args = log("--pretty=format:%h\t%an\t%ad\t%s", "--date=format:%Y-%m-%d %H:%M")
   -- With a path only commits that touched that file are listed (following renames).
   -- --follow drops merge commits (a stash entry is one); -m keeps them, once per parent.
+  local changed
   if path and path ~= "" then
     local base = cwd or git_root_or_cwd()
     local rel = (vim.fs.relpath and vim.fs.relpath(base, path)) or path
     vim.list_extend(args, { "-m", "--follow", "--", rel })
+    -- A merge changed the file only against its first parent; the rest are
+    -- dimmed. Stash entries stay enabled.
+    changed = {}
+    local first_parent = M.git_lines(log("--format=%h", "--diff-merges=first-parent", "--no-patch", "--follow", "--", rel), cwd) or {}
+    for _, sha in ipairs(vim.list_extend(first_parent, M.git_lines({ "stash", "list", "--format=%h" }, cwd) or {})) do
+      changed[sha] = true
+    end
   end
   local lines, err = M.git_lines(args, cwd)
   if not lines then
@@ -80,6 +91,7 @@ function M.list_commits(ref, limit, cwd, path)
       items[#items + 1] = {
         ref = sha,
         label = string.format("%s %-3s %s  %s  %s", head, M.author_initials(author), sha, date, subj or ""),
+        dim = changed and not changed[sha] or nil,
       }
     end
   end
@@ -125,7 +137,7 @@ end
 
 -- Commit picker with a live background diff: moving through the list diffs
 -- the current buffer against the hovered commit without closing the list.
---   items       list_commits items ({ ref, label })
+--   items       list_commits items ({ ref, label, dim }); dim rows are skipped
 --   title       picker title
 --   keep_diff   keep the diff open after <CR> (q closes it); otherwise the
 --               preview closes and on_confirm handles the pick
@@ -385,7 +397,19 @@ function M.pick(picker_opts)
 
   local sitems = {}
   for i, it in ipairs(picker_opts.items) do
-    sitems[#sitems + 1] = { idx = i, text = it.label, ref = it.ref, label = it.label }
+    sitems[#sitems + 1] = { idx = i, text = it.label, ref = it.ref, label = it.label, dim = it.dim }
+  end
+
+  -- Move to the next row in direction dir that is not dimmed; false if none.
+  local function step(picker, dir)
+    local list = picker.list
+    for i = list.cursor + dir, dir > 0 and list:count() or 1, dir do
+      if not list:get(i).dim then
+        list:view(i)
+        return true
+      end
+    end
+    return false
   end
 
   local focus_file_keys = {}
@@ -417,6 +441,9 @@ function M.pick(picker_opts)
           vim.api.nvim_set_current_win(main_win)
         end
       end,
+      -- j/k and the arrows skip dimmed rows.
+      list_down = function(picker) step(picker, 1) end,
+      list_up = function(picker) step(picker, -1) end,
     },
     win = { list = { keys = focus_file_keys }, input = { keys = focus_file_keys } },
     -- Full-width strip as a real BOTTOM SPLIT (not a float), so it never
@@ -439,7 +466,7 @@ function M.pick(picker_opts)
       },
     },
     format = function(item)
-      return { { item.label } }
+      return { { item.label, item.dim and "SnacksPickerDimmed" or nil } }
     end,
     -- Give the commit list its full height only while it has focus. Once focus
     -- moves to the diff windows it shrinks to a couple of rows, so the file
@@ -487,7 +514,11 @@ function M.pick(picker_opts)
         end
       end
     end,
-    on_change = function(_, item)
+    on_change = function(picker, item)
+      -- Any other way onto a dimmed row (start, mouse, gg) moves off it.
+      if item and item.dim then
+        return step(picker, 1) or step(picker, -1)
+      end
       if item then
         vim.schedule(function() preview_show(item.ref) end)
       end
