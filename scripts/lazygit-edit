@@ -6,13 +6,9 @@ import subprocess
 import sys
 
 
-def parse_args(args: list[str]) -> tuple[str, int | None, bool]:
-    if not args:
-        raise SystemExit(1)
-
-    open_in_tab = False
-    if args[0] == "--tab":
-        open_in_tab = True
+def parse_args(args: list[str]) -> tuple[str, int | None]:
+    # The old E of the user's LazyGit configs still passes --tab.
+    if args[:1] == ["--tab"]:
         args = args[1:]
 
     if not args:
@@ -35,7 +31,7 @@ def parse_args(args: list[str]) -> tuple[str, int | None, bool]:
     if not os.path.isabs(path):
         path = os.path.abspath(path)
 
-    return path, line, open_in_tab
+    return path, line
 
 
 def remote_expr(server: str, expr: str, *, capture: bool = False) -> subprocess.CompletedProcess[str]:
@@ -57,7 +53,7 @@ def main() -> int:
         lua = "require('features.lazygit_edit').expect(_A)"
         return remote_expr(os.environ["NVIM"], f"luaeval({json.dumps(lua)}, {json.dumps(pairs)})").returncode
 
-    path, line, open_in_tab = parse_args(sys.argv[1:])
+    path, line = parse_args(sys.argv[1:])
 
     if not os.environ.get("NVIM"):
         cmd = ["nvim"]
@@ -67,8 +63,7 @@ def main() -> int:
         os.execvp(cmd[0], cmd)
 
     server = os.environ["NVIM"]
-    lua_function = "open" if open_in_tab else "edit"
-    lua = f"require('features.lazygit_edit').{lua_function}(_A[1], _A[2])"
+    lua = "require('features.lazygit_edit').edit(_A[1], _A[2])"
     arg2 = "v:null" if line is None else str(line)
     expr = f"luaeval({json.dumps(lua)}, [{json.dumps(path)}, {arg2}])"
 

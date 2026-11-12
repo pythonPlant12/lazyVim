@@ -93,11 +93,6 @@ function M.edit(path, line)
   M.open_file({ path = path, line = line, commit = p.commit, source = p.source, new_tab = p.new_tab })
 end
 
--- True if the current buffer is the LazyGit terminal.
-function M.is_current_lazygit()
-  return is_lazygit_buf(vim.api.nvim_get_current_buf())
-end
-
 -- Focus the LazyGit terminal window across any tab; false if not open.
 function M.jump_to_lazygit()
   for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
@@ -181,22 +176,8 @@ local function in_this_tab(open)
   end
 end
 
--- Clamp the cursor to a target column on the current line.
-local function restore_cursor_col(col)
-  if not col then return end
-  local function restore()
-    local ok_cursor, cursor = pcall(vim.api.nvim_win_get_cursor, 0)
-    if not ok_cursor then return end
-    local line_len = #(vim.api.nvim_get_current_line() or "")
-    pcall(vim.api.nvim_win_set_cursor, 0, { cursor[1], math.min(tonumber(col) or 0, line_len) })
-  end
-
-  restore()
-  vim.schedule(restore)
-end
-
 -- Open a file in this tab, closing the LazyGit float.
-function M.open_same_tab(path, line, col)
+function M.open_same_tab(path, line)
   if not path or path == "" then return end
 
   local abs = vim.fn.fnamemodify(path, ":p")
@@ -210,10 +191,7 @@ function M.open_same_tab(path, line, col)
     edit_cmd = "edit " .. escaped
   end
 
-  in_this_tab(function()
-    vim.cmd(edit_cmd)
-    restore_cursor_col(col)
-  end)
+  in_this_tab(function() vim.cmd(edit_cmd) end)
 end
 
 -- Show a revision file alone (its working file is gone) as a read-only
