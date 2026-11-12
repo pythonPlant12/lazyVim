@@ -182,6 +182,16 @@ local function open_revision(abs, lines, line, new_tab)
   pcall(vim.api.nvim_win_set_cursor, 0, { tonumber(line) or 1, 0 })
 end
 
+-- The tab's label names the revision in the left pane: the tab line shows
+-- `file @hash` and the statusline `hash (source)`. No ref drops the label.
+local function set_label(tab, abs, ref, source)
+  if not vim.api.nvim_tabpage_is_valid(tab) then return end
+  vim.t[tab].revision = ref and { file = vim.fs.basename(abs), ref = ref:gsub("^(%x%x%x%x%x%x%x)%x*", "%1"), source = source } or nil
+  vim.cmd.redrawtabline()
+  local ok, lualine = pcall(require, "lualine")
+  if ok then lualine.refresh({ place = { "statusline" } }) end
+end
+
 -- Entry point of lazygit's e/E. Opens the working file in this tab (closing
 -- the lazygit float) or in a new tab. A file that differs from HEAD opens as
 -- a diff against HEAD, with the file's commit list shrunk below it, HEAD
@@ -191,7 +201,7 @@ end
 --   path     file to open
 --   line     cursor line in the working file (default: top of the file)
 --   commit   commit to compare against (default: HEAD)
---   source   branch, reflog or stash the commit came from
+--   source   branch, reflog or stash the commit came from (statusline label)
 --   new_tab  open in a new tab; q then closes the tab
 function M.open_file(opts)
   local abs = vim.fn.fnamemodify(opts.path, ":p")
@@ -201,11 +211,15 @@ function M.open_file(opts)
   local commit = opts.commit and (live_diff.git_lines({ "rev-parse", opts.commit }, cwd) or {})[1]
   -- Without a working file even HEAD (e.g. the commit that deleted it) opens alone.
   if commit and not vim.uv.fs_stat(abs) then
-    return live_diff.show_revision(commit, vim.fs.relpath(cwd, abs), cwd, function(lines)
+    return live_diff.show_revision(commit, vim.fs.relpath(cwd, abs), cwd, function(lines, shown)
       if not lines then
         return vim.notify(("%s did not exist at %s"):format(opts.path, opts.commit), vim.log.levels.WARN)
       end
       open_revision(abs, lines, opts.line, opts.new_tab)
+      local tab = vim.api.nvim_get_current_tabpage()
+      set_label(tab, abs, shown, opts.source)
+      -- The label goes with the revision file.
+      vim.api.nvim_create_autocmd("BufWinLeave", { buffer = 0, once = true, callback = function() set_label(tab) end })
     end)
   end
 
@@ -228,11 +242,16 @@ function M.open_file(opts)
     focus_diff = true,
     line = tonumber(opts.line) or 1,
     esc_keeps_diff = true,
-    on_quit = opts.new_tab and function()
-      if vim.api.nvim_tabpage_is_valid(tab) and #vim.api.nvim_list_tabpages() > 1 then
+    -- The source belongs to the commit lazygit gave, not to others in the list.
+    on_ref = function(ref)
+      set_label(tab, abs, ref, vim.startswith(commit or head, (ref:gsub("%^$", ""))) and opts.source or nil)
+    end,
+    on_quit = function()
+      set_label(tab)
+      if opts.new_tab and vim.api.nvim_tabpage_is_valid(tab) and #vim.api.nvim_list_tabpages() > 1 then
         vim.cmd.tabclose(vim.api.nvim_tabpage_get_number(tab))
       end
-    end or nil,
+    end,
   })
 end
 
