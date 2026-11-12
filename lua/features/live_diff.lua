@@ -122,6 +122,10 @@ function M.pick(picker_opts)
   local path = vim.api.nvim_buf_get_name(main_buf)
   local cwd = M.git_root()
   local ft = vim.bo[main_buf].filetype
+  -- The list belongs to this tab. Its windows stay here and show again on
+  -- return; its window autocmds must not touch other tabs.
+  local tab = vim.api.nvim_get_current_tabpage()
+  local function in_tab() return vim.api.nvim_get_current_tabpage() == tab end
 
   local preview = { win = nil, buf = nil, ref = nil }
   -- Debounce timer for the async preview fetch (see preview_show below).
@@ -155,11 +159,14 @@ function M.pick(picker_opts)
   end
   local winnew_autocmd = vim.api.nvim_create_autocmd("WinNew", {
     callback = function()
+      if not in_tab() then
+        return
+      end
       -- The new window is current inside the event; also sweep on the next
       -- tick to catch windows created without entering (enter=false floats).
       strip_inherited(vim.api.nvim_get_current_win())
       vim.schedule(function()
-        for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+        for _, w in ipairs(vim.api.nvim_tabpage_is_valid(tab) and vim.api.nvim_tabpage_list_wins(tab) or {}) do
           strip_inherited(w)
         end
       end)
@@ -435,7 +442,9 @@ function M.pick(picker_opts)
       end
 
       preview.list_autocmd = vim.api.nvim_create_autocmd("WinEnter", {
-        callback = function() vim.schedule(fit_list) end,
+        callback = function()
+          if in_tab() then vim.schedule(fit_list) end
+        end,
       })
       -- A list opened without focus (focus_diff) shrinks at once.
       vim.schedule(fit_list)
