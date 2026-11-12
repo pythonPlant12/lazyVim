@@ -294,16 +294,17 @@ function M.open_file(opts)
     focus_diff = true,
     line = tonumber(opts.line) or 1,
     esc_keeps_diff = true,
-    -- The source belongs to the commit lazygit gave, not to others in the list.
+    -- No label for HEAD or a closed diff. The source belongs to the commit
+    -- lazygit gave, not to others in the list.
     on_ref = function(ref)
-      set_label(tab, abs, ref, vim.startswith(commit or head, (ref:gsub("%^$", ""))) and opts.source or nil)
+      if not ref or vim.startswith(head, ref) then return set_label(tab) end
+      set_label(tab, abs, ref, commit and vim.startswith(commit, (ref:gsub("%^$", ""))) and opts.source or nil)
     end,
-    on_quit = function()
-      set_label(tab)
-      if opts.new_tab and vim.api.nvim_tabpage_is_valid(tab) and #vim.api.nvim_list_tabpages() > 1 then
+    on_quit = opts.new_tab and function()
+      if vim.api.nvim_tabpage_is_valid(tab) and #vim.api.nvim_list_tabpages() > 1 then
         vim.cmd.tabclose(vim.api.nvim_tabpage_get_number(tab))
       end
-    end,
+    end or nil,
   })
 end
 
