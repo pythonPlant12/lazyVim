@@ -60,19 +60,21 @@ end
 function M.list_commits(ref, limit, cwd, path)
   local args = vim.iter({ "log", ref, "--pretty=format:%h\t%an\t%ad\t%s", "--date=format:%Y-%m-%d %H:%M", ("--max-count=%d"):format(limit or 150) }):flatten():totable()
   -- With a path only commits that touched that file are listed (following renames).
+  -- --follow drops merge commits (a stash entry is one); -m keeps them, once per parent.
   if path and path ~= "" then
     local base = cwd or git_root_or_cwd()
     local rel = (vim.fs.relpath and vim.fs.relpath(base, path)) or path
-    vim.list_extend(args, { "--follow", "--", rel })
+    vim.list_extend(args, { "-m", "--follow", "--", rel })
   end
   local lines, err = M.git_lines(args, cwd)
   if not lines then
     return nil, err
   end
-  local items = {}
+  local items, seen = {}, {}
   for i, line in ipairs(lines) do
     local sha, author, date, subj = line:match("^([^\t]+)\t([^\t]*)\t([^\t]*)\t(.*)$")
-    if sha then
+    if sha and not seen[sha] then
+      seen[sha] = true
       -- Path-filtered lists rarely start at HEAD, so the marker would lie.
       local head = (i == 1 and not path) and "HEAD" or "    "
       items[#items + 1] = {
