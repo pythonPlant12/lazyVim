@@ -68,20 +68,17 @@ function M.list_commits(ref, limit, cwd, path)
   local function log(...)
     return vim.iter({ "log", ref, ("--max-count=%d"):format(limit or 150), ... }):flatten():totable()
   end
-  local args = log("--pretty=format:%h\t%an\t%ad\t%s", "--date=format:%Y-%m-%d %H:%M")
+  local args = log("--pretty=format:%h\t%an\t%ad\t%p\t%s", "--date=format:%Y-%m-%d %H:%M")
   -- With a path only commits that touched that file are listed (following renames).
-  -- --follow drops merge commits (a stash entry is one); -m keeps them, once per parent.
-  local changed
+  -- --follow drops merge commits (a stash entry is one); -m keeps them, once
+  -- per parent the file differs from.
+  local stash
   if path and path ~= "" then
     local base = cwd or git_root_or_cwd()
-    local rel = M.relpath(base, path)
-    vim.list_extend(args, { "-m", "--follow", "--name-status", "--", rel })
-    -- A merge changed the file only against its first parent; the rest are
-    -- dimmed. Stash entries stay enabled.
-    changed = {}
-    local first_parent = M.git_lines(log("--format=%h", "--diff-merges=first-parent", "--no-patch", "--follow", "--", rel), cwd) or {}
-    for _, sha in ipairs(vim.list_extend(first_parent, M.git_lines({ "stash", "list", "--format=%h" }, cwd) or {})) do
-      changed[sha] = true
+    vim.list_extend(args, { "-m", "--follow", "--name-status", "--", M.relpath(base, path) })
+    stash = {}
+    for _, sha in ipairs(M.git_lines({ "stash", "list", "--format=%h" }, cwd) or {}) do
+      stash[sha] = true
     end
   end
   local lines, err = M.git_lines(args, cwd)
@@ -90,7 +87,7 @@ function M.list_commits(ref, limit, cwd, path)
   end
   local items, seen, cur = {}, {}, nil
   for i, line in ipairs(lines) do
-    local sha, author, date, subj = line:match("^([^\t]+)\t([^\t]*)\t([^\t]*)\t(.*)$")
+    local sha, author, date, parents, subj = line:match("^([^\t]+)\t([^\t]*)\t([^\t]*)\t([^\t]*)\t(.*)$")
     -- --name-status lines (`M\tpath`, `R085\told\tnew`) follow their commit.
     local name = not sha and line:match("^%u%d*\t.-([^\t]+)$")
     if name then
@@ -101,11 +98,19 @@ function M.list_commits(ref, limit, cwd, path)
       items[#items + 1] = {
         ref = sha,
         label = string.format("%s %-3s %s  %s  %s", head, M.author_initials(author), sha, date, subj or ""),
-        dim = changed and not changed[sha] or nil,
+        parents = math.max(#vim.split(parents, " ", { trimempty = true }), 1),
       }
       seen[sha] = items[#items]
+    elseif sha then
+      seen[sha].parents = seen[sha].parents - 1
     end
     cur = sha and seen[sha] or cur
+  end
+  -- A row whose file is the same as in one of its parents (a merge that only
+  -- carries a version) is dimmed. Stash entries stay enabled.
+  for _, it in ipairs(items) do
+    it.dim = stash and it.parents > 1 and not stash[it.ref] or nil
+    it.parents = nil
   end
   return items, nil
 end
