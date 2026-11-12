@@ -1,14 +1,15 @@
--- LazyGit <-> Neovim integration: pressing "e" in LazyGit opens the file in a
--- normal Neovim window (same tab by default, new tab via the one-shot flag).
--- Called by scripts/lazygit-edit through nvim --remote.
+-- LazyGit <-> Neovim integration: e/E in LazyGit open the file through the
+-- entry point (open_file) in this tab or a new tab. Called by
+-- scripts/lazygit-edit through nvim --remote.
 local M = {}
 
--- One-shot flag: next LazyGit edit opens in a new Neovim tab.
-local _open_tab_next = false
+-- LazyGit's own edit action, moved to <f12> (raw terminal bytes) by the
+-- config below, so custom e/E can press it after they sent their message.
+local EDIT_KEY = "\27[24~"
 
-function M.set_open_tab_next()
-  _open_tab_next = true
-end
+-- The commit, source and target from the last e/E, until LazyGit's edit
+-- sends the path and line.
+local pending
 
 -- True if the buffer is a Snacks terminal running LazyGit.
 local function is_lazygit_buf(buf)
@@ -22,19 +23,76 @@ local function is_lazygit_buf(buf)
     or (type(cmd) == "string" and cmd:find("lazygit", 1, true) ~= nil)
 end
 
--- Ask LazyGit to edit the selected file in a new tab (sends "e" to its terminal).
-function M.open_tab_next_and_edit()
-  _open_tab_next = true
-  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if is_lazygit_buf(buf) then
-      local chan = vim.bo[buf].channel
-      if chan and chan > 0 then
-        vim.api.nvim_chan_send(chan, "e")
-        return
-      end
+-- First message of e/E (args: commit, new_tab, folder). Keeps them, then
+-- presses LazyGit's edit, which sends the path and line (M.edit).
+-- In commit files and the patch view, SelectedCommit is the Commits panel
+-- selection: wrong for a stash entry and, in the patch view, for a reflog or
+-- branch commit. The commit-files title on screen, "Diff files (<hash> ...)"
+-- or "Diff files (stash@{N}: ...)", names the right one. Only a stash is a
+-- known source: reflog and branch commits open in the same LazyGit view.
+function M.expect(args)
+  pending = nil
+  if args.folder then
+    return vim.notify("e/E open files, not folders", vim.log.levels.INFO, { title = "Lazygit" })
+  end
+  -- The focused LazyGit first: the key goes to the one that sent e/E.
+  for _, buf in ipairs({ vim.api.nvim_get_current_buf(), unpack(vim.api.nvim_list_bufs()) }) do
+    if is_lazygit_buf(buf) and vim.bo[buf].channel > 0 then
+      local title = args.commit and table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n"):match("─Diff files %(([^%s:)]+)")
+      pending = {
+        commit = title or args.commit,
+        source = (title or ""):match("^stash@") and "stash" or nil,
+        new_tab = args.new_tab ~= nil,
+        at = vim.uv.now(),
+      }
+      return vim.api.nvim_chan_send(vim.bo[buf].channel, EDIT_KEY)
     end
   end
-  _open_tab_next = false
+end
+
+-- LazyGit config for e/E inside Neovim. Snacks' YAML writer cannot hold a
+-- list of custom commands, so they go to their own file, loaded after the
+-- user's config.yml (its keys lose to these) and before Snacks' theme file.
+-- LazyGit's edit keeps e where no custom e exists ("edit commit" in Commits)
+-- and gets <f12>; "edit hunk" loses its key, E takes its place.
+function M.configure_lazygit()
+  local file = vim.fn.stdpath("cache") .. "/lazygit-edit.yml"
+  local files = vim.env.LG_CONFIG_FILE or ""
+  if files:find(file, 1, true) then return end
+
+  local expect = ("python3 %s --expect"):format(vim.fn.shellescape(vim.fn.stdpath("config") .. "/scripts/lazygit-edit"))
+  local commands = {}
+  for _, c in ipairs({
+    { context = "files, staging, stagingSecondary", args = "{{if not .SelectedFile}} folder=1{{end}}" },
+    { context = "commitFiles, patchBuilding", args = " commit={{.SelectedCommit.Hash}}{{if not .SelectedCommitFile}} folder=1{{end}}" },
+  }) do
+    table.insert(commands, { key = "e", context = c.context, command = expect .. c.args, description = "Open in Neovim" })
+    table.insert(commands, { key = "E", context = c.context, command = expect .. c.args .. " new_tab=1", description = "Open in a new Neovim tab" })
+  end
+  -- JSON is YAML.
+  vim.fn.writefile({ vim.json.encode({
+    keybinding = { universal = { edit = { "e", "<f12>" } }, main = { editSelectHunk = "<disabled>" } },
+    customCommands = commands,
+  }) }, file)
+
+  -- Snacks adds the user's config.yml only when LG_CONFIG_FILE is empty.
+  if files == "" then
+    local user = vim.split(vim.fn.system({ "lazygit", "-cd" }), "\n")[1] .. "/config.yml"
+    files = vim.uv.fs_stat(user) and user or ""
+  end
+  vim.env.LG_CONFIG_FILE = (files == "" and "" or files .. ",") .. file
+end
+
+-- Second message: LazyGit's edit with the path and line. After a recent e/E
+-- it opens through the entry point; otherwise (merge conflicts, the config
+-- file) it opens the file in this tab as before.
+function M.edit(path, line)
+  local p = pending
+  pending = nil
+  if not p or vim.uv.now() - p.at > 5000 then
+    return M.open_same_tab(path, line)
+  end
+  M.open_file({ path = path, line = line, commit = p.commit, source = p.source, new_tab = p.new_tab })
 end
 
 -- True if the current buffer is the LazyGit terminal.
@@ -124,18 +182,12 @@ local function restore_cursor_col(col)
   vim.schedule(restore)
 end
 
--- LazyGit edit hook opens in this tab unless the one-shot tab flag is set.
+-- Open a file in this tab, closing the LazyGit float.
 function M.open_same_tab(path, line, col)
   if not path or path == "" then return end
 
   local abs = vim.fn.fnamemodify(path, ":p")
   if abs == "" then return end
-
-  if _open_tab_next then
-    _open_tab_next = false
-    M.open(abs, line)
-    return
-  end
 
   local lazygit_win = current_lazygit_window()
   local target = normal_window_in_current_tab()
