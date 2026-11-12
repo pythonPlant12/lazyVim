@@ -60,19 +60,21 @@ end
 function M.list_commits(ref, limit, cwd, path)
   local args = vim.iter({ "log", ref, "--pretty=format:%h\t%an\t%ad\t%s", "--date=format:%Y-%m-%d %H:%M", ("--max-count=%d"):format(limit or 150) }):flatten():totable()
   -- With a path only commits that touched that file are listed (following renames).
+  -- --follow drops merge commits (a stash entry is one); -m keeps them, once per parent.
   if path and path ~= "" then
     local base = cwd or git_root_or_cwd()
     local rel = (vim.fs.relpath and vim.fs.relpath(base, path)) or path
-    vim.list_extend(args, { "--follow", "--", rel })
+    vim.list_extend(args, { "-m", "--follow", "--", rel })
   end
   local lines, err = M.git_lines(args, cwd)
   if not lines then
     return nil, err
   end
-  local items = {}
+  local items, seen = {}, {}
   for i, line in ipairs(lines) do
     local sha, author, date, subj = line:match("^([^\t]+)\t([^\t]*)\t([^\t]*)\t(.*)$")
-    if sha then
+    if sha and not seen[sha] then
+      seen[sha] = true
       -- Path-filtered lists rarely start at HEAD, so the marker would lie.
       local head = (i == 1 and not path) and "HEAD" or "    "
       items[#items + 1] = {
@@ -134,7 +136,7 @@ end
 --   esc_keeps_diff  <Esc> closes only the list, like <CR> with keep_diff
 --   on_quit     called after q closed the diff
 --   on_ref      called with the ref each time the diff shows another commit
---               (`ref^` when that commit deleted the file)
+--               (`ref^` when that commit deleted the file), nil when it closes
 function M.pick(picker_opts)
   local main_win = vim.api.nvim_get_current_win()
   local main_buf = vim.api.nvim_get_current_buf()
@@ -192,6 +194,7 @@ function M.pick(picker_opts)
     end,
   })
 
+  local close_autocmd
   local function preview_close()
     -- Run once: a later WinClosed (e.g. on_quit closing the tab) would
     -- otherwise put the file into whatever window is current then.
@@ -215,6 +218,7 @@ function M.pick(picker_opts)
       pcall(vim.api.nvim_del_autocmd, preview.list_autocmd)
       preview.list_autocmd = nil
     end
+    pcall(vim.api.nvim_del_autocmd, close_autocmd)
     -- Tear down so the file window survives no matter which side was closed:
     -- if the file window is gone, the preview window becomes the file window.
     if preview.win and vim.api.nvim_win_is_valid(preview.win) then
@@ -248,6 +252,9 @@ function M.pick(picker_opts)
     end
     preview.win, preview.buf, preview.ref = nil, nil, nil
     pcall(vim.keymap.del, "n", "q", { buffer = main_buf })
+    if picker_opts.on_ref then
+      picker_opts.on_ref(nil)
+    end
     -- Land back on the file.
     if vim.api.nvim_win_is_valid(main_win) then
       vim.api.nvim_set_current_win(main_win)
@@ -256,15 +263,31 @@ function M.pick(picker_opts)
     end
   end
 
-  -- q in either diff pane closes the commit list and the diff, like <C-g>fd.
-  -- While the list is open this is a cancel that keeps the current position.
-  local function close_with_q()
+  -- Close the commit list and the diff. While the list is open this is a
+  -- cancel that keeps the current position.
+  local function close_diff()
     if preview.picker and not preview.picker.closed then
-      orig_view = vim.api.nvim_win_call(main_win, vim.fn.winsaveview)
+      if vim.api.nvim_win_is_valid(main_win) then
+        orig_view = vim.api.nvim_win_call(main_win, vim.fn.winsaveview)
+      end
       preview.picker:close()
     else
       preview_close()
     end
+  end
+  -- Closing either diff pane (:q, <C-w>q) closes the rest.
+  close_autocmd = vim.api.nvim_create_autocmd("WinClosed", {
+    callback = function(ev)
+      local w = tonumber(ev.match)
+      if w == main_win or (preview.win and w == preview.win) then
+        vim.schedule(close_diff)
+      end
+    end,
+  })
+
+  -- q in either diff pane closes the commit list and the diff, like <C-g>fd.
+  local function close_with_q()
+    close_diff()
     if picker_opts.on_quit then
       vim.schedule(picker_opts.on_quit)
     end
@@ -483,17 +506,6 @@ function M.pick(picker_opts)
         if picker_opts.keep_diff then
           -- Ensure the preview matches the picked commit; q still closes it.
           preview_show(item.ref)
-          -- Closing either diff window (q, :q, <C-w>q) tears the whole diff
-          -- down and returns to the file.
-          for _, w in ipairs({ preview.win, main_win }) do
-            if w and vim.api.nvim_win_is_valid(w) then
-              vim.api.nvim_create_autocmd("WinClosed", {
-                pattern = tostring(w),
-                once = true,
-                callback = function() vim.schedule(preview_close) end,
-              })
-            end
-          end
         else
           preview_close()
         end

@@ -23,13 +23,9 @@ local function is_lazygit_buf(buf)
     or (type(cmd) == "string" and cmd:find("lazygit", 1, true) ~= nil)
 end
 
--- First message of e/E (args: commit, new_tab, folder). Keeps them, then
--- presses LazyGit's edit, which sends the path and line (M.edit).
--- In commit files and the patch view, SelectedCommit is the Commits panel
--- selection: wrong for a stash entry and, in the patch view, for a reflog or
--- branch commit. The commit-files title on screen, "Diff files (<hash> ...)"
--- or "Diff files (stash@{N}: ...)", names the right one. Only a stash is a
--- known source: reflog and branch commits open in the same LazyGit view.
+-- First message of e/E (args: commit, source, new_tab, folder): keep them, then
+-- press LazyGit's edit (M.edit). The on-screen "Diff files (<hash>|stash@{N}"
+-- title wins over SelectedCommit, which is wrong for a stash or in the patch view.
 function M.expect(args)
   pending = nil
   if args.folder then
@@ -41,7 +37,7 @@ function M.expect(args)
       local title = args.commit and table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n"):match("─Diff files %(([^%s:)]+)")
       pending = {
         commit = title or args.commit,
-        source = (title or ""):match("^stash@") and "stash" or nil,
+        source = (title or ""):match("^stash@") and "stash" or args.source,
         new_tab = args.new_tab ~= nil,
         at = vim.uv.now(),
       }
@@ -50,11 +46,8 @@ function M.expect(args)
   end
 end
 
--- LazyGit config for e/E inside Neovim. Snacks' YAML writer cannot hold a
--- list of custom commands, so they go to their own file, loaded after the
--- user's config.yml (its keys lose to these) and before Snacks' theme file.
--- LazyGit's edit keeps e where no custom e exists ("edit commit" in Commits)
--- and gets <f12>; "edit hunk" loses its key, E takes its place.
+-- LazyGit config for e/E, in its own file after the user's config.yml (Snacks'
+-- YAML cannot hold custom commands). LazyGit's edit adds <f12>; E replaces "edit hunk".
 function M.configure_lazygit()
   local file = vim.fn.stdpath("cache") .. "/lazygit-edit.yml"
   local files = vim.env.LG_CONFIG_FILE or ""
@@ -64,7 +57,9 @@ function M.configure_lazygit()
   local commands = {}
   for _, c in ipairs({
     { context = "files, staging, stagingSecondary", args = "{{if not .SelectedFile}} folder=1{{end}}" },
-    { context = "commitFiles, patchBuilding", args = " commit={{.SelectedCommit.Hash}}{{if not .SelectedCommitFile}} folder=1{{end}}" },
+    -- SelectedCommit is the very SelectedReflogCommit object when the view
+    -- was opened from the reflog.
+    { context = "commitFiles, patchBuilding", args = " commit={{.SelectedCommit.Hash}}{{if eq .SelectedCommit .SelectedReflogCommit}} source=reflog{{end}}{{if not .SelectedCommitFile}} folder=1{{end}}" },
   }) do
     table.insert(commands, { key = "e", context = c.context, command = expect .. c.args, description = "Open in Neovim" })
     table.insert(commands, { key = "E", context = c.context, command = expect .. c.args .. " new_tab=1", description = "Open in a new Neovim tab" })
@@ -83,23 +78,6 @@ function M.configure_lazygit()
   vim.env.LG_CONFIG_FILE = (files == "" and "" or files .. ",") .. file
 end
 
--- Second message: LazyGit's edit with the path and line. After a recent e/E
--- it opens through the entry point; otherwise (merge conflicts, the config
--- file) it opens the file in this tab as before.
-function M.edit(path, line)
-  local p = pending
-  pending = nil
-  if not p or vim.uv.now() - p.at > 5000 then
-    return M.open_same_tab(path, line)
-  end
-  M.open_file({ path = path, line = line, commit = p.commit, source = p.source, new_tab = p.new_tab })
-end
-
--- True if the current buffer is the LazyGit terminal.
-function M.is_current_lazygit()
-  return is_lazygit_buf(vim.api.nvim_get_current_buf())
-end
-
 -- Focus the LazyGit terminal window across any tab; false if not open.
 function M.jump_to_lazygit()
   for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
@@ -116,19 +94,18 @@ function M.jump_to_lazygit()
   return false
 end
 
--- Open a file in a new tab, optionally at a line.
-function M.open(path, line)
+-- `<cmd> +line path` for an Ex edit command; nil without a path.
+local function edit_cmd(cmd, path, line)
   if not path or path == "" then return end
+  local escaped = vim.fn.fnameescape(vim.fn.fnamemodify(path, ":p"))
+  line = tonumber(line)
+  return line and line > 0 and ("%s +%d %s"):format(cmd, line, escaped) or ("%s %s"):format(cmd, escaped)
+end
 
-  local abs = vim.fn.fnamemodify(path, ":p")
-  if abs == "" then return end
-
-  local escaped = vim.fn.fnameescape(abs)
-  if line and tonumber(line) and tonumber(line) > 0 then
-    vim.cmd(("tabedit +%d %s"):format(tonumber(line), escaped))
-  else
-    vim.cmd("tabedit " .. escaped)
-  end
+-- Open a file in a new tab, optionally at a line.
+local function open_new_tab(path, line)
+  local cmd = edit_cmd("tabedit", path, line)
+  if cmd then vim.cmd(cmd) end
 end
 
 -- Same-tab opens reuse a real editing window and avoid terminal/float windows.
@@ -168,110 +145,68 @@ local function close_lazygit_window(win)
   end, 50)
 end
 
--- Clamp the cursor to a target column on the current line.
-local function restore_cursor_col(col)
-  if not col then return end
-  local function restore()
-    local ok_cursor, cursor = pcall(vim.api.nvim_win_get_cursor, 0)
-    if not ok_cursor then return end
-    local line_len = #(vim.api.nvim_get_current_line() or "")
-    pcall(vim.api.nvim_win_set_cursor, 0, { cursor[1], math.min(tonumber(col) or 0, line_len) })
-  end
-
-  restore()
-  vim.schedule(restore)
-end
-
--- Open a file in this tab, closing the LazyGit float.
-function M.open_same_tab(path, line, col)
-  if not path or path == "" then return end
-
-  local abs = vim.fn.fnamemodify(path, ":p")
-  if abs == "" then return end
-
+-- Run open() in a normal window of this tab, then close the LazyGit float.
+-- Without one, the float closes first and open() runs in the window below it.
+local function in_this_tab(open)
   local lazygit_win = current_lazygit_window()
   local target = normal_window_in_current_tab()
-
-  local escaped = vim.fn.fnameescape(abs)
-  local edit_cmd
-  if line and tonumber(line) and tonumber(line) > 0 then
-    edit_cmd = ("edit +%d %s"):format(tonumber(line), escaped)
-  else
-    edit_cmd = "edit " .. escaped
-  end
-
-  if target and vim.api.nvim_win_is_valid(target) then
+  if target then
     vim.api.nvim_set_current_win(target)
-    vim.cmd(edit_cmd)
-    restore_cursor_col(col)
+    open()
+    close_lazygit_window(lazygit_win)
   else
     close_lazygit_window(lazygit_win)
-    vim.defer_fn(function()
-      vim.cmd(edit_cmd)
-      restore_cursor_col(col)
-    end, 60)
-    return
+    vim.defer_fn(open, 60)
   end
+end
 
-  close_lazygit_window(lazygit_win)
+-- Open a file in this tab, optionally at a line, closing the LazyGit float.
+local function open_this_tab(path, line)
+  local cmd = edit_cmd("edit", path, line)
+  if cmd then in_this_tab(function() vim.cmd(cmd) end) end
 end
 
 -- Show a revision file alone (its working file is gone) as a read-only
--- scratch buffer, in this tab (closing the lazygit float) or a new tab.
+-- scratch buffer, in this tab or a new tab; q closes it (the tab for E).
 local function open_revision(abs, lines, line, new_tab)
   local buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.bo[buf].modifiable = false
   vim.bo[buf].filetype = vim.filetype.match({ filename = abs, buf = buf }) or ""
-  local target = not new_tab and normal_window_in_current_tab()
-  if target then
-    close_lazygit_window(current_lazygit_window())
-    vim.api.nvim_set_current_win(target)
-    vim.api.nvim_win_set_buf(target, buf)
-  else
-    vim.cmd("tab sbuffer " .. buf)
+  vim.keymap.set("n", "q", function()
+    if new_tab and #vim.api.nvim_list_tabpages() > 1 then vim.cmd.tabclose() end
+    vim.api.nvim_buf_delete(buf, { force = true })
+  end, { buffer = buf, nowait = true })
+  local function show()
+    if new_tab then vim.cmd("tab sbuffer " .. buf) else vim.api.nvim_win_set_buf(0, buf) end
+    pcall(vim.api.nvim_win_set_cursor, 0, { tonumber(line) or 1, 0 })
   end
-  pcall(vim.api.nvim_win_set_cursor, 0, { tonumber(line) or 1, 0 })
+  if new_tab then show() else in_this_tab(show) end
+  return buf
 end
 
--- The tab's label names the revision in the left pane: the tab line shows
--- `file @hash` and the statusline `hash (source)`. No ref drops the label.
-local function set_label(tab, abs, ref, source)
-  if not vim.api.nvim_tabpage_is_valid(tab) then return end
-  vim.t[tab].revision = ref and { file = vim.fs.basename(abs), ref = ref:gsub("^(%x%x%x%x%x%x%x)%x*", "%1"), source = source } or nil
-  vim.cmd.redrawtabline()
-  local ok, lualine = pcall(require, "lualine")
-  if ok then lualine.refresh({ place = { "statusline" } }) end
-end
-
--- Entry point of lazygit's e/E. Opens the working file in this tab (closing
--- the lazygit float) or in a new tab. A file that differs from HEAD opens as
--- a diff against HEAD, with the file's commit list shrunk below it, HEAD
--- selected and the cursor in the working file. Another commit opens a
--- revision diff with that commit selected; when the working file is gone,
--- the revision file opens alone.
---   path     file to open
---   line     cursor line in the working file (default: top of the file)
---   commit   commit to compare against (default: HEAD)
---   source   branch, reflog or stash the commit came from (statusline label)
---   new_tab  open in a new tab; q then closes the tab
+-- Entry point of lazygit's e/E: a revision diff, a diff against HEAD, the plain
+-- file or the revision file alone. opts: path, line, commit, source, new_tab.
 function M.open_file(opts)
   local abs = vim.fn.fnamemodify(opts.path, ":p")
   local live_diff = require("features.live_diff")
+  local label = require("features.revision_label")
   local cwd = live_diff.git_root(abs)
-  local head = (live_diff.git_lines({ "rev-parse", "HEAD" }, cwd) or {})[1]
-  local commit = opts.commit and (live_diff.git_lines({ "rev-parse", opts.commit }, cwd) or {})[1]
-  -- Without a working file even HEAD (e.g. the commit that deleted it) opens alone.
-  if commit and not vim.uv.fs_stat(abs) then
-    return live_diff.show_revision(commit, vim.fs.relpath(cwd, abs), cwd, function(lines, shown)
+  local function rev_parse(rev) return (live_diff.git_lines({ "rev-parse", rev }, cwd) or {})[1] end
+  local head = rev_parse("HEAD")
+  local commit = opts.commit and rev_parse(opts.commit)
+  -- Without a working file the revision file opens alone, even for HEAD (the
+  -- Files panel, or the commit that deleted it).
+  if (commit or head) and not vim.uv.fs_stat(abs) then
+    return live_diff.show_revision(commit or head, vim.fs.relpath(cwd, abs), cwd, function(lines, shown)
       if not lines then
-        return vim.notify(("%s did not exist at %s"):format(opts.path, opts.commit), vim.log.levels.WARN)
+        return vim.notify(("%s did not exist at %s"):format(opts.path, opts.commit or "HEAD"), vim.log.levels.WARN)
       end
-      open_revision(abs, lines, opts.line, opts.new_tab)
+      local buf = open_revision(abs, lines, opts.line, opts.new_tab)
       local tab = vim.api.nvim_get_current_tabpage()
-      set_label(tab, abs, shown, opts.source)
+      label.set(tab, abs, shown, opts.source)
       -- The label goes with the revision file.
-      vim.api.nvim_create_autocmd("BufWinLeave", { buffer = 0, once = true, callback = function() set_label(tab) end })
+      vim.api.nvim_create_autocmd("BufWinLeave", { buffer = buf, once = true, callback = function() label.set(tab) end })
     end)
   end
 
@@ -279,7 +214,7 @@ function M.open_file(opts)
     commit = nil
   end
 
-  if opts.new_tab then M.open(abs, opts.line) else M.open_same_tab(abs, opts.line) end
+  if opts.new_tab then open_new_tab(abs, opts.line) else open_this_tab(abs, opts.line) end
   local tab = vim.api.nvim_get_current_tabpage()
   -- Untracked and unchanged files have nothing to diff against HEAD.
   if not commit and (not head or vim.system({ "git", "diff", "--quiet", "HEAD", "--", abs }, { cwd = cwd }):wait().code == 0) then
@@ -294,17 +229,30 @@ function M.open_file(opts)
     focus_diff = true,
     line = tonumber(opts.line) or 1,
     esc_keeps_diff = true,
-    -- The source belongs to the commit lazygit gave, not to others in the list.
+    -- No label for HEAD or a closed diff. The source belongs to the commit
+    -- lazygit gave, not to others in the list.
     on_ref = function(ref)
-      set_label(tab, abs, ref, vim.startswith(commit or head, (ref:gsub("%^$", ""))) and opts.source or nil)
+      if not ref or vim.startswith(head, ref) then return label.set(tab) end
+      label.set(tab, abs, ref, commit and vim.startswith(commit, (ref:gsub("%^$", ""))) and opts.source or nil)
     end,
-    on_quit = function()
-      set_label(tab)
-      if opts.new_tab and vim.api.nvim_tabpage_is_valid(tab) and #vim.api.nvim_list_tabpages() > 1 then
+    on_quit = opts.new_tab and function()
+      if vim.api.nvim_tabpage_is_valid(tab) and #vim.api.nvim_list_tabpages() > 1 then
         vim.cmd.tabclose(vim.api.nvim_tabpage_get_number(tab))
       end
-    end,
+    end or nil,
   })
+end
+
+-- Second message: LazyGit's edit with the path and line. After a recent e/E
+-- it opens through the entry point; otherwise (merge conflicts, the config
+-- file) it opens the file in this tab as before.
+function M.edit(path, line)
+  local p = pending
+  pending = nil
+  if not p or vim.uv.now() - p.at > 5000 then
+    return open_this_tab(path, line)
+  end
+  M.open_file({ path = path, line = line, commit = p.commit, source = p.source, new_tab = p.new_tab })
 end
 
 return M

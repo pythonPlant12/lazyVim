@@ -145,63 +145,51 @@ return {
       local function has_git_branch()
         return vim.b.gitsigns_head ~= nil and vim.b.gitsigns_head ~= ""
       end
-      local function has_revision() return vim.t.revision ~= nil end
-      opts.sections.lualine_b = {
-        chip_cap(cap_l, function() return P.get().git.bg end, has_git_branch),
-        {
-          function()
-            local branch = vim.b.gitsigns_head
-            if not branch or branch == "" then return "" end
-            local parts = { "%#LualineGitBranch#󰘬 " .. branch }
-            local a, b = vim.g._git_ahead or 0, vim.g._git_behind or 0
-            local u, m, d, c = vim.g._git_untracked or 0, vim.g._git_modified or 0, vim.g._git_deleted or 0, vim.g._git_conflicted or 0
-            local indicators = {}
-            if a > 0 and b > 0 then table.insert(indicators, "%#LualineGitYellow#+-") end
-            if a > 0 and b == 0 then table.insert(indicators, "%#LualineGitGreen#+") end
-            if b > 0 and a == 0 then table.insert(indicators, "%#LualineGitPeach#-") end
-            if c > 0 then table.insert(indicators, "%#LualineGitRed#!") end
-            if u > 0 then table.insert(indicators, "%#LualineGitGreen#?") end
-            if m > 0 then table.insert(indicators, "%#LualineGitYellow#*") end
-            if d > 0 then table.insert(indicators, "%#LualineGitRed#x") end
-            if #indicators > 0 then
-              table.insert(parts, " " .. table.concat(indicators, "") .. "%#LualineGitBase#")
-            end
-            return table.concat(parts, "")
-          end,
-          cond = has_git_branch,
-          padding = { left = 1, right = 1 },
-          separator = "",
-          color = function()
-            return { bg = P.get().git.bg }
-          end,
-        },
-        chip_cap(cap_r, function() return P.get().git.bg end, has_git_branch),
-        -- Revision chip: the commit in the revision diff of this tab
-        -- (features/lazygit_edit), the same in every pane of the tab.
-        chip_cap(cap_l, function() return P.get().git.bg end, has_revision),
-        {
-          function()
-            local r = vim.t.revision
-            return "%#LualineGitBranch#\u{F417} " .. r.ref .. (r.source and " (" .. r.source .. ")" or "")
-          end,
-          cond = has_revision,
-          padding = { left = 1, right = 1 },
-          separator = "",
-          color = function()
-            return { bg = P.get().git.bg }
-          end,
-        },
-        chip_cap(cap_r, function() return P.get().git.bg end, has_revision),
-        {
-          function() return "|" end,
-          padding = { left = 1, right = 1 },
-          separator = "",
-          color = function()
-            return { fg = P.get().chips.sep }
-          end,
-          cond = function() return has_git_branch() or has_revision() end,
-        },
-      }
+      local revision_label = require("features.revision_label")
+      local function has_revision() return revision_label.get() ~= nil end
+      -- A chip on the git background: caps around text_fn, shown while cond holds.
+      local function git_chip(text_fn, cond)
+        local function bg() return P.get().git.bg end
+        return {
+          chip_cap(cap_l, bg, cond),
+          { text_fn, cond = cond, padding = { left = 1, right = 1 }, separator = "", color = function() return { bg = bg() } end },
+          chip_cap(cap_r, bg, cond),
+        }
+      end
+      opts.sections.lualine_b = git_chip(function()
+        local branch = vim.b.gitsigns_head
+        if not branch or branch == "" then return "" end
+        local parts = { "%#LualineGitBranch#󰘬 " .. branch }
+        local a, b = vim.g._git_ahead or 0, vim.g._git_behind or 0
+        local u, m, d, c = vim.g._git_untracked or 0, vim.g._git_modified or 0, vim.g._git_deleted or 0, vim.g._git_conflicted or 0
+        local indicators = {}
+        if a > 0 and b > 0 then table.insert(indicators, "%#LualineGitYellow#+-") end
+        if a > 0 and b == 0 then table.insert(indicators, "%#LualineGitGreen#+") end
+        if b > 0 and a == 0 then table.insert(indicators, "%#LualineGitPeach#-") end
+        if c > 0 then table.insert(indicators, "%#LualineGitRed#!") end
+        if u > 0 then table.insert(indicators, "%#LualineGitGreen#?") end
+        if m > 0 then table.insert(indicators, "%#LualineGitYellow#*") end
+        if d > 0 then table.insert(indicators, "%#LualineGitRed#x") end
+        if #indicators > 0 then
+          table.insert(parts, " " .. table.concat(indicators, "") .. "%#LualineGitBase#")
+        end
+        return table.concat(parts, "")
+      end, has_git_branch)
+      -- Revision chip: the commit in the revision diff of this tab
+      -- (features/revision_label), the same in every pane of the tab.
+      vim.list_extend(opts.sections.lualine_b, git_chip(function()
+        local _, ref, source = revision_label.get()
+        return "%#LualineGitBranch#\u{F417} " .. ref .. (source and " (" .. source .. ")" or "")
+      end, has_revision))
+      table.insert(opts.sections.lualine_b, {
+        function() return "|" end,
+        padding = { left = 1, right = 1 },
+        separator = "",
+        color = function()
+          return { fg = P.get().chips.sep }
+        end,
+        cond = function() return has_git_branch() or has_revision() end,
+      })
 
       -- Diagnostics pill highlights from the theme palette.
       local function setup_diag_hl()

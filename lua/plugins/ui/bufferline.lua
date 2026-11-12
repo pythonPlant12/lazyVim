@@ -11,12 +11,12 @@ return {
         show_close_icon = false,
         indicator = { style = "none" },
         diagnostics = false,
-        -- A revision diff names its tab `file @hash` (features/lazygit_edit).
+        -- A revision diff names its tab `file @hash` (features/revision_label).
         -- The file is shortened, not the hash, to fit the 18-cell name.
         name_formatter = function(b)
-          local r = vim.t[b.tabnr].revision
-          if r then
-            return ("%s @%s"):format(require("bufferline.utils").truncate_name(r.file, 16 - #r.ref), r.ref)
+          local file, ref = require("features.revision_label").get(b.tabnr)
+          if ref then
+            return ("%s @%s"):format(require("bufferline.utils").truncate_name(file, 16 - #ref), ref)
           end
         end,
       })
