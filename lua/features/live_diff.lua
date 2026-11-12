@@ -412,12 +412,23 @@ function M.pick(picker_opts)
     return false
   end
 
-  local focus_file_keys = {}
+  local list_keys = {
+    -- Previous/next tab, like the global normal-mode maps.
+    ["<C-j>"] = { "tab_prev", mode = { "i", "n" } },
+    ["<C-k>"] = { "tab_next", mode = { "i", "n" } },
+  }
   for _, key in ipairs({ "<C-w>j", "<C-w><C-j>", "<C-w>k", "<C-w><C-k>" }) do
-    focus_file_keys[key] = { "focus_diff_file", mode = { "i", "n" } }
+    list_keys[key] = { "focus_diff_file", mode = { "i", "n" } }
+  end
+  -- Leave the filter input first, or the other tab opens in insert mode.
+  local function switch_tab(cmd)
+    return function()
+      vim.cmd.stopinsert()
+      vim.schedule(vim.cmd[cmd])
+    end
   end
   if picker_opts.esc_keeps_diff then
-    focus_file_keys["<Esc>"] = { "confirm", mode = "n" }
+    list_keys["<Esc>"] = { "confirm", mode = "n" }
   end
 
   local confirmed = false
@@ -444,8 +455,10 @@ function M.pick(picker_opts)
       -- j/k and the arrows skip dimmed rows.
       list_down = function(picker) step(picker, 1) end,
       list_up = function(picker) step(picker, -1) end,
+      tab_prev = switch_tab("tabprevious"),
+      tab_next = switch_tab("tabnext"),
     },
-    win = { list = { keys = focus_file_keys }, input = { keys = focus_file_keys } },
+    win = { list = { keys = list_keys }, input = { keys = list_keys } },
     -- Full-width strip as a real BOTTOM SPLIT (not a float), so it never
     -- covers the diff windows — the file stays fully visible above it.
     layout = {
