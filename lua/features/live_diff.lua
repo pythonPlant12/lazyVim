@@ -149,6 +149,7 @@ end
 --   on_quit     called after q closed the diff
 --   on_ref      called with the ref each time the diff shows another commit
 --               (`ref^` when that commit deleted the file), nil when it closes
+--   live        false: no diff while moving, only on_confirm acts
 function M.pick(picker_opts)
   local main_win = vim.api.nvim_get_current_win()
   local main_buf = vim.api.nvim_get_current_buf()
@@ -532,7 +533,7 @@ function M.pick(picker_opts)
       if item and item.dim then
         return step(picker, 1) or step(picker, -1)
       end
-      if item then
+      if item and picker_opts.live ~= false then
         vim.schedule(function() preview_show(item.ref) end)
       end
     end,

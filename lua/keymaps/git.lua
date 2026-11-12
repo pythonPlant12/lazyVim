@@ -296,31 +296,33 @@ local function pick_line_diff_base_and_preview()
       return
     end
 
-    vim.ui.select(commits, {
-      prompt = "Select commit from " .. branch_item.ref .. ":",
-      format_item = function(item) return item.label end,
-    }, function(commit_item)
-      if not commit_item then return end
-      local gs = require("gitsigns")
-      local buf = vim.api.nvim_get_current_buf()
-      gs.change_base(commit_item.ref, false)
-      preview_line_diff()
-      -- The changed base is only for this preview. The same events that
-      -- dismiss the inline preview also restore the default base (index),
-      -- so gutter signs and <C-g>fd don't keep diffing against the commit.
-      vim.defer_fn(function()
-        vim.api.nvim_create_autocmd({ "CursorMoved", "InsertEnter", "BufLeave" }, {
-          buffer = buf,
-          once = true,
-          desc = "Restore gitsigns base after line diff preview",
-          callback = function()
-            vim.schedule(function()
-              pcall(function() require("gitsigns").change_base(nil, false) end)
-            end)
-          end,
-        })
-      end, 150)
-    end)
+    -- The commit list of fD without the live diff; <CR> previews inline.
+    live_diff.pick({
+      items = commits,
+      title = "Line diff against commit (" .. branch_item.ref .. ")",
+      live = false,
+      on_confirm = function(commit_item)
+        local gs = require("gitsigns")
+        local buf = vim.api.nvim_get_current_buf()
+        gs.change_base(commit_item.ref, false)
+        preview_line_diff()
+        -- The changed base is only for this preview. The same events that
+        -- dismiss the inline preview also restore the default base (index),
+        -- so gutter signs and <C-g>fd don't keep diffing against the commit.
+        vim.defer_fn(function()
+          vim.api.nvim_create_autocmd({ "CursorMoved", "InsertEnter", "BufLeave" }, {
+            buffer = buf,
+            once = true,
+            desc = "Restore gitsigns base after line diff preview",
+            callback = function()
+              vim.schedule(function()
+                pcall(function() require("gitsigns").change_base(nil, false) end)
+              end)
+            end,
+          })
+        end, 150)
+      end,
+    })
   end)
 end
 
