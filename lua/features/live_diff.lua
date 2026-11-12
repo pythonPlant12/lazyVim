@@ -110,6 +110,12 @@ end
 --   keep_diff   keep the diff open after <CR> (q closes it); otherwise the
 --               preview closes and on_confirm handles the pick
 --   on_confirm  called with the picked item after the picker closes
+--   select      hash (full or short) of the commit to select at start
+--   focus_diff  start with focus in the file and the list shrunk
+--   line        cursor line in the file for the first diff (default: first hunk)
+--   esc_keeps_diff  <Esc> closes only the list, like <CR> with keep_diff
+--   on_quit     called after q closed the diff
+--   on_ref      called with the ref each time the diff shows another commit
 function M.pick(picker_opts)
   local main_win = vim.api.nvim_get_current_win()
   local main_buf = vim.api.nvim_get_current_buf()
@@ -161,6 +167,11 @@ function M.pick(picker_opts)
   })
 
   local function preview_close()
+    -- Run once: a later WinClosed (e.g. on_quit closing the tab) would
+    -- otherwise put the file into whatever window is current then.
+    if preview.closed then
+      return
+    end
     preview.closed = true
     if show_timer and not show_timer:is_closing() then
       show_timer:stop()
@@ -228,8 +239,12 @@ function M.pick(picker_opts)
     else
       preview_close()
     end
+    if picker_opts.on_quit then
+      vim.schedule(picker_opts.on_quit)
+    end
   end
 
+  local start_line = picker_opts.line
   -- Put `lines` (the file at some ref) into the preview pane and refresh the diff.
   local function apply_preview(lines)
     if not (preview.buf and vim.api.nvim_buf_is_valid(preview.buf)) then
@@ -273,7 +288,13 @@ function M.pick(picker_opts)
       end
     end
     -- Land on the first hunk instead of the top of the file on every hover.
+    -- The first diff lands on the caller's line instead, if given.
     vim.api.nvim_win_call(main_win, function()
+      if start_line then
+        vim.cmd(("normal! %dG"):format(start_line))
+        start_line = nil
+        return
+      end
       vim.cmd("normal! gg")
       local first_main = vim.api.nvim_buf_get_lines(main_buf, 0, 1, false)[1]
       local first_prev = vim.api.nvim_buf_get_lines(preview.buf, 0, 1, false)[1]
@@ -315,6 +336,9 @@ function M.pick(picker_opts)
           end
           preview.ref = want
           apply_preview(lines)
+          if picker_opts.on_ref then
+            picker_opts.on_ref(want)
+          end
         end)
       )
     end))
@@ -329,6 +353,9 @@ function M.pick(picker_opts)
   for _, key in ipairs({ "<C-w>j", "<C-w><C-j>", "<C-w>k", "<C-w><C-k>" }) do
     focus_file_keys[key] = { "focus_diff_file", mode = { "i", "n" } }
   end
+  if picker_opts.esc_keeps_diff then
+    focus_file_keys["<Esc>"] = { "confirm", mode = "n" }
+  end
 
   local confirmed = false
   Snacks.picker.pick({
@@ -340,6 +367,7 @@ function M.pick(picker_opts)
     -- Start focused on the list in normal mode (j/k navigate immediately);
     -- press i or / to reach the filter input.
     focus = "list",
+    enter = not picker_opts.focus_diff,
     -- Leaving the list upwards lands on the file (right pane). Without this
     -- nvim picks the window above by screen position, which is the preview.
     -- The list is the bottom window, so every vertical key goes up; this
@@ -409,6 +437,14 @@ function M.pick(picker_opts)
       preview.list_autocmd = vim.api.nvim_create_autocmd("WinEnter", {
         callback = function() vim.schedule(fit_list) end,
       })
+      -- A list opened without focus (focus_diff) shrinks at once.
+      vim.schedule(fit_list)
+      for i, it in ipairs(picker_opts.select and sitems or {}) do
+        if vim.startswith(picker_opts.select, it.ref) or vim.startswith(it.ref, picker_opts.select) then
+          picker.list:view(i)
+          break
+        end
+      end
     end,
     on_change = function(_, item)
       if item then
