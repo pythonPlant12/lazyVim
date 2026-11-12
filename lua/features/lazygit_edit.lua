@@ -47,10 +47,17 @@ function M.expect(args)
   end
 end
 
+-- A file only this Neovim writes: a shared cache file lets another instance
+-- (or a test run) swap the paths under a running LazyGit, which reloads it.
+local instance_dir = vim.fn.fnamemodify(vim.fn.tempname(), ":h")
+function M.instance_file(name)
+  return instance_dir .. "/" .. name
+end
+
 -- LazyGit config for e/E, in its own file after the user's config.yml (Snacks'
 -- YAML cannot hold custom commands). LazyGit's edit adds <f12>; E replaces "edit hunk".
 function M.configure_lazygit()
-  local file = vim.fn.stdpath("cache") .. "/lazygit-edit.yml"
+  local file = M.instance_file("lazygit-edit.yml")
   local files = vim.env.LG_CONFIG_FILE or ""
   if files:find(file, 1, true) then return end
 

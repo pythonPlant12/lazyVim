@@ -138,6 +138,8 @@ return {
         -- Snacks generates the lazygit theme from Neovim highlights; the same
         -- theme goes to config.yml for lazygit in a terminal.
         theme = require("features.lazygit_theme").theme,
+        -- Per-instance file: it holds this config's edit paths (see lazygit_edit).
+        theme_path = require("features.lazygit_edit").instance_file("lazygit-theme.yml"),
         win = {
           width = 0,
           height = 0,
