@@ -458,14 +458,23 @@ local function pick_ref_and_restore_file()
           return
         end
 
-        local git_root = LazyVim.root.git()
+        local git_root = live_diff.git_root(filepath)
         local lock = git_root .. "/.git/index.lock"
         if vim.uv.fs_stat(lock) then
           vim.uv.fs_unlink(lock)
         end
-        local result = vim.system({ "git", "checkout", commit_item.ref, "--", filepath }, { cwd = git_root }):wait()
+        -- Like `git checkout <ref> -- file`, but from the file's name at that
+        -- commit, which differs before a rename.
+        local rel = commit_item.path or live_diff.relpath(git_root, filepath)
+        local result = vim.system({ "git", "cat-file", "--filters", commit_item.ref .. ":" .. rel }, { cwd = git_root }):wait()
+        if result.code == 0 then
+          local f = assert(io.open(filepath, "wb"))
+          f:write(result.stdout)
+          f:close()
+          result = vim.system({ "git", "add", "--", filepath }, { cwd = git_root }):wait()
+        end
         if result.code ~= 0 then
-          vim.notify("git checkout failed:\n" .. (result.stderr or ""), vim.log.levels.ERROR, { title = "Git Restore" })
+          vim.notify("git restore failed:\n" .. (result.stderr or ""), vim.log.levels.ERROR, { title = "Git Restore" })
           return
         end
 
