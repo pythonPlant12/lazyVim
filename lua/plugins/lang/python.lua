@@ -30,6 +30,14 @@ local function python_user_site()
   return output[1]
 end
 
+-- The basedpyright analysis settings table of a client config, created when missing.
+local function basedpyright_analysis(config)
+  config.settings = config.settings or {}
+  config.settings.basedpyright = config.settings.basedpyright or {}
+  config.settings.basedpyright.analysis = config.settings.basedpyright.analysis or {}
+  return config.settings.basedpyright.analysis
+end
+
 -- Make basedpyright aware of bundled, custom, and django stub packages.
 local function apply_stub_paths(_, config)
   local stub_paths = {}
@@ -44,21 +52,38 @@ local function apply_stub_paths(_, config)
   if #stub_paths == 0 then
     return
   end
-  config.settings = config.settings or {}
-  config.settings.basedpyright = config.settings.basedpyright or {}
-  config.settings.basedpyright.analysis = config.settings.basedpyright.analysis or {}
+  local analysis = basedpyright_analysis(config)
   -- basedpyright only accepts a single stubPath string; use the first match
   -- and append custom stubs second so they take precedence via order
-  if not config.settings.basedpyright.analysis.stubPath then
-    config.settings.basedpyright.analysis.stubPath = stub_paths[1]
+  if not analysis.stubPath then
+    analysis.stubPath = stub_paths[1]
   end
   if #stub_paths > 1 then
-    local extra = config.settings.basedpyright.analysis.extraPaths or {}
+    local extra = analysis.extraPaths or {}
     for i = 2, #stub_paths do
       table.insert(extra, stub_paths[i])
     end
-    config.settings.basedpyright.analysis.extraPaths = extra
+    analysis.extraPaths = extra
   end
+end
+
+-- Copy ty's `extra-paths` (ty.toml, or [tool.ty.environment] in pyproject.toml) into
+-- basedpyright extraPaths, so a project that sets its import roots for ty needs no pyright config.
+local function apply_ty_extra_paths(_, config)
+  local root = config.root_dir
+  if not root then
+    return
+  end
+  local analysis = basedpyright_analysis(config)
+  local extra = analysis.extraPaths or {}
+  for _, name in ipairs({ "ty.toml", "pyproject.toml" }) do
+    local file = vim.fs.joinpath(root, name)
+    local content = vim.fn.filereadable(file) == 1 and table.concat(vim.fn.readfile(file), "\n") or ""
+    for path in (content:match("extra%-paths%s*=%s*(%b[])") or ""):gmatch("[\"']([^\"']+)[\"']") do
+      add_unique_path(extra, vim.fs.joinpath(root, path))
+    end
+  end
+  analysis.extraPaths = extra
 end
 
 -- Chain a before_init hook onto any existing one without clobbering it.
@@ -171,6 +196,7 @@ return {
       })
       merge_before_init(opts.servers.basedpyright, apply_python_path_from_venv)
       merge_before_init(opts.servers.basedpyright, apply_stub_paths)
+      merge_before_init(opts.servers.basedpyright, apply_ty_extra_paths)
 
       opts.servers.ruff = vim.tbl_deep_extend("force", opts.servers.ruff or {}, {
         root_dir = python_root_resolver("ruff"),
