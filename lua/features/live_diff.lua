@@ -328,12 +328,19 @@ function M.pick(picker_opts)
       preview_close()
     end
   end
-  -- Closing either diff pane (:q, <C-w>q) closes the rest.
+  -- Closing either diff pane (:q, <C-w>q) closes the rest. The working file
+  -- then takes the right pane's view, read here before the window goes.
   close_autocmd = vim.api.nvim_create_autocmd("WinClosed", {
     callback = function(ev)
       local w = tonumber(ev.match)
       if w == main_win or (preview.win and w == preview.win) then
-        vim.schedule(close_diff)
+        orig_view = vim.api.nvim_win_call(main_win, vim.fn.winsaveview)
+        vim.schedule(function()
+          close_diff()
+          if vim.api.nvim_win_is_valid(main_win) then
+            vim.api.nvim_win_call(main_win, function() vim.fn.winrestview(orig_view) end)
+          end
+        end)
       end
     end,
   })
