@@ -145,6 +145,7 @@ return {
       local function has_git_branch()
         return vim.b.gitsigns_head ~= nil and vim.b.gitsigns_head ~= ""
       end
+      local function has_revision() return vim.t.revision ~= nil end
       opts.sections.lualine_b = {
         chip_cap(cap_l, function() return P.get().git.bg end, has_git_branch),
         {
@@ -175,6 +176,22 @@ return {
           end,
         },
         chip_cap(cap_r, function() return P.get().git.bg end, has_git_branch),
+        -- Revision chip: the commit in the revision diff of this tab
+        -- (features/lazygit_edit), the same in every pane of the tab.
+        chip_cap(cap_l, function() return P.get().git.bg end, has_revision),
+        {
+          function()
+            local r = vim.t.revision
+            return "%#LualineGitBranch#\u{F417} " .. r.ref .. (r.source and " (" .. r.source .. ")" or "")
+          end,
+          cond = has_revision,
+          padding = { left = 1, right = 1 },
+          separator = "",
+          color = function()
+            return { bg = P.get().git.bg }
+          end,
+        },
+        chip_cap(cap_r, function() return P.get().git.bg end, has_revision),
         {
           function() return "|" end,
           padding = { left = 1, right = 1 },
@@ -182,7 +199,7 @@ return {
           color = function()
             return { fg = P.get().chips.sep }
           end,
-          cond = has_git_branch,
+          cond = function() return has_git_branch() or has_revision() end,
         },
       }
 
