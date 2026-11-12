@@ -23,13 +23,9 @@ local function is_lazygit_buf(buf)
     or (type(cmd) == "string" and cmd:find("lazygit", 1, true) ~= nil)
 end
 
--- First message of e/E (args: commit, new_tab, folder). Keeps them, then
--- presses LazyGit's edit, which sends the path and line (M.edit).
--- In commit files and the patch view, SelectedCommit is the Commits panel
--- selection: wrong for a stash entry and, in the patch view, for a reflog or
--- branch commit. The commit-files title on screen, "Diff files (<hash> ...)"
--- or "Diff files (stash@{N}: ...)", names the right one. Only a stash is a
--- known source: reflog and branch commits open in the same LazyGit view.
+-- First message of e/E (args: commit, source, new_tab, folder): keep them, then
+-- press LazyGit's edit (M.edit). The on-screen "Diff files (<hash>|stash@{N}"
+-- title wins over SelectedCommit, which is wrong for a stash or in the patch view.
 function M.expect(args)
   pending = nil
   if args.folder then
@@ -41,7 +37,7 @@ function M.expect(args)
       local title = args.commit and table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n"):match("─Diff files %(([^%s:)]+)")
       pending = {
         commit = title or args.commit,
-        source = (title or ""):match("^stash@") and "stash" or nil,
+        source = (title or ""):match("^stash@") and "stash" or args.source,
         new_tab = args.new_tab ~= nil,
         at = vim.uv.now(),
       }
@@ -64,7 +60,9 @@ function M.configure_lazygit()
   local commands = {}
   for _, c in ipairs({
     { context = "files, staging, stagingSecondary", args = "{{if not .SelectedFile}} folder=1{{end}}" },
-    { context = "commitFiles, patchBuilding", args = " commit={{.SelectedCommit.Hash}}{{if not .SelectedCommitFile}} folder=1{{end}}" },
+    -- SelectedCommit is the very SelectedReflogCommit object when the view
+    -- was opened from the reflog.
+    { context = "commitFiles, patchBuilding", args = " commit={{.SelectedCommit.Hash}}{{if eq .SelectedCommit .SelectedReflogCommit}} source=reflog{{end}}{{if not .SelectedCommitFile}} folder=1{{end}}" },
   }) do
     table.insert(commands, { key = "e", context = c.context, command = expect .. c.args, description = "Open in Neovim" })
     table.insert(commands, { key = "E", context = c.context, command = expect .. c.args .. " new_tab=1", description = "Open in a new Neovim tab" })
