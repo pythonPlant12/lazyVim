@@ -490,6 +490,11 @@ return {
         return comp
       end
 
+      local paths = require("utils.path_display")
+      -- The path chip renders this slot; fill_path_slot puts the path in.
+      local PATH_SLOT = "\u{E000}path\u{E000}"
+      local path_text = ""
+
       -- Path/breadcrumb components are wrapped into rounded chips and truncated safely.
       opts.sections.lualine_c = opts.sections.lualine_c or {}
       local chip_index = 1
@@ -505,14 +510,12 @@ return {
           local styled_comp = style_chip(comp, bg_fn)
           if chip_index == 1 then
             styled_comp.padding = { left = 1, right = 0 }
-            -- modified_hl "" keeps a modified file's name on the chip's own
-            -- foreground instead of MatchParen, which this config tints per theme.
-            local path_fn = LazyVim.lualine.pretty_path({ filename_hl = "", directory_hl = "", modified_hl = "" })
-            styled_comp[1] = function(self)
-              local icon = require("mini.icons").get("file", vim.fn.expand("%:t"))
-              local path = type(path_fn) == "function" and path_fn(self) or ""
-              if icon and icon ~= "" then return " " .. icon .. " " .. path end
-              return path
+            -- The full path from the folder Neovim was opened in, drawn as a
+            -- slot that fill_path_slot below fills with as much as fits.
+            styled_comp[1] = function()
+              local name = vim.api.nvim_buf_get_name(0)
+              path_text = name ~= "" and paths.relative(name) or ""
+              return " " .. require("mini.icons").get("file", vim.fs.basename(name)) .. " " .. PATH_SLOT
             end
             local existing_color_fn = styled_comp.color
             styled_comp.color = function()
@@ -576,6 +579,22 @@ return {
         end
       end
       opts.sections.lualine_c = styled_c
+
+      -- The path takes the room the other chips leave; a longer one loses its
+      -- start (utils/path_display.fit). %= is dropped so it does not pad the measure.
+      local function fill_path_slot(stl)
+        local i, j = (stl or ""):find(PATH_SLOT, 1, true)
+        if not i then return stl end
+        local win = vim.api.nvim_get_current_win()
+        local width = vim.o.laststatus == 3 and vim.o.columns or vim.api.nvim_win_get_width(win)
+        local rest = (stl:sub(1, i - 1) .. stl:sub(j + 1)):gsub("%%=", "")
+        local used = vim.api.nvim_eval_statusline(rest, { winid = win, maxwidth = width }).width
+        local text = paths.fit(path_text, width - used):gsub("%%", "%%%%")
+        return stl:sub(1, i - 1) .. text .. stl:sub(j + 1)
+      end
+      local lualine = require("lualine")
+      local render = lualine.statusline
+      lualine.statusline = function(...) return fill_path_slot(render(...)) end
 
       return opts
     end,
