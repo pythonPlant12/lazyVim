@@ -75,39 +75,85 @@ local function current_branch(cwd)
   return "HEAD"
 end
 
--- Keep the current branch first, then local refs, then remote refs.
-local function list_branches(active_branch, cwd)
-  local lines, err = live_diff.git_lines({ "for-each-ref", "--format=%(refname:short)", "refs/heads", "refs/remotes" }, cwd)
+-- Current branch first, then the remote default branch (origin/HEAD), the
+-- other remote branches and the local ones, each newest first. Symbolic refs
+-- are aliases and left out. rank keeps the groups in order while searching.
+local function list_branches(cwd)
+  local lines, err = live_diff.git_lines({
+    "for-each-ref", "--sort=-committerdate",
+    "--format=%(refname)%09%(refname:short)%09%(symref:short)%09%(committerdate:relative)",
+    "refs/heads", "refs/remotes",
+  }, cwd)
   if not lines then
     return nil, err
   end
-  local seen = {}
-  local current = {}
-  local local_refs = {}
-  local remote_refs = {}
-  for _, ref in ipairs(lines) do
-    if ref ~= "origin/HEAD" and not seen[ref] then
-      seen[ref] = true
-      local is_remote = ref:find("/", 1, true) ~= nil
-      local item = {
-        ref = ref,
-        label = is_remote and ("[remote] " .. ref) or ("[local]  " .. ref),
-      }
-      if (not is_remote) and active_branch and ref == active_branch then
-        item.label = item.label .. " (current)"
-        current[#current + 1] = item
-      elseif is_remote then
-        remote_refs[#remote_refs + 1] = item
-      else
-        local_refs[#local_refs + 1] = item
-      end
+  local active = current_branch(cwd)
+  local detached = active == "HEAD" and (live_diff.git_lines({ "rev-parse", "--short", "HEAD" }, cwd) or {})[1]
+  local groups = { { { ref = active, label = ("Current (%s)"):format(detached and "HEAD " .. detached or active) } }, {}, {}, {} }
+  local default
+  local refs = {}
+  for _, line in ipairs(lines) do
+    local full, ref, target, date = unpack(vim.split(line, "\t"))
+    if target ~= "" then
+      default = full == "refs/remotes/origin/HEAD" and target or default
+    elseif ref == active and not vim.startswith(full, "refs/remotes/") then
+      groups[1][1].date = date
+    else
+      refs[#refs + 1] = { ref = ref, label = ref, date = date, remote = vim.startswith(full, "refs/remotes/") }
     end
   end
+  for _, it in ipairs(refs) do
+    local g = groups[it.ref == default and 2 or it.remote and 3 or 4]
+    g[#g + 1] = it
+  end
   local items = {}
-  vim.list_extend(items, current)
-  vim.list_extend(items, local_refs)
-  vim.list_extend(items, remote_refs)
+  for rank, g in ipairs(groups) do
+    for _, it in ipairs(g) do
+      it.rank, it.remote = rank, nil
+      items[#items + 1] = it
+    end
+  end
   return items, nil
+end
+
+-- The repo-relative name of the file at path on ref, which differs after a
+-- move; the current name when ref does not have the file.
+local function file_on_branch(ref, path, cwd)
+  local rel = live_diff.relpath(cwd, path)
+  return live_diff.path_at(ref, rel, cwd) or rel
+end
+
+-- Branch list in the commit list's bottom strip, opened in normal mode (i
+-- reaches the search). on_pick(item) gets the chosen branch.
+local function select_branch(title, cwd, on_pick)
+  local branches, err = list_branches(cwd)
+  if not branches then
+    vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = title })
+    return
+  end
+  local width = 0
+  for i, it in ipairs(branches) do
+    it.idx, it.text = i, it.label
+    width = math.max(width, vim.api.nvim_strwidth(it.label))
+  end
+  Snacks.picker.pick({
+    title = "Select branch",
+    items = branches,
+    focus = "list",
+    layout = live_diff.bottom_layout,
+    sort = { fields = { "rank", "score:desc", "idx" } },
+    format = function(item)
+      return {
+        { live_diff.icons.branch .. " " },
+        { item.label .. string.rep(" ", width - vim.api.nvim_strwidth(item.label) + 2), item.rank == 1 and "SnacksPickerGitBranchCurrent" or nil },
+        { item.date or "", "SnacksPickerDimmed" },
+      }
+    end,
+    confirm = function(picker, item)
+      picker:close()
+      if item then vim.schedule(function() on_pick(item) end) end
+    end,
+  })
 end
 
 -- Map a buffer line to its line number in the gitsigns base (usually HEAD) by
@@ -190,29 +236,14 @@ local function pick_line_diff_base_and_preview()
   end
   local base_lnum = buf_line_to_base(vim.api.nvim_win_get_cursor(0)[1])
   local cwd = live_diff.git_root()
-  local active = current_branch(cwd)
-  local branches, err = list_branches(active, cwd)
-  if not branches then
-    vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = "Git Diff" })
-    return
-  end
-  if #branches == 0 then
-    vim.notify("No branches found", vim.log.levels.WARN, { title = "Git Diff" })
-    return
-  end
-
-  vim.ui.select(branches, {
-    prompt = "Select branch:",
-    format_item = function(item) return item.label end,
-  }, function(branch_item)
-    if not branch_item then return end
-
-    local commits, commits_err = list_line_commits(path, base_lnum, cwd, branch_item.ref)
+  select_branch("Git Diff", cwd, function(branch_item)
+    local rel = file_on_branch(branch_item.ref, path, cwd)
+    local commits, commits_err = list_line_commits(cwd .. "/" .. rel, base_lnum, cwd, branch_item.ref)
     if not commits then
       vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = "Git Diff" })
       return
     end
-    commits = live_diff.with_branch_head(commits, branch_item.ref, cwd)
+    commits = live_diff.with_branch_head(commits, branch_item.ref, cwd, rel)
     if #commits == 0 then
       vim.notify("No commits changed this line on " .. branch_item.ref, vim.log.levels.WARN, { title = "Git Diff" })
       return
@@ -359,28 +390,14 @@ local function pick_branch_commits(title, on_pick)
     return
   end
   local cwd = live_diff.git_root()
-  local branches, err = list_branches(current_branch(cwd), cwd)
-  if not branches then
-    vim.notify("Could not list branches: " .. err, vim.log.levels.ERROR, { title = title })
-    return
-  end
-  if #branches == 0 then
-    vim.notify("No branches found", vim.log.levels.WARN, { title = title })
-    return
-  end
-
-  vim.ui.select(branches, {
-    prompt = "Select branch:",
-    format_item = function(item) return item.label end,
-  }, function(branch_item)
-    if not branch_item then return end
-
-    local commits, commits_err = live_diff.list_commits(branch_item.ref, 150, cwd, fpath)
+  select_branch(title, cwd, function(branch_item)
+    local rel = file_on_branch(branch_item.ref, fpath, cwd)
+    local commits, commits_err = live_diff.list_commits(branch_item.ref, 150, cwd, cwd .. "/" .. rel)
     if not commits then
       vim.notify("Could not list commits: " .. commits_err, vim.log.levels.ERROR, { title = title })
       return
     end
-    commits = live_diff.with_branch_head(commits, branch_item.ref, cwd)
+    commits = live_diff.with_branch_head(commits, branch_item.ref, cwd, rel)
     if #commits == 0 then
       vim.notify("No commits changed this file on " .. branch_item.ref, vim.log.levels.WARN, { title = title })
       return

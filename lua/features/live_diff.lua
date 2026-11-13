@@ -61,6 +61,30 @@ function M.relpath(cwd, path)
   return (vim.fs.relpath and vim.fs.relpath(cwd, path)) or path
 end
 
+-- Lazygit's Nerd Font icons for branch and commit rows.
+M.icons = { branch = "\u{f062c}", commit = "\u{f0718}" }
+
+-- Full-width strip as a real BOTTOM SPLIT (not a float), so it never
+-- covers the diff windows — the file stays fully visible above it. Shared
+-- by the branch and commit lists.
+M.bottom_layout = {
+  -- snacks reads cycle from the resolved layout: j/k stop at the
+  -- first/last row instead of wrapping around.
+  cycle = false,
+  layout = {
+    box = "vertical",
+    position = "bottom",
+    backdrop = false,
+    width = 0,
+    height = 0.3,
+    border = "top",
+    title = " {title} ",
+    title_pos = "left",
+    { win = "input", height = 1, border = "bottom" },
+    { win = "list", border = "none" },
+  },
+}
+
 -- Return recent commits for a ref (or a list of refs) as selectable items
 -- (marking HEAD). With a path, each item's path is the file's name at that
 -- commit (renames followed).
@@ -115,13 +139,45 @@ function M.list_commits(ref, limit, cwd, path)
   return items, nil
 end
 
+-- The file's repo-relative name at ref: `rel` itself, or the name it has
+-- there after a move. A move on this branch comes from the file's history
+-- (--follow), a move on ref from the renames since the merge base. nil when
+-- ref does not have the file.
+function M.path_at(ref, rel, cwd)
+  local function has(r, p)
+    return vim.system({ "git", "cat-file", "-e", r .. ":" .. p }, { cwd = cwd }):wait().code == 0
+  end
+  if has(ref, rel) then
+    return rel
+  end
+  local base = (M.git_lines({ "merge-base", "HEAD", ref }, cwd) or {})[1]
+  if not base then
+    return nil
+  end
+  -- The name at the merge base: the newest name in HEAD's history it has.
+  local names = M.git_lines({ "log", "--follow", "--name-only", "--format=", "HEAD", "--", rel }, cwd) or {}
+  local old = vim.iter(vim.list.unique(names)):find(function(p) return has(base, p) end)
+  if not old then
+    return nil
+  end
+  for _, line in ipairs(M.git_lines({ "diff", "-M", "--diff-filter=R", "--name-status", base, ref }, cwd) or {}) do
+    local from, to = line:match("^R%d*\t([^\t]+)\t([^\t]+)$")
+    if from == old then
+      return to
+    end
+  end
+  return has(ref, old) and old or nil
+end
+
 -- Put the branch tip first, marked HEAD, so the branch itself is selectable
--- even when its last commit did not touch the file or line.
-function M.with_branch_head(items, ref, cwd)
+-- even when its last commit did not touch the file or line. path: the file's
+-- name at ref (path_at), shown on the tip row.
+function M.with_branch_head(items, ref, cwd, path)
   local head = (M.list_commits(ref, 1, cwd) or {})[1]
   if not head then
     return items
   end
+  head.path = path
   -- Drop the tip wherever it is: a list of several refs may hold newer commits.
   items = vim.tbl_filter(function(it) return it.ref ~= head.ref end, items)
   table.insert(items, 1, head)
@@ -558,27 +614,11 @@ function M.pick(picker_opts)
       end,
     },
     win = { list = { keys = list_keys }, input = { keys = input_keys } },
-    -- Full-width strip as a real BOTTOM SPLIT (not a float), so it never
-    -- covers the diff windows — the file stays fully visible above it.
-    layout = {
-      -- snacks reads cycle from the resolved layout: j/k stop at the
-      -- first/last commit instead of wrapping around.
-      cycle = false,
-      layout = {
-        box = "vertical",
-        position = "bottom",
-        backdrop = false,
-        width = 0,
-        height = 0.3,
-        border = "top",
-        title = " {title} ",
-        title_pos = "left",
-        { win = "input", height = 1, border = "bottom" },
-        { win = "list", border = "none" },
-      },
-    },
+    layout = M.bottom_layout,
+    -- Commits get the commit icon; the working row keeps the hash column.
     format = function(item)
-      return { { item.label, item.dim and "SnacksPickerDimmed" or nil } }
+      local icon = item.header and "" or item.ref == "working" and "  " or M.icons.commit .. " "
+      return { { icon .. item.label, item.dim and "SnacksPickerDimmed" or nil } }
     end,
     -- Give the commit list its full height only while it has focus. Once focus
     -- moves to the diff windows it shrinks to a couple of rows, so the file
