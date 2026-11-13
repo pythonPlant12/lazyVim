@@ -108,3 +108,6 @@ ai-setup-backup-*.tar.gz
 !.planning/*.md
 !.planning/*.example.yaml
 # END idream-managed agent workspace
+
+# Local issue tracker (docs/agents/issue-tracker.md)
+.scratch/

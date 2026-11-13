@@ -4,7 +4,12 @@ return {
     "akinsho/bufferline.nvim",
     opts = function(_, opts)
       opts = opts or {}
-      local max_name = 50
+      local label = require("features.revision_label")
+      local paths = require("utils.path_display")
+      -- The file a tab shows: its revision diff's file, or its window's buffer.
+      local function tab_file(tab)
+        return label.get(tab) or vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(vim.api.nvim_tabpage_get_win(tab)))
+      end
       opts.options = vim.tbl_deep_extend("force", opts.options or {}, {
         mode = "tabs",
         separator_style = { "│", "│" },
@@ -12,16 +17,19 @@ return {
         show_close_icon = false,
         indicator = { style = "none" },
         diagnostics = false,
-        -- Each tab is as wide as its name, up to max_name cells.
+        -- Each tab is as wide as its full name.
         tab_size = 0,
-        max_name_length = max_name,
-        -- A revision diff names its tab `file @hash` (features/revision_label).
-        -- A name too long is shortened in the file, not the hash.
+        truncate_names = false,
+        -- Tabs with the same file name show their folders (name_formatter).
+        show_duplicate_prefix = false,
+        -- The file name, with two or more folders while another tab's file
+        -- has the same name. A revision diff adds `@hash` (features/revision_label).
         name_formatter = function(b)
-          local file, ref = require("features.revision_label").get(b.tabnr)
-          if ref then
-            return ("%s @%s"):format(require("bufferline.utils").truncate_name(file, max_name - 2 - #ref), ref)
-          end
+          local file, ref = label.get(b.tabnr)
+          file = file or b.path
+          if file == "" then return end
+          local name = paths.unique(file, vim.tbl_map(tab_file, vim.api.nvim_list_tabpages()))
+          return ref and ("%s @%s"):format(name, ref) or name
         end,
       })
       -- Bufferline acts as a tabline; each theme owns its tab colors.

@@ -1,4 +1,4 @@
--- Top bars of a split diff: `<file icon> file | <branch icon> branch | @hash`
+-- Top bars of a split diff: `<file icon> dir/dir/file | <branch icon> branch | @hash`
 -- on the revision pane, `... | working` on the working file. A window keeps
 -- its bar in w:diff_bar; autocmds/winbar.lua draws it in place of the split bar.
 local M = {}
@@ -11,8 +11,9 @@ local function head(cwd)
 end
 
 local function bar(path, branch, rev)
-  local file = vim.fs.basename(path)
-  local text = ("%s %s | \u{F062C} %s | %s"):format(require("mini.icons").get("file", file), file, branch, rev)
+  local paths = require("utils.path_display")
+  local text = ("%s %s | \u{F062C} %s | %s"):format(
+    require("mini.icons").get("file", vim.fs.basename(path)), paths.tail(paths.relative(path), 2), branch, rev)
   return " " .. text:gsub("%%", "%%%%") .. " "
 end
 
