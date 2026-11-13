@@ -400,6 +400,10 @@ function M.open_file(opts)
     end)
   end
 
+  -- e/E on a commit selects the last change to the file before it, so the
+  -- diff holds the commit's own changes. None (root, or the commit added or
+  -- renamed the file): the commit itself.
+  local before = commit and (live_diff.list_commits(commit .. "^", 1, cwd, abs) or {})[1]
   if commit == head then
     commit = nil
   end
@@ -411,7 +415,7 @@ function M.open_file(opts)
   if opts.new_tab then open_new_tab(work, opts.line) else open_this_tab(work, opts.line) end
   local tab = vim.api.nvim_get_current_tabpage()
   -- Untracked and unchanged files have nothing to diff against HEAD.
-  if not commit and (not head or vim.system({ "git", "diff", "--quiet", "HEAD", "--", work }, { cwd = cwd }):wait().code == 0) then
+  if not commit and not before and (not head or vim.system({ "git", "diff", "--quiet", "HEAD", "--", work }, { cwd = cwd }):wait().code == 0) then
     return
   end
   live_diff.pick({
@@ -420,7 +424,7 @@ function M.open_file(opts)
     title = "Diff against commit",
     keep_diff = true,
     worktree_row = true,
-    select = commit or head,
+    select = before and before.ref or commit or head,
     focus_diff = true,
     line = tonumber(opts.line) or 1,
     esc_keeps_diff = true,
