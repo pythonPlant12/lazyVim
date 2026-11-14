@@ -1,14 +1,15 @@
--- LazyGit <-> Neovim integration: e/E in LazyGit open the file through the
--- entry point (open_file) in this tab or a new tab. Called by
+-- LazyGit <-> Neovim integration: in LazyGit, e opens the file in this tab, E
+-- in a new tab, D its diff in a new tab, through the entry point (open_file).
+-- Called by
 -- scripts/lazygit-edit through nvim --remote. Also starts LazyGit (<C-g>g)
 -- and shows a commit in it (L in a commit list).
 local M = {}
 
 -- LazyGit's own edit action, moved to <f12> (raw terminal bytes) by the
--- config below, so custom e/E can press it after they sent their message.
+-- config below, so custom e/E/D can press it after they sent their message.
 local EDIT_KEY = "\27[24~"
 
--- The commit, source and target from the last e/E, until LazyGit's edit
+-- The commit, source and target from the last e/E/D, until LazyGit's edit
 -- sends the path and line.
 local pending
 
@@ -24,15 +25,15 @@ local function is_lazygit_buf(buf)
     or (type(cmd) == "string" and cmd:find("lazygit", 1, true) ~= nil)
 end
 
--- First message of e/E (args: commit, source, refs, new_tab, folder): keep them, then
+-- First message of e/E/D (args: commit, source, refs, new_tab, diff, folder): keep them, then
 -- press LazyGit's edit (M.edit). The on-screen "Diff files (<hash>|stash@{N}"
 -- title wins over SelectedCommit, which is wrong for a stash or in the patch view.
 function M.expect(args)
   pending = nil
   if args.folder then
-    return vim.notify("e/E open files, not folders", vim.log.levels.INFO, { title = "Lazygit" })
+    return vim.notify("e/E/D open files, not folders", vim.log.levels.INFO, { title = "Lazygit" })
   end
-  -- The focused LazyGit first: the key goes to the one that sent e/E.
+  -- The focused LazyGit first: the key goes to the one that sent e/E/D.
   for _, buf in ipairs({ vim.api.nvim_get_current_buf(), unpack(vim.api.nvim_list_bufs()) }) do
     if is_lazygit_buf(buf) and vim.bo[buf].channel > 0 then
       local title = args.commit and table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n"):match("─Diff files %(([^%s:)]+)")
@@ -41,6 +42,7 @@ function M.expect(args)
         source = (title or ""):match("^stash@") and "stash" or args.source,
         refs = args.refs,
         new_tab = args.new_tab ~= nil,
+        diff = args.diff ~= nil,
         at = vim.uv.now(),
       }
       return vim.api.nvim_chan_send(vim.bo[buf].channel, EDIT_KEY)
@@ -55,8 +57,9 @@ function M.instance_file(name)
   return instance_dir .. "/" .. name
 end
 
--- LazyGit config for e/E, in its own file after the user's config.yml (Snacks'
+-- LazyGit config for e/E/D, in its own file after the user's config.yml (Snacks'
 -- YAML cannot hold custom commands). LazyGit's edit adds <f12>; E replaces "edit hunk".
+-- D in the Files panel stays LazyGit's reset menu.
 function M.configure_lazygit()
   local file = M.instance_file("lazygit-edit.yml")
   local files = vim.env.LG_CONFIG_FILE or ""
@@ -65,7 +68,7 @@ function M.configure_lazygit()
   local expect = ("python3 %s --expect"):format(vim.fn.shellescape(vim.fn.stdpath("config") .. "/scripts/lazygit-edit"))
   local commands = {}
   for _, c in ipairs({
-    { context = "files, staging, stagingSecondary", args = "{{if not .SelectedFile}} folder=1{{end}}" },
+    { context = "files, staging, stagingSecondary", diff_context = "staging, stagingSecondary", args = "{{if not .SelectedFile}} folder=1{{end}}" },
     -- SelectedCommit is the very SelectedReflogCommit object when the view
     -- was opened from the reflog, SelectedSubCommit from a branch's commits.
     -- Which panel opened those is unknown: refs lists the local branch, remote
@@ -76,6 +79,7 @@ function M.configure_lazygit()
   }) do
     table.insert(commands, { key = "e", context = c.context, command = expect .. c.args, description = "Open in Neovim" })
     table.insert(commands, { key = "E", context = c.context, command = expect .. c.args .. " new_tab=1", description = "Open in a new Neovim tab" })
+    table.insert(commands, { key = "D", context = c.diff_context or c.context, command = expect .. c.args .. " new_tab=1 diff=1", description = "Diff in a new Neovim tab" })
   end
   -- JSON is YAML.
   vim.fn.writefile({ vim.json.encode({
@@ -360,9 +364,9 @@ local function branch_of(commit, refs, cwd)
   end
 end
 
--- Entry point of lazygit's e/E: a revision diff, a diff against HEAD, the plain
--- file or the revision file alone. opts: path (the file's name at the commit),
--- line, commit, source, refs (comma list), new_tab.
+-- Entry point of lazygit's e/E/D: the plain file, with diff a revision diff or
+-- a diff against HEAD, or the revision file alone. opts: path (the file's name
+-- at the commit), line, commit, source, refs (comma list), new_tab, diff.
 function M.open_file(opts)
   local abs = vim.fn.fnamemodify(opts.path, ":p")
   local live_diff = require("features.live_diff")
@@ -400,7 +404,10 @@ function M.open_file(opts)
     end)
   end
 
-  -- e/E on a commit selects the last change to the file before it, so the
+  if opts.new_tab then open_new_tab(work, opts.line) else open_this_tab(work, opts.line) end
+  if not opts.diff then return end
+
+  -- D on a commit selects the last change to the file before it, so the
   -- diff holds the commit's own changes. None (root, or the commit added or
   -- renamed the file): the commit itself.
   local before = commit and (live_diff.list_commits(commit .. "^", 1, cwd, abs) or {})[1]
@@ -412,7 +419,6 @@ function M.open_file(opts)
     return commit and vim.startswith(commit, (ref:gsub("%^$", ""))) and source or nil
   end
 
-  if opts.new_tab then open_new_tab(work, opts.line) else open_this_tab(work, opts.line) end
   local tab = vim.api.nvim_get_current_tabpage()
   -- Untracked and unchanged files have nothing to diff against HEAD.
   if not commit and not before and (not head or vim.system({ "git", "diff", "--quiet", "HEAD", "--", work }, { cwd = cwd }):wait().code == 0) then
@@ -442,7 +448,7 @@ function M.open_file(opts)
   })
 end
 
--- Second message: LazyGit's edit with the path and line. After a recent e/E
+-- Second message: LazyGit's edit with the path and line. After a recent e/E/D
 -- it opens through the entry point; otherwise (merge conflicts, the config
 -- file) it opens the file in this tab as before.
 function M.edit(path, line)
@@ -451,7 +457,7 @@ function M.edit(path, line)
   if not p or vim.uv.now() - p.at > 5000 then
     return open_this_tab(path, line)
   end
-  M.open_file({ path = path, line = line, commit = p.commit, source = p.source, refs = p.refs, new_tab = p.new_tab })
+  M.open_file({ path = path, line = line, commit = p.commit, source = p.source, refs = p.refs, new_tab = p.new_tab, diff = p.diff })
 end
 
 return M
