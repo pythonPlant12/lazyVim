@@ -102,4 +102,36 @@ function M.apply(hl, colors, langs)
   end
 end
 
+-- Define every registry LSP group a theme left undefined, so a theme with its
+-- own palette (not built through apply()) still covers the full LSP set.
+--   * A missing base group links to the first Treesitter group of its category
+--     (@lsp.typemod.function.declaration -> @function), so it takes the
+--     theme's own color.
+--   * A missing .<lang> variant links to its base group.
+-- Groups the theme already defines stay as they are.
+function M.fill_lsp(langs)
+  langs = langs or M.langs
+  local function defined(name)
+    return next(vim.api.nvim_get_hl(0, { name = name, create = false })) ~= nil
+  end
+  for _, groups in pairs(M.registry) do
+    local source
+    for _, group in ipairs(groups) do
+      if group:sub(1, 5) ~= "@lsp." then source = group break end
+    end
+    for _, group in ipairs(groups) do
+      if group:sub(1, 5) == "@lsp." then
+        if not defined(group) and source then
+          vim.api.nvim_set_hl(0, group, { link = source })
+        end
+        for _, lang in ipairs(langs) do
+          if not defined(group .. "." .. lang) then
+            vim.api.nvim_set_hl(0, group .. "." .. lang, { link = group })
+          end
+        end
+      end
+    end
+  end
+end
+
 return M

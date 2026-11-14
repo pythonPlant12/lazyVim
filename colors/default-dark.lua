@@ -13,3 +13,7 @@ if type(vim.g.theme_custom_hl) == "table" then
   vim.g.theme_custom_hl = t
 end
 vim.g.colors_name = "default-dark"
+
+-- Same LSP group coverage as the Meteorite themes, in this theme's colors.
+package.loaded["themes.semantic"] = nil
+require("themes.semantic").fill_lsp()

@@ -85,3 +85,7 @@ end
 for _, g in ipairs({ "SnacksPickerBorder", "SnacksInputBorder" }) do
   hl(0, g, { fg = border, bg = bg })
 end
+
+-- Same LSP group coverage as the Meteorite themes, in this theme's colors.
+package.loaded["themes.semantic"] = nil
+require("themes.semantic").fill_lsp()
