@@ -89,17 +89,24 @@ M.bottom_layout = {
 -- (marking HEAD). With a path, each item's path is the file's name at that
 -- commit (renames followed).
 function M.list_commits(ref, limit, cwd, path)
-  local function log(...)
-    return vim.iter({ "log", ref, ("--max-count=%d"):format(limit or 150), ... }):flatten():totable()
+  local function log(max, ...)
+    return vim.iter({ "log", ref, ("--max-count=%d"):format(max), ... }):flatten():totable()
   end
-  local args = log("--pretty=format:%h\t%an\t%ad\t%p\t%s", "--date=format:%Y-%m-%d %H:%M")
-  -- With a path only commits that touched that file are listed (following renames).
-  -- --follow drops merge commits (a stash entry is one); -m keeps them, once
-  -- per parent the file differs from.
+  local args = log(limit or 150, "--pretty=format:%h\t%an\t%ad\t%p\t%s", "--date=format:%Y-%m-%d %H:%M")
+  -- With a path only commits that touched that file are listed, under any name
+  -- it had. --follow tracks one name per walk: at a merge whose other side
+  -- still has the old name it switches to that and drops the commits on the
+  -- new one, so it only collects the names. -m keeps merge commits (a stash
+  -- entry is one), once per parent the file differs from.
   local stash
   if path and path ~= "" then
-    local base = cwd or git_root_or_cwd()
-    vim.list_extend(args, { "-m", "--follow", "--name-status", "--", M.relpath(base, path) })
+    local rel = M.relpath(cwd or git_root_or_cwd(), path)
+    local names = { rel }
+    for _, line in ipairs(M.git_lines(log(150, "--follow", "--name-status", "--format=", "--", rel), cwd) or {}) do
+      vim.list_extend(names, vim.list_slice(vim.split(line, "\t"), 2))
+    end
+    vim.list_extend(args, { "-m", "--name-status", "--" })
+    vim.list_extend(args, vim.list.unique(names))
     stash = {}
     for _, sha in ipairs(M.git_lines({ "stash", "list", "--format=%h" }, cwd) or {}) do
       stash[sha] = true
