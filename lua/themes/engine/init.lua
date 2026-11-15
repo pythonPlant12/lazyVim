@@ -9,8 +9,17 @@ local html = require("themes.engine.html")
 local palette = require("themes.engine.palette")
 local rose_pine_dawn = require("themes.overrides.rose-pine-dawn")
 
+-- Vim's regex javascript syntax (.vue <script> without a Treesitter parser)
+-- links plain code to Special and braces to Function; keep them text-colored so
+-- only LSP tokens add color.
+local function apply_regex_js_hl()
+  vim.api.nvim_set_hl(0, "javaScript", { link = "Identifier" })
+  vim.api.nvim_set_hl(0, "javaScriptBraces", { link = "Identifier" })
+end
+
 -- Colorschemes reset highlight groups, so reapply all custom layers afterward.
 local function apply_all()
+  apply_regex_js_hl()
   transparency.apply_snacks_backdrop()
   rose_pine_dawn.apply()
   plugin_groups.apply_custom_hl()
@@ -136,3 +145,42 @@ vim.api.nvim_create_autocmd("ColorScheme", {
   callback = html.apply,
 })
 html.apply()
+
+-- default-light: self/this/super/cls arrive from some servers as plain
+-- variables or classes (lua_ls self, Python super); give them the keyword
+-- color like Treesitter's @variable.builtin.
+local self_words = { self = true, this = true, super = true, cls = true }
+vim.api.nvim_create_autocmd("LspTokenUpdate", {
+  group = vim.api.nvim_create_augroup("SelfKeywordHl", { clear = true }),
+  callback = function(args)
+    if vim.g.colors_name ~= "default-light" then return end
+    local token = args.data.token
+    if token.line ~= token.end_line then return end
+    local line = vim.api.nvim_buf_get_lines(args.buf, token.line, token.line + 1, false)[1] or ""
+    if self_words[line:sub(token.start_col + 1, token.end_col)] then
+      vim.lsp.semantic_tokens.highlight_token(token, args.buf, args.data.client_id, "@variable.builtin", { priority = 130 })
+    end
+  end,
+})
+
+-- Vue templates: the server sends every <script> binding (constants, refs,
+-- props) as a property, like a real member access. Give the top-level ones
+-- (not after a ".") the variable color they have in <script>.
+local function in_vue_script(buf, row, col)
+  local ok, node = pcall(vim.treesitter.get_node, { bufnr = buf, pos = { row, col }, ignore_injections = true })
+  while ok and node do
+    if node:type() == "script_element" then return true end
+    node = node:parent()
+  end
+  return false
+end
+vim.api.nvim_create_autocmd("LspTokenUpdate", {
+  group = vim.api.nvim_create_augroup("VueTemplateBindingHl", { clear = true }),
+  callback = function(args)
+    local token = args.data.token
+    if token.type ~= "property" or token.line ~= token.end_line or vim.bo[args.buf].filetype ~= "vue" then return end
+    local line = vim.api.nvim_buf_get_lines(args.buf, token.line, token.line + 1, false)[1] or ""
+    if line:sub(1, token.start_col):match("%.%s*$") or in_vue_script(args.buf, token.line, token.start_col) then return end
+    vim.lsp.semantic_tokens.highlight_token(token, args.buf, args.data.client_id, "@variable", { priority = 130 })
+  end,
+})

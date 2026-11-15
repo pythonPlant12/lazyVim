@@ -221,8 +221,9 @@ local statusline_palettes = {
 -- lightness. Dark colors (backgrounds, lines, borders) stay as they are, so the
 -- role logic and the UI are identical; only the color strength differs.
 -- With `dark` set, dark colors (diff backgrounds) get the same saturation cut
--- and keep their lightness.
-local function dim(hex, dark)
+-- and keep their lightness. `sat` and `pull` change the strength (defaults
+-- 0.55 and 0.2).
+local function dim(hex, dark, sat, pull)
   if type(hex) ~= "string" or not hex:match("^#%x%x%x%x%x%x$") then return hex end
   local r, g, b = tonumber(hex:sub(2, 3), 16) / 255, tonumber(hex:sub(4, 5), 16) / 255, tonumber(hex:sub(6, 7), 16) / 255
   local max, min = math.max(r, g, b), math.min(r, g, b)
@@ -237,8 +238,8 @@ local function dim(hex, dark)
     else h = (r - g) / d + 4 end
     h = h / 6
   end
-  s = s * 0.55
-  if l > 0.5 and not dark then l = l - (l - 0.5) * 0.2 end
+  s = s * (sat or 0.55)
+  if l > 0.5 and not dark then l = l - (l - 0.5) * (pull or 0.2) end
   local function hue(p, q, t)
     t = t % 1
     if t < 1 / 6 then return p + (q - p) * 6 * t end
@@ -251,6 +252,8 @@ local function dim(hex, dark)
   local function byte(v) return math.floor(v * 255 + 0.5) end
   return string.format("#%02X%02X%02X", byte(hue(p, q, h + 1 / 3)), byte(hue(p, q, h)), byte(hue(p, q, h - 1 / 3)))
 end
+
+M.dim = dim
 
 local function dimmed(t)
   local out = {}
