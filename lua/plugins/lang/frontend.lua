@@ -85,6 +85,7 @@ return {
         -- tsserver finds references only in its own server, so all packages
         -- of a pnpm workspace share one server.
         root_dir = function(bufnr, on_dir)
+          resolver.link_worktree_node_modules(bufnr)
           local root = resolver.nearest_root_by_markers(bufnr, resolver.frontend_markers.vtsls)
           local pnpm_workspace = find_up("pnpm-workspace.yaml", root, "file")
           on_dir(pnpm_workspace and vim.fs.dirname(pnpm_workspace) or root)
@@ -160,6 +161,7 @@ return {
       opts.servers.vue_ls = vim.tbl_deep_extend("force", opts.servers.vue_ls or {}, {
         filetypes = { "vue" },
         root_dir = function(bufnr, on_dir)
+          resolver.link_worktree_node_modules(bufnr)
           on_dir(resolver.nearest_root_by_markers(bufnr, resolver.frontend_markers.vue_ls))
         end,
         on_attach = function(client)
@@ -173,6 +175,7 @@ return {
       -- Prefer project ESLint config; fall back to one global config unless disabled.
       opts.servers.eslint = vim.tbl_deep_extend("force", prev_eslint, {
         root_dir = function(bufnr, on_dir)
+          resolver.link_worktree_node_modules(bufnr)
           if resolver.eslint_has_project_config(bufnr) then
             on_dir(resolver.eslint_root(bufnr))
             return

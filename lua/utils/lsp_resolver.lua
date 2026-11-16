@@ -76,6 +76,35 @@ local function ancestors_until(start_dir, stop_dir)
   return dirs
 end
 
+-- For a directory inside a linked git worktree: the worktree root and the
+-- same directory in the repository's main tree. Nil in the main tree.
+local function main_tree_dir(dir)
+  local git = vim.fs.find(".git", { path = dir, upward = true, type = "file" })[1]
+  local main = git and (read_file(git) or ""):match("^gitdir: (.-)/%.git/worktrees/")
+  if not main then
+    return nil
+  end
+  local worktree = dir_of(git)
+  return worktree, normalize(main) .. dir:sub(#worktree + 1)
+end
+
+local warned = {}
+
+-- One warning per key for each Neovim session.
+local function warn_once(key, message)
+  if warned[key] then
+    return
+  end
+  warned[key] = true
+  vim.schedule(function()
+    vim.notify(message, vim.log.levels.WARN, { title = "Worktree" })
+  end)
+end
+
+local function short(path)
+  return vim.fn.fnamemodify(path, ":~")
+end
+
 -- ESLint config file names (flat config + legacy)
 local eslint_config_names = {
   "eslint.config.js",
@@ -196,6 +225,35 @@ function M.nearest_root_by_markers(bufnr, markers)
   return root
 end
 
+-- A linked worktree without installed packages borrows them from the main
+-- tree: each folder from the file up to the worktree root gets a node_modules
+-- symlink to the main tree's one. A worktree with its own install stays as is.
+function M.link_worktree_node_modules(bufnr)
+  local file_dir = dir_of(vim.api.nvim_buf_get_name(bufnr))
+  local worktree, main_dir = main_tree_dir(file_dir or "")
+  if not worktree then
+    return
+  end
+  local own = uv.fs_lstat(join_path(worktree, "node_modules"))
+  if own and own.type ~= "link" then
+    return
+  end
+
+  local linked = own ~= nil
+  for _, dir in ipairs(ancestors_until(file_dir, worktree)) do
+    local link = join_path(dir, "node_modules")
+    local target = join_path(main_dir, "node_modules")
+    if not uv.fs_lstat(link) and is_dir(target) then
+      linked = uv.fs_symlink(target, link) or linked
+    end
+    main_dir = vim.fs.dirname(main_dir)
+  end
+
+  warn_once("node_modules:" .. worktree, linked
+    and ("%s has no node_modules. Linked to the main tree's. Delete the links before `pnpm install`."):format(short(worktree))
+    or ("%s has no node_modules, and the main tree has none. Run `pnpm install`."):format(short(worktree)))
+end
+
 function M.eslint_root(bufnr)
   -- Prefer the nearest real ESLint config, then package roots with ignore files.
   local ignore_files = { ".gitignore", ".eslintignore" }
@@ -255,15 +313,30 @@ function M.active_venv_dir()
   return nil
 end
 
+-- The virtualenv directly inside dir, if any.
+local function venv_in(dir)
+  for _, name in ipairs(M.python_venv_dirs) do
+    local candidate = join_path(dir, name)
+    if is_dir(candidate) and is_file(join_path(candidate, "pyvenv.cfg")) then
+      return candidate
+    end
+  end
+end
+
 function M.python_venv_for_root(root)
-  -- Project-local venvs win over shell/global environments.
+  -- Project-local venvs win, then the main tree's venv for a linked
+  -- worktree without one, then shell/global environments.
   local nroot = normalize(root)
   if nroot then
-    for _, name in ipairs(M.python_venv_dirs) do
-      local candidate = join_path(nroot, name)
-      if is_dir(candidate) and is_file(join_path(candidate, "pyvenv.cfg")) then
-        return candidate
-      end
+    local venv = venv_in(nroot)
+    if venv then
+      return venv
+    end
+    local worktree, main_dir = main_tree_dir(nroot)
+    venv = main_dir and venv_in(main_dir)
+    if venv then
+      warn_once("venv:" .. worktree, ("%s has no venv. Using %s."):format(short(worktree), short(venv)))
+      return venv
     end
   end
   return M.active_venv_dir()

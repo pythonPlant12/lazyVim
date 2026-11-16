@@ -82,6 +82,13 @@ If Neovim cwd is `project/`, opening each file will usually resolve to the neare
 
 Important caveat: roots are bounded by your current `:pwd`. If you start Neovim from a deeper folder, root detection will not walk above that boundary.
 
+## Git worktrees without dependencies
+
+A linked worktree borrows from the repository's main tree and warns once:
+
+- No `node_modules` in the worktree root: each folder from the file up to the root gets a `node_modules` symlink to the main tree's one. Delete the links before `pnpm install`.
+- No `venv`/`.venv`/`.env` in the Python root: basedpyright and ruff use the main tree's venv.
+
 ## Check command
 
 Use:
