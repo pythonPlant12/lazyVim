@@ -135,12 +135,6 @@ function M.apply_to_client(client)
   return settings
 end
 
--- tsserver hints 7016 ("no declaration file") on every import of an untyped JS
--- package, such as a pnpm workspace package. 7016 as an error stays.
-local function is_untyped_module_hint(diagnostic)
-  return diagnostic.code == 7016 and diagnostic.severity == vim.lsp.protocol.DiagnosticSeverity.Hint
-end
-
 -- When type checking is off, filter diagnostics at publish time and clear stale ones.
 local function filter_diagnostics(client, diagnostics)
   if not M.is_managed_client(client) then
@@ -149,7 +143,7 @@ local function filter_diagnostics(client, diagnostics)
   if not M.type_check_enabled(client_root(client)) then
     return {}
   end
-  return vim.tbl_filter(function(d) return not is_untyped_module_hint(d) end, diagnostics)
+  return diagnostics
 end
 
 -- Reset a client's diagnostic namespace to clear stale entries.
