@@ -428,10 +428,11 @@ function M.apply(variant)
   hl(0, "Visual",      { fg = p.fg, bg = p.selection })
   hl(0, "VisualNOS",   { bg = p.selection_inactive })
   hl(0, "Search",      { bg = p.search })
-  -- The current match: dark text on amber in every variant.
+  -- The current match: dark text on amber in every variant; bold only while typing.
   local light = vim.o.background == "light"
-  hl(0, "IncSearch",   { fg = light and p.fg or p.bg, bg = light and "#F3D58C" or p.warn, bold = true })
-  hl(0, "CurSearch",   { link = "IncSearch" })
+  local current = { fg = light and p.fg or p.bg, bg = light and "#F3D58C" or p.warn }
+  hl(0, "CurSearch",   current)
+  hl(0, "IncSearch",   vim.tbl_extend("force", current, { bold = true }))
   hl(0, "MatchParen",  { fg = p.fg, bg = p.selection_inactive, bold = true })
 
   hl(0, "StatusLine",   { fg = p.status_fg, bg = p.status_bg })
