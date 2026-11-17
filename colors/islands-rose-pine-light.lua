@@ -136,6 +136,8 @@ hl(0, "PmenuThumb",    { bg = ui.border })
 hl(0, "Visual",        { fg = ui.fg_bright, bg = ui.selection })
 hl(0, "Search",        { fg = ui.fg_bright, bg = ui.search })
 hl(0, "IncSearch",     { fg = ui.fg_bright, bg = ui.search, bold = true })
+-- The match n/N lands on: dark text on amber.
+hl(0, "CurSearch",     { fg = ui.fg_bright, bg = "#F3D58C", bold = true })
 hl(0, "MatchParen",    { bg = ui.border,    bold = true })
 
 hl(0, "StatusLine",    { fg = ui.fg_bright, bg = ui.line })

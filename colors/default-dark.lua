@@ -66,8 +66,10 @@ local function soften_groups()
       vim.api.nvim_set_hl(0, name, spec)
     end
   end
-  -- HTML/Vue element names use the variable color (white-gray).
+  -- Attributes, keys and HTML/Vue element names use the variable color
+  -- (white-gray).
   local variable_fg = vim.api.nvim_get_hl(0, { name = "@variable", link = false }).fg
+  require("themes.semantic").apply(vim.api.nvim_set_hl, { member = { fg = variable_fg } })
   for _, g in ipairs({
     "htmlTagName", "htmlTagN", "htmlSpecialTagName",
     "@tag", "@tag.builtin", "@tag.html", "@tag.builtin.html", "@tag.vue", "@tag.builtin.vue",

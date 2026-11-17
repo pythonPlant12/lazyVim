@@ -97,7 +97,6 @@ local c = {
   special  = "#2F6E7E", -- builtin functions, literals (Meteorite teal role)
   keyword  = "#A8631A",
   type     = "#8A7220",
-  member   = "#686B84", -- properties: a step lighter than the text color
   param    = "#7A48B3",
   constant = "#7C52AE",
   number   = "#0E7294",
@@ -115,7 +114,7 @@ semantic.apply(hl, {
   ["type.builtin"]        = c.keyword,
   ["variable"]            = fg,
   ["variable.builtin"]    = c.keyword,
-  ["member"]              = c.member,
+  ["member"]              = fg, -- attributes and keys: the variable color
   ["parameter"]           = c.param,
   ["parameter.builtin"]   = c.func,
   ["constant"]            = c.constant,

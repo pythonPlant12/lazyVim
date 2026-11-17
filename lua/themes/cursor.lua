@@ -428,7 +428,9 @@ function M.apply(variant)
   hl(0, "Visual",      { fg = p.fg, bg = p.selection })
   hl(0, "VisualNOS",   { bg = p.selection_inactive })
   hl(0, "Search",      { bg = p.search })
-  hl(0, "IncSearch",   { fg = p.bg, bg = p.warn, bold = true })
+  -- The current match: dark text on amber in every variant.
+  local light = vim.o.background == "light"
+  hl(0, "IncSearch",   { fg = light and p.fg or p.bg, bg = light and "#F3D58C" or p.warn, bold = true })
   hl(0, "CurSearch",   { link = "IncSearch" })
   hl(0, "MatchParen",  { fg = p.fg, bg = p.selection_inactive, bold = true })
 
@@ -474,7 +476,7 @@ function M.apply(variant)
     ["type.builtin"]        = p.keyword,
     ["variable"]            = p.fg,
     ["variable.builtin"]    = p.keyword,
-    ["member"]              = p.property,
+    ["member"]              = p.fg, -- attributes and keys: the variable color
     ["parameter"]           = p.param,
     ["parameter.builtin"]   = p.method_decl,
     ["constant"]            = p.constant,

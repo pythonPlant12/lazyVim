@@ -121,6 +121,8 @@ hl(0, "PmenuThumb", { bg = palette.border })
 hl(0, "Visual", { fg = palette.fg_bright, bg = palette.selection })
 hl(0, "Search", { fg = palette.fg_bright, bg = palette.search })
 hl(0, "IncSearch", { fg = palette.fg_bright, bg = palette.search, bold = true })
+-- The match n/N lands on: dark text on amber.
+hl(0, "CurSearch", { fg = palette.fg_bright, bg = "#F3D58C", bold = true })
 hl(0, "MatchParen", { bg = palette.border, bold = true })
 
 hl(0, "StatusLine", { fg = palette.fg_bright, bg = palette.line })
