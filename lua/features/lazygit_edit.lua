@@ -160,19 +160,32 @@ local function close_file_buffers(question, choices, on_accept)
   return true
 end
 
--- What dir has checked out: `branch <name>`, or `commit <hash>` on a
--- detached HEAD.
+-- What dir has checked out: { branch (nil on a detached HEAD), hash (8
+-- characters, as LazyGit shows it) }.
 local function git_head(dir)
-  for _, try in ipairs({ { "branch", "symbolic-ref", "-q", "--short", "HEAD" }, { "commit", "rev-parse", "--short", "HEAD" } }) do
-    local out = vim.fn.systemlist({ "git", "-C", dir, unpack(try, 2) })
-    if vim.v.shell_error == 0 and out[1] then
-      return try[1] .. " " .. out[1]
-    end
+  local function git(...)
+    local out = vim.fn.systemlist({ "git", "-C", dir, ... })
+    return vim.v.shell_error == 0 and out[1] or nil
   end
+  local hash = git("rev-parse", "--short=8", "HEAD")
+  return hash and { branch = git("symbolic-ref", "-q", "--short", "HEAD"), hash = hash }
 end
 
-local function notify(message)
-  vim.notify(message, vim.log.levels.INFO, { title = "Lazygit" })
+-- Notify a checkout for 10 seconds: title, then what was checked out before
+-- and now, each { worktree (optional), branch, hash }. The tip of a branch
+-- reads HEAD (<hash>).
+local function notify_checkout(title, from, to)
+  local lines = { title }
+  for _, side in ipairs({ { "from:", from }, { "to:", to } }) do
+    local head = side[2]
+    lines[#lines + 1] = side[1]
+    if head.worktree then
+      lines[#lines + 1] = "  worktree: " .. vim.fn.fnamemodify(head.worktree, ":~")
+    end
+    lines[#lines + 1] = "  branch: " .. (head.branch or "detached")
+    lines[#lines + 1] = "  commit: " .. (head.branch and ("HEAD (%s)"):format(head.hash) or head.hash or "unknown")
+  end
+  vim.notify(table.concat(lines, "\n"), vim.log.levels.INFO, { title = title, timeout = 10000 })
 end
 
 -- The folder LazyGit runs in and what it had checked out when last looked
@@ -191,11 +204,14 @@ local function follow_lazygit()
   if target == cwd then
     local before, head = seen.head, seen.dir and git_head(seen.dir)
     seen.head = head
-    if before and head and head ~= before and close_file_buffers(
+    -- Another branch, or another commit on a detached HEAD; new commits on
+    -- the same branch do not count.
+    local moved = before and head and (head.branch ~= before.branch or not head.branch and head.hash ~= before.hash)
+    if moved and close_file_buffers(
       "%d buffer(s) have unsaved changes. Discard them and close all buffers?",
       "&Discard and close\n&Keep buffers"
     ) then
-      notify(("Checked out %s (was %s)"):format(head, before))
+      notify_checkout("Git checked out", before, head)
     end
     return
   end
@@ -205,6 +221,7 @@ local function follow_lazygit()
     return
   end
 
+  local from = vim.tbl_extend("force", seen.dir == cwd and seen.head or git_head(cwd) or {}, { worktree = cwd })
   vim.cmd.cd(vim.fn.fnameescape(target))
   seen = { dir = target, head = git_head(target) }
   for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
@@ -213,7 +230,7 @@ local function follow_lazygit()
       break
     end
   end
-  notify("Switched to worktree " .. vim.fn.fnamemodify(target, ":~"))
+  notify_checkout("Worktree checked out", from, vim.tbl_extend("force", seen.head or {}, { worktree = target }))
 end
 
 -- Start LazyGit (<C-g>g) with the config for e/E, in the last worktree it
