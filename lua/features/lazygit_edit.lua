@@ -143,53 +143,91 @@ local function file_buffers()
   end, vim.api.nvim_list_bufs())
 end
 
--- After lazygit closes: when it switched to another worktree of the same
--- repository, close every file buffer and move Neovim there, so nothing on
--- screen still belongs to the old worktree.
-local function follow_lazygit_worktree()
-  local cwd = vim.fn.getcwd()
-  local target = lazygit_cwd(cwd)
-  if target == cwd then
-    return
-  end
-
+-- Close every file buffer. With unsaved changes, ask first (question takes
+-- the buffer count, choices is a confirm() list whose first entry accepts)
+-- and run on_accept. False when the user declines.
+local function close_file_buffers(question, choices, on_accept)
   local modified = vim.tbl_filter(function(buf) return vim.bo[buf].modified end, file_buffers())
   if #modified > 0 then
-    local choice = vim.fn.confirm(
-      ("%d buffer(s) have unsaved changes. Save all and switch to %s?"):format(#modified, vim.fn.fnamemodify(target, ":~")),
-      "&Save and switch\n&Stay here",
-      2
-    )
-    if choice ~= 1 then
-      return
+    if vim.fn.confirm(question:format(#modified), choices, 2) ~= 1 then
+      return false
     end
-    vim.cmd("wall")
+    if on_accept then on_accept() end
   end
-
   for _, buf in ipairs(file_buffers()) do
     pcall(vim.api.nvim_buf_delete, buf, { force = true })
   end
+  return true
+end
+
+-- What dir has checked out: `branch <name>`, or `commit <hash>` on a
+-- detached HEAD.
+local function git_head(dir)
+  for _, try in ipairs({ { "branch", "symbolic-ref", "-q", "--short", "HEAD" }, { "commit", "rev-parse", "--short", "HEAD" } }) do
+    local out = vim.fn.systemlist({ "git", "-C", dir, unpack(try, 2) })
+    if vim.v.shell_error == 0 and out[1] then
+      return try[1] .. " " .. out[1]
+    end
+  end
+end
+
+local function notify(message)
+  vim.notify(message, vim.log.levels.INFO, { title = "Lazygit" })
+end
+
+-- The folder LazyGit runs in and what it had checked out when last looked
+-- at. One table for every open: Snacks reuses a hidden LazyGit and its
+-- first on_close.
+local seen = {}
+
+-- Nothing on screen may belong to what was checked out before. When LazyGit
+-- switched to another worktree of the same repository, close every file
+-- buffer and move Neovim there. When it checked out another branch or commit,
+-- close every file buffer. Runs when LazyGit closes and before e/E/D open a
+-- file; a second run finds nothing new.
+local function follow_lazygit()
+  local cwd = vim.fn.getcwd()
+  local target = lazygit_cwd(cwd)
+  if target == cwd then
+    local before, head = seen.head, seen.dir and git_head(seen.dir)
+    seen.head = head
+    if before and head and head ~= before and close_file_buffers(
+      "%d buffer(s) have unsaved changes. Discard them and close all buffers?",
+      "&Discard and close\n&Keep buffers"
+    ) then
+      notify(("Checked out %s (was %s)"):format(head, before))
+    end
+    return
+  end
+
+  local question = "%d buffer(s) have unsaved changes. Save all and switch to " .. vim.fn.fnamemodify(target, ":~") .. "?"
+  if not close_file_buffers(question, "&Save and switch\n&Stay here", function() vim.cmd("wall") end) then
+    return
+  end
 
   vim.cmd.cd(vim.fn.fnameescape(target))
+  seen = { dir = target, head = git_head(target) }
   for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
     if vim.bo[vim.api.nvim_win_get_buf(win)].filetype == "neo-tree" then
       require("neo-tree.command").execute({ source = "filesystem", dir = target, action = "show" })
       break
     end
   end
-  vim.notify("Switched to worktree " .. vim.fn.fnamemodify(target, ":~"), vim.log.levels.INFO, { title = "Lazygit" })
+  notify("Switched to worktree " .. vim.fn.fnamemodify(target, ":~"))
 end
 
 -- Start LazyGit (<C-g>g) with the config for e/E, in the last worktree it
 -- switched to.
 function M.open_lazygit()
   M.configure_lazygit()
+  local dir = lazygit_cwd(LazyVim.root.git())
+  seen = { dir = dir, head = git_head(dir) }
   return Snacks.lazygit({
-    cwd = lazygit_cwd(LazyVim.root.git()),
+    cwd = dir,
     env = { LAZYGIT_NEW_DIR_FILE = lazygit_dir_file },
     win = {
       on_close = function()
-        vim.schedule(follow_lazygit_worktree)
+        vim.schedule(follow_lazygit)
       end,
     },
   })
@@ -452,6 +490,7 @@ end
 -- it opens through the entry point; otherwise (merge conflicts, the config
 -- file) it opens the file in this tab as before.
 function M.edit(path, line)
+  follow_lazygit()
   local p = pending
   pending = nil
   if not p or vim.uv.now() - p.at > 5000 then
