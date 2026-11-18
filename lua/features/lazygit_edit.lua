@@ -25,9 +25,41 @@ local function is_lazygit_buf(buf)
     or (type(cmd) == "string" and cmd:find("lazygit", 1, true) ~= nil)
 end
 
+-- LazyGit's diffing mode (W) names its base ref only on the bottom line, and a
+-- filter or a search takes that line over. So each LazyGit buffer is watched:
+-- the ref it named last stays until the line shows something else.
+local diff_base, watched = {}, {}
+local function track_diff_base(buf)
+  if not vim.api.nvim_buf_is_valid(buf) then return end
+  local line = vim.iter(vim.api.nvim_buf_get_lines(buf, -4, -1, false)):rev():find(function(l) return l:match("%S") end) or ""
+  local base = line:match("Showing output for: git diff %-%-stat %-p (%S+)")
+  if base or not (line:find("^%s*Filter: ") or line:find("^%s*Search: ") or line:find("Running custom command", 1, true)) then
+    diff_base[buf] = base
+  end
+end
+local function watch_diff_base(buf)
+  track_diff_base(buf)
+  if watched[buf] then return end
+  watched[buf] = true
+  local scheduled = false
+  vim.api.nvim_buf_attach(buf, false, {
+    on_lines = function()
+      if scheduled then return end
+      scheduled = true
+      vim.schedule(function()
+        scheduled = false
+        track_diff_base(buf)
+      end)
+    end,
+    on_detach = function() diff_base[buf], watched[buf] = nil, nil end,
+  })
+end
+
 -- First message of e/E/D (args: commit, source, refs, new_tab, diff, folder): keep them, then
 -- press LazyGit's edit (M.edit). The on-screen "Diff files (<hash>|stash@{N}"
 -- title wins over SelectedCommit, which is wrong for a stash or in the patch view.
+-- The last title counts: lines above may be scrollback. A narrow panel cuts
+-- it short: its border is not part of the ref.
 function M.expect(args)
   pending = nil
   if args.folder then
@@ -36,9 +68,11 @@ function M.expect(args)
   -- The focused LazyGit first: the key goes to the one that sent e/E/D.
   for _, buf in ipairs({ vim.api.nvim_get_current_buf(), unpack(vim.api.nvim_list_bufs()) }) do
     if is_lazygit_buf(buf) and vim.bo[buf].channel > 0 then
-      local title = args.commit and table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n"):match("─Diff files %(([^%s:)]+)")
+      local title = args.commit and table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n"):match(".*─Diff files %(([^%s:)─]+)")
+      watch_diff_base(buf)
       pending = {
         commit = title or args.commit,
+        base = diff_base[buf],
         source = (title or ""):match("^stash@") and "stash" or args.source,
         refs = args.refs,
         new_tab = args.new_tab ~= nil,
@@ -239,7 +273,7 @@ function M.open_lazygit()
   M.configure_lazygit()
   local dir = lazygit_cwd(LazyVim.root.git())
   seen = { dir = dir, head = git_head(dir) }
-  return Snacks.lazygit({
+  local term = Snacks.lazygit({
     cwd = dir,
     env = { LAZYGIT_NEW_DIR_FILE = lazygit_dir_file },
     win = {
@@ -248,6 +282,8 @@ function M.open_lazygit()
       end,
     },
   })
+  watch_diff_base(term.buf)
+  return term
 end
 
 -- Send keys to a terminal one by one, 150 ms apart: an <Esc> followed at
@@ -421,7 +457,9 @@ end
 
 -- Entry point of lazygit's e/E/D: the plain file, with diff a revision diff or
 -- a diff against HEAD, or the revision file alone. opts: path (the file's name
--- at the commit), line, commit, source, refs (comma list), new_tab, diff.
+-- at the commit), line, commit, source, refs (comma list), new_tab, diff, base
+-- (the ref of LazyGit's diffing mode: D compares it with the commit, or with
+-- the working file without one).
 function M.open_file(opts)
   local abs = vim.fn.fnamemodify(opts.path, ":p")
   local live_diff = require("features.live_diff")
@@ -466,7 +504,8 @@ function M.open_file(opts)
   -- diff holds the commit's own changes. None (root, or the commit added or
   -- renamed the file): the commit itself.
   local before = commit and (live_diff.list_commits(commit .. "^", 1, cwd, abs) or {})[1]
-  if commit == head then
+  local base = opts.base and rev_parse(opts.base)
+  if commit == head and not base then
     commit = nil
   end
   -- The source belongs to the commit lazygit gave, not to others in the list.
@@ -476,21 +515,26 @@ function M.open_file(opts)
 
   local tab = vim.api.nvim_get_current_tabpage()
   -- Untracked and unchanged files have nothing to diff against HEAD.
-  if not commit and not before and (not head or vim.system({ "git", "diff", "--quiet", "HEAD", "--", work }, { cwd = cwd }):wait().code == 0) then
+  if not base and not commit and not before and (not head or vim.system({ "git", "diff", "--quiet", "HEAD", "--", work }, { cwd = cwd }):wait().code == 0) then
     return
   end
   live_diff.pick({
     -- Commits of the file reachable from HEAD or from the commit, HEAD first.
-    items = live_diff.with_branch_head(live_diff.list_commits({ "HEAD", commit }, 150, cwd, work) or {}, "HEAD", cwd),
-    title = "Diff against commit",
+    -- With a base the commit itself comes first: the right pane starts on the
+    -- file as that commit has it, whichever commit changed it last.
+    items = live_diff.with_branch_head(live_diff.list_commits({ "HEAD", commit }, 150, cwd, work) or {}, base and commit or "HEAD", cwd),
+    title = base and ("Compare %s with"):format(opts.base) or "Diff against commit",
     keep_diff = true,
     worktree_row = true,
-    select = before and before.ref or commit or head,
+    left = base and { ref = base, branch = branch_of(base, opts.base, cwd), path = live_diff.path_at(base, live_diff.relpath(cwd, work), cwd) } or nil,
+    select = base and (commit or "working") or before and before.ref or commit or head,
     focus_diff = true,
     line = tonumber(opts.line) or 1,
     esc_keeps_diff = true,
-    -- No label for HEAD or a closed diff.
+    -- `file @base..@commit` or `file @base..working` with a base; else no
+    -- label for HEAD or a closed diff.
     on_ref = function(ref)
+      if base and ref then return label.set(tab, work, ("%s..%s"):format(opts.base, ref == "working" and ref or "@" .. ref)) end
       if not ref or vim.startswith(head, ref) then return label.set(tab) end
       label.set(tab, work, ref, source_of(ref))
     end,
@@ -513,7 +557,7 @@ function M.edit(path, line)
   if not p or vim.uv.now() - p.at > 5000 then
     return open_this_tab(path, line)
   end
-  M.open_file({ path = path, line = line, commit = p.commit, source = p.source, refs = p.refs, new_tab = p.new_tab, diff = p.diff })
+  M.open_file({ path = path, line = line, commit = p.commit, source = p.source, refs = p.refs, new_tab = p.new_tab, diff = p.diff, base = p.base })
 end
 
 return M
