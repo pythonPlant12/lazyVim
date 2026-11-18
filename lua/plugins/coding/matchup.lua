@@ -13,6 +13,8 @@ return {
     init = function()
       -- No statusline/popup preview of an offscreen match.
       vim.g.matchup_matchparen_offscreen = {}
+      -- No "◀ try" label after the closing bracket of a matched block.
+      vim.g.matchup_treesitter_disable_virtual_text = true
       -- Highlight after a short pause, not on every cursor move.
       vim.g.matchup_matchparen_deferred = 1
     end,
