@@ -221,13 +221,14 @@ end
 --               skipped; a row shows the file at its path (default: the
 --               current file's)
 --   title       picker title
---   keep_diff   keep the diff open after <CR> (q closes it); otherwise the
---               preview closes and on_confirm handles the pick
+--   keep_diff   <CR> keeps the diff and the list and moves to the file (q
+--               closes both); otherwise the list and the preview close and
+--               on_confirm handles the pick
 --   on_confirm  called with the picked item after the picker closes
 --   select      hash (full or short) of the commit to select at start
 --   focus_diff  start with focus in the file and the list shrunk
 --   line        cursor line in the file for the first diff (default: first hunk)
---   esc_keeps_diff  <Esc> closes only the list, like <CR> with keep_diff
+--   esc_keeps_diff  <Esc> closes only the list and keeps the diff
 --   on_quit     called after q closed the diff
 --   on_ref      called with the ref each time the diff shows another commit
 --               (`ref^` when that commit deleted the file), nil when it closes
@@ -582,6 +583,9 @@ function M.pick(picker_opts)
       vim.schedule(vim.cmd[cmd])
     end
   end
+  if picker_opts.keep_diff then
+    input_keys["<CR>"] = { "focus_diff_file", mode = { "i", "n" } }
+  end
   if picker_opts.esc_keeps_diff then
     input_keys["<Esc>"] = { "confirm", mode = "n" }
   end
@@ -605,6 +609,7 @@ function M.pick(picker_opts)
     -- also covers the swapped <C-w>j/<C-w>k of keymaps/editing.lua.
     actions = {
       focus_diff_file = function()
+        vim.cmd.stopinsert()
         if vim.api.nvim_win_is_valid(main_win) then
           vim.api.nvim_set_current_win(main_win)
         end
