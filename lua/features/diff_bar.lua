@@ -10,10 +10,17 @@ local function head(cwd)
   return out[2] ~= "HEAD" and out[2] or sha:sub(1, 7), sha
 end
 
-local function bar(path, branch, rev)
+-- from: the file's name in the other pane when it differs (a rename), shown
+-- as `dir/dir/old -> new`; the new name keeps its folders after a move.
+local function bar(path, branch, rev, from)
   local paths = require("utils.path_display")
+  local name = paths.tail(paths.relative(path), 2)
+  if from then
+    local moved = vim.fs.dirname(from) ~= vim.fs.dirname(path)
+    name = ("%s -> %s"):format(paths.tail(paths.relative(from), 2), moved and name or vim.fs.basename(path))
+  end
   local text = ("%s %s | \u{F062C} %s | %s"):format(
-    require("mini.icons").get("file", vim.fs.basename(path)), paths.tail(paths.relative(path), 2), branch, rev)
+    require("mini.icons").get("file", vim.fs.basename(path)), name, branch, rev)
   return " " .. text:gsub("%%", "%%%%") .. " "
 end
 
@@ -27,15 +34,17 @@ local function redraw() vim.api.nvim_exec_autocmds("User", { pattern = "DiffBar"
 -- branch }, ref read as HEAD when it is HEAD, branch defaults to the current
 -- one. work, the other pane if any: { path } for the working file of the
 -- current branch, or another revision like rev (a diff of two revisions).
--- path is the file's name in that pane.
+-- path is the file's name in that pane (full, or relative to cwd). After a
+-- rename the other pane's bar reads `old -> new`.
 function M.show(rev_win, work_win, cwd, rev, work)
   local current, sha = head(cwd)
-  local function text(side)
+  local function full(side) return vim.fs.normalize(vim.fs.joinpath(side.path:sub(1, 1) == "/" and "" or cwd, side.path)) end
+  local function text(side, from)
     local r = side.ref and "@" .. (vim.startswith(sha, side.ref) and "HEAD" or side.ref:gsub("^(%x%x%x%x%x%x%x)%x*", "%1")) or "working"
-    return bar(side.path, side.ref and side.branch or current, r)
+    return bar(full(side), side.ref and side.branch or current, r, from and full(from) ~= full(side) and full(from) or nil)
   end
   put(rev_win, text(rev))
-  put(work_win, work and text(work))
+  put(work_win, work and text(work, rev))
   redraw()
 end
 
