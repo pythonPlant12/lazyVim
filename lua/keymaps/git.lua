@@ -319,6 +319,11 @@ local function open_file_diff_fullscreen(base)
       end
     end
     if #diff_wins == 0 then return end
+    -- Start on the first hunk; '' goes back to the line before the diff.
+    local other = vim.iter(diff_wins):find(function(w) return w ~= orig_win end)
+    if other and vim.api.nvim_win_is_valid(orig_win) then
+      vim.api.nvim_win_call(orig_win, function() live_diff.first_hunk(vim.api.nvim_win_get_buf(other)) end)
+    end
 
     local close_autocmds = {}
     local function close_diff()

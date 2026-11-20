@@ -215,6 +215,18 @@ function M.color_diff_side(win, side)
   vim.wo[win].winhighlight = side and ("DiffText:DiffText%s,DiffTextAdd:DiffText%s"):format(side, side) or ""
 end
 
+-- Put the cursor of the current diff window on its first hunk; other_buf is
+-- the buffer of the other pane.
+local function first_hunk(other_buf)
+  vim.cmd("normal! gg")
+  local function first(buf) return vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] end
+  -- If line 1 already differs it IS the first hunk; ]c would skip past it.
+  if first(0) == first(other_buf) then
+    pcall(vim.cmd, "normal! ]c")
+  end
+end
+M.first_hunk = first_hunk
+
 -- Commit picker with a live background diff: moving through the list diffs
 -- the current buffer against the hovered commit without closing the list.
 --   items       list_commits items ({ ref, label, dim, path }); dim rows are
@@ -470,11 +482,6 @@ function M.pick(picker_opts)
     else
       -- Content changed under an existing diff; recompute it.
       vim.api.nvim_win_call(main_win, function() vim.cmd("diffupdate") end)
-      -- Replacing the preview lines opens all its folds, but the file pane
-      -- keeps its closed folds and the panes lose alignment. Reset both.
-      for _, w in ipairs({ preview.win, main_win }) do
-        vim.api.nvim_win_call(w, function() vim.cmd("normal! zX") end)
-      end
     end
     -- Land on the first hunk instead of the top of the file on every hover.
     -- The first diff lands on the caller's line instead, if given.
@@ -484,13 +491,7 @@ function M.pick(picker_opts)
         start_line = nil
         return
       end
-      vim.cmd("normal! gg")
-      local first_main = vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]
-      local first_prev = vim.api.nvim_buf_get_lines(preview.buf, 0, 1, false)[1]
-      -- If line 1 already differs it IS the first hunk; ]c would skip past it.
-      if first_main == first_prev then
-        pcall(vim.cmd, "normal! ]c")
-      end
+      first_hunk(preview.buf)
     end)
   end
 
