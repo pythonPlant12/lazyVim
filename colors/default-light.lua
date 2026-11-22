@@ -97,6 +97,7 @@ local c = {
   special  = "#2F6E7E", -- builtin functions, literals (Meteorite teal role)
   keyword  = "#A8631A",
   type     = "#8A7220",
+  member   = "#000000", -- properties and object keys: black, darker than the text color
   param    = "#7A48B3",
   constant = "#7C52AE",
   number   = "#0E7294",
