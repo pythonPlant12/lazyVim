@@ -344,10 +344,17 @@ local function edit_cmd(cmd, path, line)
   return line and line > 0 and ("%s +%d %s"):format(cmd, line, escaped) or ("%s %s"):format(cmd, escaped)
 end
 
+-- Run an Ex command that opens a new tab. The new window copies the options
+-- of the LazyGit window, so drop its float colors.
+local function new_tab(cmd)
+  vim.cmd(cmd)
+  vim.wo.winhighlight = ""
+end
+
 -- Open a file in a new tab, optionally at a line.
 local function open_new_tab(path, line)
   local cmd = edit_cmd("tabedit", path, line)
-  if cmd then vim.cmd(cmd) end
+  if cmd then new_tab(cmd) end
 end
 
 -- Same-tab opens reuse a real editing window and avoid terminal/float windows.
@@ -411,21 +418,21 @@ end
 -- Show a revision file alone (its working file is gone) as a read-only
 -- scratch buffer, in this tab or a new tab; q closes it (the tab for E).
 -- on_show gets the window that shows it.
-local function open_revision(abs, lines, line, new_tab, on_show)
+local function open_revision(abs, lines, line, in_new_tab, on_show)
   local buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.bo[buf].modifiable = false
   vim.bo[buf].filetype = vim.filetype.match({ filename = abs, buf = buf }) or ""
   vim.keymap.set("n", "q", function()
-    if new_tab and #vim.api.nvim_list_tabpages() > 1 then vim.cmd.tabclose() end
+    if in_new_tab and #vim.api.nvim_list_tabpages() > 1 then vim.cmd.tabclose() end
     vim.api.nvim_buf_delete(buf, { force = true })
   end, { buffer = buf, nowait = true })
   local function show()
-    if new_tab then vim.cmd("tab sbuffer " .. buf) else vim.api.nvim_win_set_buf(0, buf) end
+    if in_new_tab then new_tab("tab sbuffer " .. buf) else vim.api.nvim_win_set_buf(0, buf) end
     pcall(vim.api.nvim_win_set_cursor, 0, { tonumber(line) or 1, 0 })
     on_show(vim.api.nvim_get_current_win())
   end
-  if new_tab then show() else in_this_tab(show) end
+  if in_new_tab then show() else in_this_tab(show) end
   return buf
 end
 
