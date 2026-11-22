@@ -98,9 +98,23 @@ keymaps.set("n", "<C-w>r", function() require("features.window_resize").enter() 
 
 -- Diagnostics
 
--- Swap j/k (j=up, k=down)
-keymaps.set("n", "j", "k", opts)
-keymaps.set("n", "k", "j", opts)
+-- A motion that first puts the line it leaves in the jumplist (<C-o> returns
+-- to it) when its count is min_count or more.
+local function with_jump_mark(motion, min_count)
+  return function()
+    local count = vim.v.count
+    -- m' takes the typed count, so the motion gets it again.
+    return count >= min_count and "m'" .. (count > 0 and count or "") .. motion or motion
+  end
+end
+local expr_opts = { noremap = true, silent = true, expr = true }
+
+-- Swap j/k (j=up, k=down); a count above 5 is a jump.
+keymaps.set("n", "j", with_jump_mark("k", 6), expr_opts)
+keymaps.set("n", "k", with_jump_mark("j", 6), expr_opts)
+-- Half-page scrolls are jumps too.
+keymaps.set("n", "<C-d>", with_jump_mark("<C-d>", 0), expr_opts)
+keymaps.set("n", "<C-u>", with_jump_mark("<C-u>", 0), expr_opts)
 keymaps.set("v", "j", "k", opts)
 keymaps.set("v", "k", "j", opts)
 

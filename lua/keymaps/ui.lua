@@ -71,6 +71,7 @@ vim.api.nvim_create_autocmd("User", {
         if input and input ~= "" then
           local line = tonumber(input)
           if line then
+            vim.cmd("normal! m'") -- :{line} is no jump; this puts the old line in the jumplist
             vim.cmd(tostring(line))
           end
         end
@@ -157,6 +158,7 @@ keymaps.set("n", "gl", function()
 
   local max_line = vim.api.nvim_buf_line_count(0)
   line = math.max(1, math.min(line, max_line))
+  vim.cmd("normal! m'") -- :{line} is no jump; this puts the old line in the jumplist
   vim.cmd(tostring(line))
   pcall(vim.cmd, "normal! zv")
 end, { desc = "Go to line" })
