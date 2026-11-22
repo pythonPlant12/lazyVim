@@ -638,12 +638,15 @@ function M.pick(picker_opts)
     -- gets the space back without losing the list.
     on_show = function(picker)
       preview.picker = picker
-      local list_win = picker.list.win.win
-      if not (list_win and vim.api.nvim_win_is_valid(list_win)) then
+      -- The bottom split that holds the input and the list; Snacks lays the
+      -- list out in whatever height it has.
+      local root_win = picker.layout.root.win
+      if not (root_win and vim.api.nvim_win_is_valid(root_win)) then
         return
       end
-      local full_height = vim.api.nvim_win_get_height(list_win)
-      local collapsed_height = 2
+      local full_height = vim.api.nvim_win_get_height(root_win)
+      -- Two list rows stay visible.
+      local collapsed_height = full_height - vim.api.nvim_win_get_height(picker.list.win.win) + 2
 
       local function picker_focused()
         local current = vim.api.nvim_get_current_win()
@@ -656,18 +659,20 @@ function M.pick(picker_opts)
       end
 
       local function fit_list()
-        if not vim.api.nvim_win_is_valid(list_win) then
+        if not vim.api.nvim_win_is_valid(root_win) then
           return
         end
         local target = picker_focused() and full_height or collapsed_height
-        if vim.api.nvim_win_get_height(list_win) ~= target then
-          pcall(vim.api.nvim_win_set_height, list_win, target)
+        if vim.api.nvim_win_get_height(root_win) ~= target then
+          pcall(vim.api.nvim_win_set_height, root_win, target)
         end
       end
 
-      preview.list_autocmd = vim.api.nvim_create_autocmd("WinEnter", {
-        callback = function()
-          if in_tab() then vim.schedule(fit_list) end
+      -- A new split (the first diff pane) evens out the window heights and
+      -- the list grows again, so an unfocused list shrinks again after it.
+      preview.list_autocmd = vim.api.nvim_create_autocmd({ "WinEnter", "WinResized" }, {
+        callback = function(ev)
+          if in_tab() and (ev.event == "WinEnter" or not picker_focused()) then vim.schedule(fit_list) end
         end,
       })
       -- A list opened without focus (focus_diff) shrinks at once.
