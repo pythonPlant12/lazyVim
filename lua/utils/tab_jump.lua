@@ -163,14 +163,18 @@ end
 M._back = {}
 M._forward = {}
 
--- Capture the current window, its buffer, and cursor as a restorable location.
+-- Set snap's cursor and view (the scroll position, so the line returns to
+-- the same height on screen) from the current window.
+local function remember(snap)
+  snap.pos = vim.api.nvim_win_get_cursor(0)
+  snap.view = vim.fn.winsaveview()
+  return snap
+end
+
+-- Capture the current window, its buffer, cursor and view as a restorable location.
 local function snapshot()
   local win = vim.api.nvim_get_current_win()
-  return {
-    win = win,
-    buf = vim.api.nvim_win_get_buf(win),
-    pos = vim.api.nvim_win_get_cursor(win),
-  }
+  return remember({ win = win, buf = vim.api.nvim_win_get_buf(win) })
 end
 
 -- True if we're currently in the window+buffer `snap` points at. The cursor
@@ -183,7 +187,7 @@ local function loc_matches(snap)
   return true
 end
 
--- Move focus to `snap`: switch its tab, focus its window, restore buffer and cursor.
+-- Move focus to `snap`: switch its tab, focus its window, restore buffer, cursor and view.
 local function restore(snap)
   if not snap or not vim.api.nvim_win_is_valid(snap.win) then return false end
   local tab = vim.api.nvim_win_get_tabpage(snap.win)
@@ -195,8 +199,8 @@ local function restore(snap)
     and vim.api.nvim_win_get_buf(snap.win) ~= snap.buf then
     pcall(vim.api.nvim_win_set_buf, snap.win, snap.buf)
   end
-  if snap.pos then
-    pcall(vim.api.nvim_win_set_cursor, snap.win, snap.pos)
+  if snap.view then
+    pcall(vim.api.nvim_win_call, snap.win, function() vim.fn.winrestview(snap.view) end)
   end
   return true
 end
@@ -239,7 +243,7 @@ function M.back()
   local entry = M._back[#M._back]
   if entry and loc_matches(entry.dest) then
     M._back[#M._back] = nil
-    entry.dest.pos = vim.api.nvim_win_get_cursor(0) -- remember spot for redo
+    remember(entry.dest) -- the spot for redo
     push(M._forward, entry)
     restore(entry.origin)
     return
@@ -259,7 +263,7 @@ function M.forward()
   local entry = M._forward[#M._forward]
   if entry and loc_matches(entry.origin) then
     M._forward[#M._forward] = nil
-    entry.origin.pos = vim.api.nvim_win_get_cursor(0)
+    remember(entry.origin)
     push(M._back, entry)
     restore(entry.dest)
     return
