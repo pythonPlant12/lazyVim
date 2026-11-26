@@ -152,25 +152,35 @@ return {
       opts.window.border = "rounded"
       opts.window.mappings = opts.window.mappings or {}
       -- Left collapses an expanded dir or jumps to the parent node.
-      opts.window.mappings["<Left>"] = function(state)
+      -- tree:get_node() reads the tree window's cursor, so both handlers also
+      -- work from the `/` search input (fuzzy_finder_mappings below).
+      local function collapse_or_parent(state)
         local node = state.tree:get_node()
+        if not node then
+          return
+        end
         if node.type == "directory" and node:is_expanded() then
           node:collapse()
           require("neo-tree.ui.renderer").redraw(state)
         else
+          -- Set the cursor directly: renderer.focus_node would focus the tree
+          -- window, and leaving the search input closes it.
           local parent_id = node:get_parent_id()
-          if parent_id then
-            require("neo-tree.ui.renderer").focus_node(state, parent_id)
+          local _, linenr = state.tree:get_node(parent_id or "")
+          if linenr then
+            vim.api.nvim_win_set_cursor(state.winid, { linenr, 0 })
           end
         end
       end
       -- Right expands a collapsed directory.
-      opts.window.mappings["<Right>"] = function(state)
+      local function expand_dir(state)
         local node = state.tree:get_node()
-        if node.type == "directory" and not node:is_expanded() then
+        if node and node.type == "directory" and not node:is_expanded() then
           require("neo-tree.sources.filesystem").toggle_directory(state, node)
         end
       end
+      opts.window.mappings["<Left>"] = collapse_or_parent
+      opts.window.mappings["<Right>"] = expand_dir
       -- Shift-Enter opens in a new tab, Ctrl-Enter in a split to the right
       -- (splitright is on), matching the file picker's bindings.
       opts.window.mappings["<S-CR>"]    = "open_tabnew"
@@ -302,6 +312,11 @@ return {
       opts.filesystem.bind_to_cwd = false
       opts.filesystem.window = opts.filesystem.window or {}
       opts.filesystem.window.mappings = opts.filesystem.window.mappings or {}
+      -- In the `/` search input, Left/Right fold the highlighted result
+      -- directory instead of moving the text cursor.
+      opts.filesystem.window.fuzzy_finder_mappings = opts.filesystem.window.fuzzy_finder_mappings or {}
+      opts.filesystem.window.fuzzy_finder_mappings["<Left>"] = collapse_or_parent
+      opts.filesystem.window.fuzzy_finder_mappings["<Right>"] = expand_dir
       -- Run grug-far scoped to the selected file/directory from Neo-tree.
       opts.filesystem.commands.grug_far_search_node = function(state)
         local node = state.tree:get_node()
