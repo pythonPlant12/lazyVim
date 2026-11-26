@@ -47,3 +47,13 @@ vim.api.nvim_create_autocmd(
   }
 )
 vim.api.nvim_create_autocmd("User", { group = group, pattern = "DiffBar", callback = schedule_update })
+
+-- The bar of an unfocused window is bold like the focused one's; Neovim's
+-- default WinBarNC is not.
+local function bold_inactive_bar()
+  local hl = vim.api.nvim_get_hl(0, { name = "WinBarNC", link = false })
+  hl.bold = true
+  vim.api.nvim_set_hl(0, "WinBarNC", hl)
+end
+bold_inactive_bar()
+vim.api.nvim_create_autocmd("ColorScheme", { group = group, callback = bold_inactive_bar })
