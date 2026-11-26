@@ -59,7 +59,6 @@ keymaps.set("n", "<C-g>h",  function() Snacks.picker.git_log({ cwd = LazyVim.roo
 keymaps.set("n", "<C-g>s",  function() Snacks.picker.git_status() end, { desc = "Git status" })
 keymaps.set("n", "<C-g>d",  function() Snacks.picker.git_diff() end, { desc = "Git diff" })
 keymaps.set("n", "<C-g>ld", preview_line_diff, { desc = "Line diff" })
-keymaps.set("n", "<C-g>lh", function() Snacks.picker.git_log_line() end, { desc = "Line history" })
 keymaps.set("n", "<C-g>lr", function() require("gitsigns").reset_hunk() end, { desc = "Revert line/hunk to HEAD" })
 -- The file behind the current buffer.
 local function current_real_file()
@@ -181,7 +180,8 @@ end
 
 -- Commits that changed one specific line (git log -L follows the line as it
 -- moves through history). Each item carries the line's content as of that
--- commit (post-image of the -L hunk), used to restore it.
+-- commit (post-image of the -L hunk), used to restore it, and its line
+-- number there (lnum).
 local function list_line_commits(path, lnum, cwd, ref)
   local rel = (vim.fs.relpath and vim.fs.relpath(cwd, path)) or path
   local cmd = { "git", "log", "--no-color", "--format=%x01%h%x09%an%x09%ad%x09%s", "--date=format:%Y-%m-%d %H:%M" }
@@ -213,6 +213,7 @@ local function list_line_commits(path, lnum, cwd, ref)
     elseif cur then
       if line:match("^@@") then
         in_hunk = true
+        cur.lnum = cur.lnum or tonumber(line:match("^@@ %-%d+,?%d* %+(%d+)"))
       elseif line:match("^diff %-%-git") then
         in_hunk = false
       elseif in_hunk then
@@ -561,7 +562,65 @@ end
 
 keymaps.set("n", "<C-g>lR", pick_line_commit_and_restore, { desc = "Restore line from commit" })
 
-keymaps.set("n", "<C-g>fh", function() Snacks.picker.git_log_file() end, { desc = "File history" })
+-- History of the current file, or of the cursor line with by_line: the
+-- commit list of fD, where each row diffs the file before that commit (left)
+-- against the file at it (right). ask_branch: pick the branch first, else
+-- the current one.
+local function show_history(by_line, ask_branch)
+  local title = by_line and "Line history" or "File history"
+  local path = current_real_file()
+  if path == "" then
+    vim.notify("No file in current buffer", vim.log.levels.ERROR, { title = title })
+    return
+  end
+  local lnum = buf_line_to_base(vim.api.nvim_win_get_cursor(0)[1])
+  local cwd = live_diff.git_root()
+  local function open(ref, branch)
+    local file = cwd .. "/" .. file_on_branch(ref, path, cwd)
+    local file_commits, err = live_diff.list_commits(ref, 150, cwd, file)
+    local items = file_commits
+    if items and by_line then items, err = list_line_commits(file, lnum, cwd, ref) end
+    if not items then
+      vim.notify("Could not list commits: " .. err, vim.log.levels.ERROR, { title = title })
+      return
+    end
+    if #items == 0 then
+      vim.notify(("No commits changed this %s on %s"):format(by_line and "line" or "file", branch), vim.log.levels.WARN, { title = title })
+      return
+    end
+    -- The file before a commit: at its parent, under the name the commit
+    -- before it gave the file (a rename changes the name).
+    local before, at, lnums = {}, {}, {}
+    for i, it in ipairs(file_commits) do
+      before[it.ref] = { ref = it.ref .. "^", path = (file_commits[i + 1] or it).path }
+      at[it.ref] = it.path
+    end
+    for _, it in ipairs(items) do
+      it.path = it.path or at[it.ref]
+      lnums[it.ref] = it.lnum
+    end
+    local tab = vim.api.nvim_get_current_tabpage()
+    live_diff.pick({
+      items = items,
+      title = ("%s (%s)"):format(title, branch),
+      keep_diff = true,
+      branch = branch,
+      left = function(commit) return before[commit] or { ref = commit .. "^" } end,
+      line = by_line and function(commit) return lnums[commit] end or nil,
+      on_ref = function(commit) revision_label.set(tab, path, commit) end,
+    })
+  end
+  if ask_branch then
+    select_branch(title, cwd, function(item) open(item.ref, item.ref) end)
+  else
+    open("HEAD", current_branch(cwd))
+  end
+end
+
+keymaps.set("n", "<C-g>fh", function() show_history(false, false) end, { desc = "File history" })
+keymaps.set("n", "<C-g>fH", function() show_history(false, true) end, { desc = "File history of a branch" })
+keymaps.set("n", "<C-g>lh", function() show_history(true, false) end, { desc = "Line history" })
+keymaps.set("n", "<C-g>lH", function() show_history(true, true) end, { desc = "Line history of a branch" })
 keymaps.set("n", "<C-g>fr", function() require("gitsigns").reset_buffer() end, { desc = "Revert file to HEAD" })
 
 local ns_inline = vim.api.nvim_create_namespace("gitsigns_preview_inline")

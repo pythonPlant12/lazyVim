@@ -239,7 +239,9 @@ M.first_hunk = first_hunk
 --   on_confirm  called with the picked item after the picker closes
 --   select      hash (full or short) of the commit to select at start
 --   focus_diff  start with focus in the file and the list shrunk
---   line        cursor line in the file for the first diff (default: first hunk)
+--   line        cursor line in the file for the first diff (default: first
+--               hunk), or a function of the shown item's ref that returns the
+--               line for each diff
 --   esc_keeps_diff  <Esc> closes only the list and keeps the diff
 --   on_quit     called after q closed the diff
 --   on_ref      called with the ref each time the diff shows another commit
@@ -250,16 +252,20 @@ M.first_hunk = first_hunk
 --   worktree_row  a `Worktree` header row on top (the diffs compare to it)
 --   left        { ref, branch, path }: a fixed revision in the left pane; the shown
 --               commit goes to the right pane, and a `working` row on top
---               (ref "working") shows the working file there
+--               (ref "working") shows the working file there. Or a function
+--               of the shown item's ref that returns one for each row (a
+--               history: no `working` row)
 function M.pick(picker_opts)
   local main_win = vim.api.nvim_get_current_win()
   local main_buf = vim.api.nvim_get_current_buf()
   local path = vim.api.nvim_buf_get_name(main_buf)
   local cwd = M.git_root()
   local ft = vim.bo[main_buf].filetype
-  local left = picker_opts.left
+  -- left: the fixed left revision; left_of: the left revision of a row.
+  local left = type(picker_opts.left) == "table" and picker_opts.left or nil
+  local left_of = type(picker_opts.left) == "function" and picker_opts.left or nil
   -- The file's name at each commit, where the item knows it.
-  local paths = left and { [left.ref] = left.path } or {}
+  local paths = {}
   for _, it in ipairs(picker_opts.items) do
     paths[it.ref] = paths[it.ref] or it.path
   end
@@ -429,7 +435,8 @@ function M.pick(picker_opts)
     end
   end
 
-  local start_line = picker_opts.line
+  local line_of = type(picker_opts.line) == "function" and picker_opts.line or nil
+  local start_line = not line_of and picker_opts.line or nil
   -- Put `lines` into a read-only revision buffer (a new one if buf is not
   -- valid) and return it.
   local function revision_buf(buf, lines)
@@ -486,10 +493,10 @@ function M.pick(picker_opts)
     -- Land on the first hunk instead of the top of the file on every hover.
     -- The first diff lands on the caller's line instead, if given.
     vim.api.nvim_win_call(main_win, function()
-      if start_line then
-        vim.cmd(("normal! %dG"):format(start_line))
-        start_line = nil
-        return
+      local line = start_line or line_of and line_of(preview.ref)
+      start_line = nil
+      if line then
+        return vim.cmd(("normal! %dG"):format(line))
       end
       first_hunk(preview.buf)
     end)
@@ -511,14 +518,16 @@ function M.pick(picker_opts)
         return
       end
       -- The file at ref (a note when it did not exist), the ref shown and the
-      -- file's name there; the `working` row has no lines.
-      local function fetch(ref, on_done)
+      -- file's name there (rel, else the item's, else the current one); the
+      -- `working` row has no lines.
+      local function fetch(ref, on_done, rel)
         if ref == "working" then return on_done(nil, ref) end
-        local rel = paths[ref] or M.relpath(cwd, path)
+        rel = rel or paths[ref] or M.relpath(cwd, path)
         M.show_revision(ref, rel, cwd, function(lines, shown)
           on_done(lines or { "(file did not exist at " .. ref .. ")" }, shown, rel)
         end)
       end
+      local row_left = left or left_of and left_of(want)
       fetch(want, function(lines, shown, file)
         -- With left, its revision stays in the left pane and `want` goes right.
         local function apply(left_lines, left_shown, left_file)
@@ -526,17 +535,17 @@ function M.pick(picker_opts)
             return -- superseded by a newer hover or the picker closed
           end
           preview.ref = want
-          if left then show_right(lines) end
+          if row_left then show_right(lines) end
           apply_preview(left_lines)
           local branch = picker_opts.branch
           if type(branch) == "function" then branch = branch(shown) end
-          diff_bar.show(preview.win, main_win, cwd, { path = left_file, ref = left_shown, branch = left and left.branch or branch },
-            left and lines and { path = file, ref = shown, branch = branch } or { path = path })
+          diff_bar.show(preview.win, main_win, cwd, { path = left_file, ref = left_shown, branch = row_left and row_left.branch or branch },
+            row_left and lines and { path = file, ref = shown, branch = branch } or { path = path })
           if picker_opts.on_ref then
             picker_opts.on_ref(shown)
           end
         end
-        if left then fetch(left.ref, apply) else apply(lines, shown, file) end
+        if row_left then fetch(row_left.ref, apply, row_left.path) else apply(lines, shown, file) end
       end)
     end))
   end
