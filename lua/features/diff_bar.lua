@@ -1,5 +1,6 @@
 -- Top bars of a split diff: `<file icon> dir/dir/file | <branch icon> branch | @hash`
--- on the revision pane, `... | working` on the working file. A window keeps
+-- on the revision pane, `... | working` on the working file. The checked-out
+-- commit reads `@HEAD`; the newest commit of another branch `@hash (latest)`. A window keeps
 -- its bar in w:diff_bar; autocmds/winbar.lua draws it in place of the split bar.
 local M = {}
 
@@ -39,9 +40,21 @@ local function redraw() vim.api.nvim_exec_autocmds("User", { pattern = "DiffBar"
 function M.show(rev_win, work_win, cwd, rev, work)
   local current, sha = head(cwd)
   local function full(side) return vim.fs.normalize(vim.fs.joinpath(side.path:sub(1, 1) == "/" and "" or cwd, side.path)) end
+  -- The newest commit of each branch shown.
+  local tips = {}
+  local function tip(branch)
+    tips[branch] = tips[branch] or (require("features.live_diff").git_lines({ "rev-parse", "--verify", "--quiet", branch }, cwd) or {})[1] or ""
+    return tips[branch]
+  end
   local function text(side, from)
-    local r = side.ref and "@" .. (vim.startswith(sha, side.ref) and "HEAD" or side.ref:gsub("^(%x%x%x%x%x%x%x)%x*", "%1")) or "working"
-    return bar(full(side), side.ref and side.branch or current, r, from and full(from) ~= full(side) and full(from) or nil)
+    local branch = side.ref and side.branch or current
+    local r = "working"
+    if side.ref and vim.startswith(sha, side.ref) then
+      r = "@HEAD"
+    elseif side.ref then
+      r = "@" .. side.ref:gsub("^(%x%x%x%x%x%x%x)%x*", "%1") .. (vim.startswith(tip(branch), side.ref) and " (latest)" or "")
+    end
+    return bar(full(side), branch, r, from and full(from) ~= full(side) and full(from) or nil)
   end
   put(rev_win, text(rev))
   put(work_win, work and text(work, rev))
