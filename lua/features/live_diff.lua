@@ -221,6 +221,63 @@ end
 
 -- Put the cursor of the current diff window on its first hunk; other_buf is
 -- the buffer of the other pane.
+-- The working file of a diff window: its own file, the file its revision
+-- buffer was made from (b:working_file), or that of another diff window of
+-- the tab.
+local function working_file(win)
+  local function of(w)
+    local buf = vim.api.nvim_win_get_buf(w)
+    local name = vim.bo[buf].buftype == "" and vim.api.nvim_buf_get_name(buf) or ""
+    return vim.b[buf].working_file or name ~= "" and name or nil
+  end
+  local path = of(win)
+  for _, w in ipairs(vim.api.nvim_tabpage_list_wins(vim.api.nvim_win_get_tabpage(win))) do
+    path = path or vim.wo[w].diff and of(w) or nil
+  end
+  return path
+end
+
+-- The line of buffer `target` that matches the cursor line of `win`, which
+-- shows another version of the same file.
+local function matching_line(win, target)
+  local buf, lnum = vim.api.nvim_win_get_buf(win), vim.api.nvim_win_get_cursor(win)[1]
+  if buf == target then return lnum end
+  local function text(b) return table.concat(vim.api.nvim_buf_get_lines(b, 0, -1, false), "\n") .. "\n" end
+  local offset = 0
+  for _, hunk in ipairs(vim.text.diff(text(buf), text(target), { result_type = "indices" })) do
+    local from, count, to, to_count = unpack(hunk)
+    -- An empty side names the line before the gap.
+    if count == 0 then from = from + 1 end
+    if to_count == 0 then to = to + 1 end
+    if lnum < from then break end
+    if lnum < from + count then return to + math.min(lnum - from, math.max(to_count - 1, 0)) end
+    offset = to + to_count - from - count
+  end
+  return lnum + offset
+end
+
+-- From a diff window: open its working file in a new tab, on the line that
+-- matches the cursor line. The diff stays in its tab.
+function M.open_working_file(win)
+  win = win or vim.api.nvim_get_current_win()
+  local path = working_file(win)
+  if not (path and vim.uv.fs_stat(path)) then
+    return vim.notify("No working file for this diff", vim.log.levels.WARN, { title = "Git Diff" })
+  end
+  local target = vim.fn.bufadd(path)
+  vim.fn.bufload(target)
+  local line = matching_line(win, target)
+  -- Not `tab sbuffer`: with 'switchbuf' it goes to a window that shows the file.
+  vim.cmd("tab split")
+  vim.api.nvim_win_set_buf(0, target)
+  -- The new window copies the diff options and side colors of the diff window.
+  vim.cmd("diffoff")
+  vim.wo.scrollbind, vim.wo.cursorbind, vim.wo.winhighlight = false, false, ""
+  vim.bo[target].buflisted = true
+  pcall(vim.api.nvim_win_set_cursor, 0, { line, 0 })
+  vim.cmd("normal! zvzz")
+end
+
 local function first_hunk(other_buf)
   vim.cmd("normal! gg")
   local function first(buf) return vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] end
@@ -449,6 +506,7 @@ function M.pick(picker_opts)
       vim.bo[buf].buftype = "nofile"
       vim.bo[buf].swapfile = false
       vim.bo[buf].filetype = ft
+      vim.b[buf].working_file = path ~= "" and path or nil
       vim.keymap.set("n", "q", close_with_q, { buffer = buf, silent = true })
     end
     vim.bo[buf].modifiable = true
@@ -605,7 +663,7 @@ function M.pick(picker_opts)
     input_keys["<Esc>"] = { "confirm", mode = "n" }
   end
   -- The input is for typing; L there stays a letter.
-  local list_keys = vim.tbl_extend("force", input_keys, { L = "show_in_lazygit" })
+  local list_keys = vim.tbl_extend("force", input_keys, { L = "show_in_lazygit", E = "open_working_file" })
 
   local confirmed = false
   Snacks.picker.pick({
@@ -628,6 +686,12 @@ function M.pick(picker_opts)
         if vim.api.nvim_win_is_valid(main_win) then
           vim.api.nvim_set_current_win(main_win)
         end
+      end,
+      -- From the file's window, so the new tab does not copy the list's options.
+      open_working_file = function()
+        if not vim.api.nvim_win_is_valid(main_win) then return end
+        vim.api.nvim_set_current_win(main_win)
+        M.open_working_file(main_win)
       end,
       -- j/k and the arrows skip dimmed rows.
       list_down = function(picker) step(picker, 1) end,

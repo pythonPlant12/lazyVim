@@ -625,6 +625,10 @@ keymaps.set("n", "<C-g>fH", function() show_history(false, true) end, { desc = "
 keymaps.set("n", "<C-g>lh", function() show_history(true, false) end, { desc = "Line history" })
 keymaps.set("n", "<C-g>lH", function() show_history(true, true) end, { desc = "Line history of a branch" })
 keymaps.set("n", "<C-g>fr", function() require("gitsigns").reset_buffer() end, { desc = "Revert file to HEAD" })
+-- E in a diff window; elsewhere E stays the motion.
+keymaps.set("n", "E", function()
+  return vim.wo.diff and "<Cmd>lua require('features.live_diff').open_working_file()<CR>" or "E"
+end, { expr = true, desc = "Diff: open the working file in a new tab" })
 keymaps.set("n", "<C-g>fb", function() require("features.blame_all").toggle() end, { desc = "Toggle blame on all lines" })
 
 local ns_inline = vim.api.nvim_create_namespace("gitsigns_preview_inline")
