@@ -20,7 +20,7 @@ if type(vim.g.theme_custom_hl) == "table" then
     panel_bg = panel_bg,
     picker_bg = bg, -- pickers sit on the editor bg, not the gray panel
     ref_bg = "#ECECEF", -- word-under-cursor matches, a step darker than islands-light
-    blame_fg = "#9AA1AC", -- git blame (also inlay hints), a step lighter than islands-light
+    blame_fg = "#7590B5", -- git blame (also inlay hints): a muted blue, apart from the gray comments
     cursorline_bg = "#E7EFF7", -- active line and list cursor rows: the selection blue, lighter
   })
   -- Opaque variant: statusline sits on a gray panel instead of transparency.
