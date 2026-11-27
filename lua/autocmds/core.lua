@@ -2,6 +2,7 @@
 require("autocmds.window")
 require("autocmds.formatting")
 require("autocmds.window_state")
+require("autocmds.diff_wrap")
 require("themes.engine") -- applies theme colors to plugin UIs (was autocmds/highlights.lua)
 require("features.import_hl").setup() -- imported names take their LSP token color
 require("autocmds.matchpairs")
