@@ -150,6 +150,29 @@ return {
         )
       end
 
+      -- The plugin draws the description as an overlay at the end of the line,
+      -- on top of the gitsigns blame. As eol text with a priority below the
+      -- blame's (100), the description comes first and the blame follows it.
+      local sign = require("bookmarks.sign")
+      local place_sign = sign.place_sign
+      sign.place_sign = function(line, buf, desc)
+        place_sign(line, buf, desc)
+        local ns = vim.api.nvim_get_namespaces().BookmarksNvim
+        for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(buf, ns, { line - 1, 0 }, { line - 1, -1 }, { details = true })) do
+          local opts = mark[4]
+          if opts.virt_text_pos == "overlay" then
+            vim.api.nvim_buf_set_extmark(buf, ns, mark[2], mark[3], {
+              id = mark[1],
+              virt_text = opts.virt_text,
+              virt_text_pos = "eol",
+              priority = 50,
+              hl_group = opts.hl_group,
+              hl_mode = opts.hl_mode,
+            })
+          end
+        end
+      end
+
       local is_light = vim.o.background == "light"
       require("bookmarks").setup({
         picker = {
