@@ -152,9 +152,15 @@ function M.jump(motion)
   end
   -- Jump to the existing tab/window showing this buffer and put the old buffer back
   -- in the window we came from (restore), avoiding a duplicate.
+  local view = vim.fn.winsaveview()
   M.goto_visible_buf(post_buf, {
     restore = { win = pre_win, buf = pre_buf },
   })
+  local win = vim.api.nvim_get_current_win()
+  if win ~= pre_win then
+    vim.fn.winrestview(view)
+    M._retarget(pre_win, win, post_buf)
+  end
 end
 
 -- Cross-tab back/forward history. Neovim's jumplist is per-window, so a jump that
@@ -162,6 +168,19 @@ end
 -- destination window. We record those hops here so <C-h>/<C-l> can walk them.
 M._back = {}
 M._forward = {}
+
+-- A step landed in window `to` because it already shows `buf`. Point every
+-- recorded location for `buf` in window `from` at it, or the next <C-h>/<C-l>
+-- would not match its entry and the chain of steps would break.
+function M._retarget(from, to, buf)
+  for _, stack in ipairs({ M._back, M._forward }) do
+    for _, entry in ipairs(stack) do
+      for _, snap in ipairs({ entry.origin, entry.dest }) do
+        if snap.win == from and snap.buf == buf then snap.win = to end
+      end
+    end
+  end
+end
 
 -- Set snap's cursor and view (the scroll position, so the line returns to
 -- the same height on screen) from the current window.
@@ -188,8 +207,20 @@ local function loc_matches(snap)
 end
 
 -- Move focus to `snap`: switch its tab, focus its window, restore buffer, cursor and view.
+-- When its window no longer shows its buffer and another window does, the step
+-- goes to that window instead of loading the buffer a second time.
 local function restore(snap)
-  if not snap or not vim.api.nvim_win_is_valid(snap.win) then return false end
+  if not snap then return false end
+  local has_win = vim.api.nvim_win_is_valid(snap.win)
+  if not has_win or vim.api.nvim_win_get_buf(snap.win) ~= snap.buf then
+    local _, shown = M.find_visible_buf(snap.buf)
+    if shown then
+      M._retarget(snap.win, shown, snap.buf)
+      snap.win = shown
+    elseif not has_win then
+      return false
+    end
+  end
   local tab = vim.api.nvim_win_get_tabpage(snap.win)
   if vim.api.nvim_tabpage_is_valid(tab) then
     pcall(vim.api.nvim_set_current_tabpage, tab)
