@@ -184,7 +184,7 @@ end
 -- number there (lnum).
 local function list_line_commits(path, lnum, cwd, ref)
   local rel = (vim.fs.relpath and vim.fs.relpath(cwd, path)) or path
-  local cmd = { "git", "log", "--no-color", "--format=%x01%h%x09%an%x09%ad%x09%s", "--date=format:%Y-%m-%d %H:%M" }
+  local cmd = { "git", "log", "--no-color", "--format=%x01%h%x09%ae%x09%ad%x09%s", "--date=format:%Y-%m-%d %H:%M" }
   if ref then
     cmd[#cmd + 1] = ref
   end
@@ -200,11 +200,13 @@ local function list_line_commits(path, lnum, cwd, ref)
   for _, line in ipairs(vim.split(result.stdout or "", "\n")) do
     local header = line:match("^\1(.*)$")
     if header then
-      local sha, author, date, subj = header:match("^([^\t]+)\t([^\t]*)\t([^\t]*)\t(.*)$")
+      local sha, email, date, subj = header:match("^([^\t]+)\t([^\t]*)\t([^\t]*)\t(.*)$")
       if sha then
         cur = {
           ref = sha,
-          label = string.format("     %-3s %s  %s  %s", live_diff.author_initials(author), sha, date, subj or ""),
+          email = email,
+          date = date,
+          subj = subj,
           lines = {},
         }
         items[#items + 1] = cur
@@ -549,6 +551,7 @@ local function pick_line_commit_and_restore()
     return
   end
 
+  live_diff.set_labels(items)
   vim.ui.select(items, {
     prompt = ("Restore line %d from:"):format(buf_lnum),
     format_item = function(item) return item.label end,

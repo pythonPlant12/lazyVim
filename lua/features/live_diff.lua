@@ -41,19 +41,21 @@ function M.git_lines(args, cwd)
   return vim.split(out, "\n", { trimempty = true }), nil
 end
 
--- "Nikita Petrov" -> "NP"; single-word names use their first two characters.
-function M.author_initials(name)
-  local words = {}
-  for w in (name or ""):gmatch("%S+") do
-    words[#words + 1] = w
+-- Set the label of each commit row ({ ref, email, date, subj, head }): HEAD
+-- marker, author email, hash, date, subject. The emails are padded to one
+-- width. Returns the label of a row with "working" in the hash column.
+function M.set_labels(items)
+  local width = 0
+  for _, it in ipairs(items) do
+    width = math.max(width, vim.api.nvim_strwidth(it.email or ""))
   end
-  if #words == 0 then
-    return "??"
+  local function label(head, email, rest)
+    return ("%s %s%s %s"):format(head and "HEAD" or "    ", email, (" "):rep(width - vim.api.nvim_strwidth(email)), rest)
   end
-  if #words == 1 then
-    return vim.fn.strcharpart(words[1], 0, 2):upper()
+  for _, it in ipairs(items) do
+    if it.email then it.label = label(it.head, it.email, ("%s  %s  %s"):format(it.ref, it.date, it.subj)) end
   end
-  return (vim.fn.strcharpart(words[1], 0, 1) .. vim.fn.strcharpart(words[#words], 0, 1)):upper()
+  return label(false, "", "working")
 end
 
 -- Path of a file relative to the repository root cwd.
@@ -92,7 +94,7 @@ function M.list_commits(ref, limit, cwd, path)
   local function log(max, ...)
     return vim.iter({ "log", ref, ("--max-count=%d"):format(max), ... }):flatten():totable()
   end
-  local args = log(limit or 150, "--pretty=format:%h\t%an\t%ad\t%p\t%s", "--date=format:%Y-%m-%d %H:%M")
+  local args = log(limit or 150, "--pretty=format:%h\t%ae\t%ad\t%p\t%s", "--date=format:%Y-%m-%d %H:%M")
   -- With a path only commits that touched that file are listed, under any name
   -- it had. --follow tracks one name per walk: at a merge whose other side
   -- still has the old name it switches to that and drops the commits on the
@@ -118,17 +120,19 @@ function M.list_commits(ref, limit, cwd, path)
   end
   local items, seen, cur = {}, {}, nil
   for i, line in ipairs(lines) do
-    local sha, author, date, parents, subj = line:match("^([^\t]+)\t([^\t]*)\t([^\t]*)\t([^\t]*)\t(.*)$")
+    local sha, email, date, parents, subj = line:match("^([^\t]+)\t([^\t]*)\t([^\t]*)\t([^\t]*)\t(.*)$")
     -- --name-status lines (`M\tpath`, `R085\told\tnew`) follow their commit.
     local name = not sha and line:match("^%u%d*\t.-([^\t]+)$")
     if name then
       cur.path = cur.path or name
     elseif sha and not seen[sha] then
-      -- Path-filtered lists rarely start at HEAD, so the marker would lie.
-      local head = (i == 1 and not path) and "HEAD" or "    "
       items[#items + 1] = {
         ref = sha,
-        label = string.format("%s %-3s %s  %s  %s", head, M.author_initials(author), sha, date, subj or ""),
+        email = email,
+        date = date,
+        subj = subj,
+        -- Path-filtered lists rarely start at HEAD, so the marker would lie.
+        head = i == 1 and not path,
         parents = math.max(#vim.split(parents, " ", { trimempty = true }), 1),
       }
       seen[sha] = items[#items]
@@ -229,7 +233,7 @@ M.first_hunk = first_hunk
 
 -- Commit picker with a live background diff: moving through the list diffs
 -- the current buffer against the hovered commit without closing the list.
---   items       list_commits items ({ ref, label, dim, path }); dim rows are
+--   items       list_commits items ({ ref, dim, path } and the set_labels fields); dim rows are
 --               skipped; a row shows the file at its path (default: the
 --               current file's)
 --   title       picker title
@@ -554,8 +558,9 @@ function M.pick(picker_opts)
   -- The working row puts "working" in the hash column. The Worktree header
   -- names the right pane above the commits and is never selected.
   local items = picker_opts.items
+  local working = M.set_labels(items)
   if left then
-    items = vim.list_extend({ { ref = "working", label = "         working" } }, items)
+    items = vim.list_extend({ { ref = "working", label = working } }, items)
   elseif picker_opts.worktree_row then
     items = vim.list_extend({ { ref = "worktree", label = "Worktree", header = true } }, items)
   end
